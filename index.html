@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="background-color" content="#ffffff" />
+  <meta name="description" content="Cadenza — Disponibilités et agenda centralisé pour ensembles de musique." />
+
+  <!-- Configuration App Native iOS / Android -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Cadenza" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <title>Cadenza</title>
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Favicon SVG : Point d'orgue / Cadence -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ffffff'/%3E%3Cpath d='M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z' fill='%23000000'/%3E%3Ccircle cx='50' cy='57' r='6.5' fill='%23000000'/%3E%3C/svg%3E" />
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #000000;
+      --muted: #5a5a5a;
+      --subtle: #f5f5f5;
+      --border: #dcdcdc;
+      --border-strong: #000000;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --font-serif: "Georgia", "Times New Roman", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none;
+    }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* En-tête fixe sobre */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: calc(12px + var(--safe-top)) 16px 12px;
+    }
+
+    .header-inner {
+      max-width: 680px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand svg {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .brand-titles {
+      min-width: 0;
+    }
+
+    .brand-name {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    .ensemble-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Conteneur principal */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 18px 16px calc(92px + var(--safe-bottom));
+    }
+
+    /* Boutons */
+    button, .btn {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      padding: 10px 14px;
+      cursor: pointer;
+      border: 1px solid var(--border-strong);
+      background: var(--bg);
+      color: var(--fg);
+      transition: background-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--fg);
+      color: var(--bg);
+      border-color: var(--fg);
+    }
+
+    .btn-primary:hover {
+      background: #1f1f1f;
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--fg);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--fg);
+    }
+
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 12.5px;
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-color: var(--border);
+      position: relative;
+    }
+
+    .notif-dot {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #000000;
+    }
+
+    .notif-dot.off {
+      background: transparent;
+      border: 1px solid #888;
+    }
+
+    /* Formulaires */
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+      color: var(--fg);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      color: var(--fg);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--fg);
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Cartes & Sections */
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: 21px;
+      font-weight: 400;
+      margin: 0;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 14px;
+      background: var(--bg);
+    }
+
+    .card.featured {
+      border: 1.5px solid var(--fg);
+    }
+
+    .card-kicker {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .card-date {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      margin: 0 0 4px;
+      text-transform: capitalize;
+    }
+
+    .card-meta {
+      font-size: 13.5px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .card-program {
+      font-size: 14px;
+      padding-top: 8px;
+      border-top: 1px solid var(--subtle);
+      margin-top: 8px;
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* Sondage disponibilités */
+    .consensus-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--fg);
+      margin-bottom: 8px;
+    }
+
+    .consensus-badge.full {
+      background: var(--fg);
+      color: var(--bg);
+    }
+
+    .vote-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    .vote-btn {
+      padding: 8px 6px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .vote-btn.active-yes {
+      background: var(--fg);
+      color: var(--bg);
+      border-color: var(--fg);
+      font-weight: 600;
+    }
+
+    .vote-btn.active-maybe {
+      background: var(--subtle);
+      border: 1.5px dashed var(--fg);
+      font-weight: 600;
+    }
+
+    .vote-btn.active-no {
+      background: var(--subtle);
+      color: var(--muted);
+      text-decoration: line-through;
+      border-color: var(--border);
+    }
+
+    .member-votes-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .member-chip {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .member-chip.yes {
+      border-color: var(--fg);
+      font-weight: 500;
+    }
+
+    .member-chip.no {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    /* Barre de navigation inférieure native */
+    nav.tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border);
+      padding: 6px 8px calc(6px + var(--safe-bottom));
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .tab-item {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      flex-direction: column;
+      gap: 3px;
+      padding: 6px 4px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+    }
+
+    .tab-item.active {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    .tab-item svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+    }
+
+    /* Modales / Bottom Sheets */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.35);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-sheet {
+      background: var(--bg);
+      width: 100%;
+      max-width: 680px;
+      border-top-left-radius: 14px;
+      border-top-right-radius: 14px;
+      border-top: 1px solid var(--fg);
+      padding: 20px 18px calc(24px + var(--safe-bottom));
+      max-height: 90dvh;
+      overflow-y: auto;
+    }
+
+    @media (min-width: 640px) {
+      .modal-backdrop {
+        align-items: center;
+        padding: 16px;
+      }
+      .modal-sheet {
+        border-radius: 10px;
+        border: 1px solid var(--fg);
+        max-width: 460px;
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-family: var(--font-serif);
+      font-size: 19px;
+      margin: 0;
+    }
+
+    /* Écran d'accueil / Onboarding */
+    .onboarding-wrap {
+      max-width: 440px;
+      margin: 24px auto;
+    }
+
+    .onboarding-logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .onboarding-logo svg {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 8px;
+    }
+
+    .onboarding-logo h1 {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 400;
+      margin: 0;
+    }
+
+    .onboarding-logo p {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 6px 0 0;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 22px 0;
+    }
+
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Toast feedback */
+    .toast {
+      position: fixed;
+      top: calc(16px + var(--safe-top));
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      z-index: 100;
+      background: var(--fg);
+      color: var(--bg);
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      transition: transform 0.22s ease;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 36px 16px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+    }
+
+    .empty-state p {
+      margin: 0 0 14px;
+    }
+
+    .banner-install {
+      border: 1px solid var(--fg);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .member-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--subtle);
+    }
+
+    .member-row:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- En-tête -->
+  <header id="app-header" class="hidden">
+    <div class="header-inner">
+      <div class="brand">
+        <!-- Symbole de la cadence / point d'orgue -->
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#000000"/>
+          <circle cx="50" cy="57" r="6.5" fill="#000000"/>
+        </svg>
+        <div class="brand-titles">
+          <h1 class="brand-name">Cadenza</h1>
+          <div id="header-ensemble-name" class="ensemble-subtitle">Chargement...</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-invite-top" class="btn-secondary btn-sm" title="Inviter les membres">Inviter</button>
+        <button id="btn-notif-top" class="icon-btn" title="Notifications système" aria-label="Notifications">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span id="notif-status-dot" class="notif-dot off"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenu Principal -->
+  <main>
+    <!-- ÉCRAN 0 : Création ou Jonction d'un ensemble -->
+    <section id="view-onboarding" class="onboarding-wrap hidden">
+      <div class="onboarding-logo">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#000000"/>
+          <circle cx="50" cy="57" r="6.5" fill="#000000"/>
+        </svg>
+        <h1>Cadenza</h1>
+        <p>Disponibilités et agenda centralisé pour ensembles musicaux.</p>
+      </div>
+
+      <!-- Carte Rejoindre (mise en avant si lien d'invitation) -->
+      <div id="join-card" class="card">
+        <div class="card-kicker" id="join-kicker">Rejoindre un ensemble</div>
+        <h2 class="modal-title" id="join-ensemble-title" style="margin-bottom: 12px;">Accéder à un espace existant</h2>
+        <form id="form-join">
+          <div class="field" id="join-code-field">
+            <label for="join-code">Code ou lien de l'ensemble</label>
+            <input type="text" id="join-code" placeholder="Ex: ens-a1b2c3" required />
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="join-name">Votre prénom</label>
+              <input type="text" id="join-name" placeholder="Ex: Clara" required />
+            </div>
+            <div class="field">
+              <label for="join-instrument">Instrument</label>
+              <input type="text" id="join-instrument" placeholder="Ex: Violon I" required />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary btn-full">Rejoindre l'ensemble</button>
+        </form>
+      </div>
+
+      <div id="onboarding-divider" class="divider">ou</div>
+
+      <!-- Carte Créer un ensemble -->
+      <div id="create-card" class="card">
+        <div class="card-kicker">Nouvel espace</div>
+        <h2 class="modal-title" style="margin-bottom: 12px;">Créer un ensemble</h2>
+        <form id="form-create">
+          <div class="field">
+            <label for="create-ensemble-name">Nom de l'ensemble</label>
+            <input type="text" id="create-ensemble-name" placeholder="Ex: Quatuor Lumière" required />
+          </div>
+          <div class="field">
+            <label for="create-formation">Formation</label>
+            <select id="create-formation">
+              <option value="Duo">Duo</option>
+              <option value="Trio">Trio</option>
+              <option value="Quatuor" selected>Quatuor</option>
+              <option value="Quintette">Quintette</option>
+              <option value="Sextuor / Octuor">Sextuor / Octuor</option>
+              <option value="Ensemble de chambre">Ensemble de chambre</option>
+            </select>
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="create-member-name">Votre prénom</label>
+              <input type="text" id="create-member-name" placeholder="Ex: Marc" required />
+            </div>
+            <div class="field">
+              <label for="create-member-instrument">Instrument</label>
+              <input type="text" id="create-member-instrument" placeholder="Ex: Violoncelle" required />
+            </div>
+          </div>
+          <button type="submit" class="btn-secondary btn-full">Créer et inviter les membres</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Bannière installation PWA -->
+    <div id="install-banner" class="banner-install hidden">
+      <span id="install-text">Installer Cadenza sur votre appareil pour recevoir les alertes.</span>
+      <button id="btn-install-pwa" class="btn-primary btn-sm">Installer</button>
+    </div>
+
+    <!-- VUE 1 : AGENDA CENTRALISÉ -->
+    <section id="view-agenda" class="hidden">
+      <div class="section-head">
+        <h2 class="section-title">Agenda de l'ensemble</h2>
+        <button id="btn-open-rehearsal" class="btn-primary btn-sm">+ Répétition</button>
+      </div>
+
+      <div id="agenda-list"></div>
+    </section>
+
+    <!-- VUE 2 : DISPONIBILITÉS -->
+    <section id="view-avail" class="hidden">
+      <div class="section-head">
+        <h2 class="section-title">Disponibilités</h2>
+        <button id="btn-open-poll" class="btn-primary btn-sm">+ Proposer une date</button>
+      </div>
+
+      <div id="polls-list"></div>
+    </section>
+
+    <!-- VUE 3 : ENSEMBLE & MEMBRES -->
+    <section id="view-ensemble" class="hidden">
+      <div class="section-head">
+        <h2 class="section-title">Ensemble</h2>
+      </div>
+
+      <div class="card featured">
+        <div class="card-kicker" id="info-formation">Formation</div>
+        <h3 class="card-date" id="info-name" style="font-family: var(--font-serif); font-size: 22px;">—</h3>
+        <div class="card-meta">Code d'invitation : <strong id="info-code">—</strong></div>
+        <div class="card-actions">
+          <button id="btn-share-invite" class="btn-primary btn-full">Envoyer le lien d'invitation</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Musiciens (<span id="members-count">0</span>)</div>
+        <div id="members-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Notifications push système</div>
+        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">
+          Recevez une alerte native dès qu'une date est proposée ou qu'une répétition est validée, même lorsque l'application est fermée.
+        </p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button id="btn-enable-push" class="btn-primary btn-sm">Activer les notifications</button>
+          <button id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
+        </div>
+        <div id="push-status-msg" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Mon profil & Mes ensembles</div>
+        <div id="saved-ensembles-list" style="margin: 8px 0 12px;"></div>
+        <button id="btn-switch-onboarding" class="btn-secondary btn-sm btn-full">Créer ou rejoindre un autre ensemble</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Barre de navigation inférieure -->
+  <nav id="app-nav" class="tab-bar hidden" aria-label="Navigation principale">
+    <button class="tab-item active" data-tab="agenda">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Agenda</span>
+    </button>
+    <button class="tab-item" data-tab="avail">
+      <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Disponibilités</span>
+    </button>
+    <button class="tab-item" data-tab="ensemble">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Ensemble</span>
+    </button>
+  </nav>
+
+  <!-- MODALE : PROPOSER UNE DATE DE DISPONIBILITÉ -->
+  <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Proposer un créneau</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button>
+      </div>
+      <form id="form-poll">
+        <div class="field">
+          <label for="poll-date">Date</label>
+          <input type="date" id="poll-date" required />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="poll-start">Début</label>
+            <input type="time" id="poll-start" value="14:00" required />
+          </div>
+          <div class="field">
+            <label for="poll-end">Fin</label>
+            <input type="time" id="poll-end" value="17:00" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="poll-location">Lieu envisagé (optionnel)</label>
+          <input type="text" id="poll-location" placeholder="Ex: Salle 3, Conservatoire" />
+        </div>
+        <div class="field">
+          <label for="poll-note">Programme / Remarque (optionnel)</label>
+          <input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement" />
+        </div>
+        <button type="submit" class="btn-primary btn-full">Soumettre aux membres</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE : AJOUTER UNE RÉPÉTITION DIRECTEMENT À L'AGENDA -->
+  <div id="modal-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Planifier une répétition</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button>
+      </div>
+      <form id="form-rehearsal">
+        <div class="field">
+          <label for="reh-date">Date</label>
+          <input type="date" id="reh-date" required />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="reh-start">Début</label>
+            <input type="time" id="reh-start" value="14:00" required />
+          </div>
+          <div class="field">
+            <label for="reh-end">Fin</label>
+            <input type="time" id="reh-end" value="17:00" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="reh-location">Lieu</label>
+          <input type="text" id="reh-location" placeholder="Ex: Studio B, 12 rue de la Paix" required />
+        </div>
+        <div class="field">
+          <label for="reh-program">Œuvres / Programme de travail</label>
+          <input type="text" id="reh-program" placeholder="Ex: Beethoven Op. 18 n°4 — Allegro" />
+        </div>
+        <div class="field">
+          <label for="reh-notes">Notes (optionnel)</label>
+          <textarea id="reh-notes" rows="2" placeholder="Ex: Accorder à 442 Hz, travail des transitions"></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer dans l'agenda</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Génération automatique de l'icône Apple Touch PNG 180x180 à partir du symbole de cadence -->
+  <script>
+    (function generateAppleTouchIcon() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 180, 180);
+        const s = 1.8;
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(12 * s, 64 * s);
+        ctx.bezierCurveTo(12 * s, 31 * s, 88 * s, 31 * s, 88 * s, 64 * s);
+        ctx.bezierCurveTo(84 * s, 39 * s, 16 * s, 39 * s, 12 * s, 64 * s);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(50 * s, 57 * s, 6.5 * s, 0, Math.PI * 2);
+        ctx.fill();
+
+        const link = document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.href = canvas.toDataURL('image/png');
+        document.head.appendChild(link);
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Logique Applicative & Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
+    import { getDatabase, ref, set, push, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
+    import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
+      authDomain: "cadenza-dad79.firebaseapp.com",
+      databaseURL: "https://cadenza-dad79-default-rtdb.firebaseio.com",
+      projectId: "cadenza-dad79",
+      storageBucket: "cadenza-dad79.firebasestorage.app",
+      messagingSenderId: "298490556921",
+      appId: "1:298490556921:web:0f83dc2d107ee4eae8cd28",
+      measurementId: "G-PT9W1RCJJR"
+    };
+
+    // Optionnel : Collez ici votre clé publique VAPID (Console Firebase > Paramètres > Cloud Messaging > Certificats Push Web)
+    // pour activer le réveil serveur FCM 100% fermé sur tous les appareils.
+    const FIREBASE_VAPID_KEY = "";
+
+    const app = initializeApp(firebaseConfig);
+    try { getAnalytics(app); } catch (_) {}
+    const db = getDatabase(app);
+
+    // État local persistant
+    const STORAGE_KEY = "cadenza_session_v1";
+    let session = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
+      activeEnsembleId: null,
+      ensembles: {} // { [ensembleId]: { memberId, name, instrument, ensembleName } }
+    };
+
+    let currentEnsembleData = null;
+    let unsubscribeEnsemble = null;
+    let swRegistration = null;
+    let messagingInstance = null;
+    let lastNotifiedTimestamp = Number(localStorage.getItem("cadenza_last_event_ts") || Date.now());
+    let deferredInstallPrompt = null;
+
+    // Utilitaires
+    const $ = (id) => document.getElementById(id);
+
+    function saveSession() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    }
+
+    function haptic() {
+      if (navigator.vibrate) navigator.vibrate(10);
+    }
+
+    function showToast(msg) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.remove("show"), 3200);
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function generateId(prefix) {
+      const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+      let out = prefix + "-";
+      for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+      return out;
+    }
+
+    function formatDateFr(isoDate) {
+      if (!isoDate) return "";
+      const [y, m, d] = isoDate.split("-").map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      return dateObj.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+    }
+
+    function getInviteUrl(ensembleId) {
+      return `${window.location.origin}${window.location.pathname}?ensemble=${encodeURIComponent(ensembleId)}`;
+    }
+
+    // Service Worker & Notifications Push
+    async function initServiceWorkerAndPush() {
+      if (!("serviceWorker" in navigator)) return;
+      try {
+        swRegistration = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+        const supported = await isSupported().catch(() => false);
+        if (supported) {
+          messagingInstance = getMessaging(app);
+          onMessage(messagingInstance, (payload) => {
+            const title = payload.notification?.title || "Cadenza";
+            const body = payload.notification?.body || "Mise à jour de votre ensemble.";
+            triggerLocalSystemNotification(title, body);
+          });
+        }
+      } catch (err) {
+        console.warn("SW init:", err);
+      }
+      updatePushUI();
+    }
+
+    async function triggerLocalSystemNotification(title, body) {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const options = {
+        body,
+        tag: "cadenza-update",
+        renotify: true,
+        data: { url: window.location.href }
+      };
+      if (swRegistration && swRegistration.showNotification) {
+        await swRegistration.showNotification(title, options);
+      } else {
+        new Notification(title, options);
+      }
+    }
+
+    async function requestPushPermission() {
+      haptic();
+      if (!("Notification" in window)) {
+        showToast("Les notifications ne sont pas supportées sur ce navigateur.");
+        return;
+      }
+
+      // Sur iOS, les notifications PWA exigent l'installation sur l'écran d'accueil
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+      if (isIOS && !isStandalone) {
+        showToast("Sur iPhone/iPad : appuyez sur Partager > Sur l'écran d'accueil d'abord.");
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      updatePushUI();
+
+      if (permission !== "granted") {
+        showToast("Autorisation refusée dans les réglages du navigateur.");
+        return;
+      }
+
+      let fcmToken = null;
+      if (messagingInstance && swRegistration && FIREBASE_VAPID_KEY) {
+        try {
+          fcmToken = await getToken(messagingInstance, {
+            vapidKey: FIREBASE_VAPID_KEY,
+            serviceWorkerRegistration: swRegistration
+          });
+        } catch (err) {
+          console.warn("FCM Token:", err);
+        }
+      }
+
+      if (session.activeEnsembleId && session.ensembles[session.activeEnsembleId]) {
+        const memberId = session.ensembles[session.activeEnsembleId].memberId;
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/members/${memberId}`), {
+          pushEnabled: true,
+          ...(fcmToken ? { fcmToken } : {})
+        });
+      }
+
+      showToast("Notifications système activées.");
+      await triggerLocalSystemNotification("Cadenza", "Les notifications de répétition sont actives sur cet appareil.");
+    }
+
+    function updatePushUI() {
+      const dot = $("notif-status-dot");
+      const msg = $("push-status-msg");
+      if (!("Notification" in window)) {
+        dot.classList.add("off");
+        if (msg) msg.textContent = "Navigateur non compatible avec les notifications push.";
+        return;
+      }
+      if (Notification.permission === "granted") {
+        dot.classList.remove("off");
+        if (msg) {
+          msg.textContent = FIREBASE_VAPID_KEY
+            ? "Statut : Actif (notifications système + arrière-plan FCM)."
+            : "Statut : Notifications système actives sur cet appareil.";
+        }
+      } else {
+        dot.classList.add("off");
+        if (msg) msg.textContent = "Statut : Désactivées. Cliquez sur le bouton ci-dessus pour les activer.";
+      }
+    }
+
+    // Installation PWA (Android / Desktop / iOS)
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      $("install-banner").classList.remove("hidden");
+    });
+
+    $("btn-install-pwa").addEventListener("click", async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        $("install-banner").classList.add("hidden");
+      }
+    });
+
+    // Navigation par onglets
+    function switchTab(tabName) {
+      haptic();
+      ["agenda", "avail", "ensemble"].forEach((t) => {
+        $(`view-${t}`).classList.toggle("hidden", t !== tabName);
+      });
+      document.querySelectorAll(".tab-item").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.tab === tabName);
+      });
+    }
+
+    document.querySelectorAll(".tab-item").forEach((btn) => {
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+    });
+
+    // Modales
+    function openModal(id) {
+      haptic();
+      const today = new Date().toISOString().split("T")[0];
+      if (id === "modal-poll" && !$("poll-date").value) $("poll-date").value = today;
+      if (id === "modal-rehearsal" && !$("reh-date").value) $("reh-date").value = today;
+      $(id).classList.add("open");
+    }
+
+    function closeModal(id) {
+      $(id).classList.remove("open");
+    }
+
+    document.querySelectorAll("[data-close]").forEach((btn) => {
+      btn.addEventListener("click", () => closeModal(btn.dataset.close));
+    });
+
+    document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+      backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop) closeModal(backdrop.id);
+      });
+    });
+
+    // Gestion Onboarding (Création ou Rejoindre via lien)
+    async function checkUrlInviteAndBoot() {
+      const params = new URLSearchParams(window.location.search);
+      const invitedEnsembleId = params.get("ensemble");
+
+      if (invitedEnsembleId) {
+        // Si l'utilisateur fait déjà partie de cet ensemble, on l'ouvre directement
+        if (session.ensembles[invitedEnsembleId]) {
+          session.activeEnsembleId = invitedEnsembleId;
+          saveSession();
+          window.history.replaceState({}, "", window.location.pathname);
+          enterEnsemble(invitedEnsembleId);
+          return;
+        }
+
+        // Sinon on récupère le nom de l'ensemble invité pour un accueil dédié
+        try {
+          const snap = await get(ref(db, `ensembles/${invitedEnsembleId}`));
+          if (snap.exists()) {
+            const data = snap.val();
+            $("join-kicker").textContent = `Invitation — ${data.formation || "Ensemble"}`;
+            $("join-ensemble-title").textContent = `Rejoindre « ${data.name} »`;
+            $("join-code").value = invitedEnsembleId;
+            $("join-code-field").classList.add("hidden");
+            $("join-card").classList.add("featured");
+            $("create-card").classList.add("hidden");
+            $("onboarding-divider").classList.add("hidden");
+          }
+        } catch (err) {
+          console.warn(err);
+        }
+        showOnboarding();
+        return;
+      }
+
+      if (session.activeEnsembleId && session.ensembles[session.activeEnsembleId]) {
+        enterEnsemble(session.activeEnsembleId);
+      } else {
+        showOnboarding();
+      }
+    }
+
+    function showOnboarding() {
+      $("app-header").classList.add("hidden");
+      $("app-nav").classList.add("hidden");
+      $("view-agenda").classList.add("hidden");
+      $("view-avail").classList.add("hidden");
+      $("view-ensemble").classList.add("hidden");
+      $("view-onboarding").classList.remove("hidden");
+    }
+
+    // Formulaire : Créer un ensemble
+    $("form-create").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      const ensembleName = $("create-ensemble-name").value.trim();
+      const formation = $("create-formation").value;
+      const memberName = $("create-member-name").value.trim();
+      const instrument = $("create-member-instrument").value.trim();
+
+      const ensembleId = generateId("ens");
+      const memberId = generateId("mbr");
+
+      const payload = {
+        id: ensembleId,
+        name: ensembleName,
+        formation,
+        createdAt: Date.now(),
+        members: {
+          [memberId]: {
+            id: memberId,
+            name: memberName,
+            instrument,
+            pushEnabled: Notification.permission === "granted",
+            joinedAt: Date.now()
+          }
+        }
+      };
+
+      await set(ref(db, `ensembles/${ensembleId}`), payload);
+
+      session.ensembles[ensembleId] = { memberId, name: memberName, instrument, ensembleName };
+      session.activeEnsembleId = ensembleId;
+      saveSession();
+
+      showToast("Ensemble créé.");
+      enterEnsemble(ensembleId);
+    });
+
+    // Formulaire : Rejoindre un ensemble
+    $("form-join").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      let rawCode = $("join-code").value.trim();
+      // Extrait l'ID si l'utilisateur a collé l'URL complète
+      if (rawCode.includes("ensemble=")) {
+        try {
+          const u = new URL(rawCode);
+          rawCode = u.searchParams.get("ensemble") || rawCode;
+        } catch (_) {
+          rawCode = rawCode.split("ensemble=")[1].split("&")[0];
+        }
+      }
+
+      const memberName = $("join-name").value.trim();
+      const instrument = $("join-instrument").value.trim();
+
+      const snap = await get(ref(db, `ensembles/${rawCode}`));
+      if (!snap.exists()) {
+        showToast("Ensemble introuvable. Vérifiez le lien ou le code.");
+        return;
+      }
+
+      const ensembleData = snap.val();
+      const memberId = generateId("mbr");
+
+      await set(ref(db, `ensembles/${rawCode}/members/${memberId}`), {
+        id: memberId,
+        name: memberName,
+        instrument,
+        pushEnabled: Notification.permission === "granted",
+        joinedAt: Date.now()
+      });
+
+      session.ensembles[rawCode] = {
+        memberId,
+        name: memberName,
+        instrument,
+        ensembleName: ensembleData.name
+      };
+      session.activeEnsembleId = rawCode;
+      saveSession();
+
+      window.history.replaceState({}, "", window.location.pathname);
+      showToast(`Bienvenue dans ${ensembleData.name}.`);
+      enterEnsemble(rawCode);
+    });
+
+    // Connexion temps réel à l'ensemble actif
+    function enterEnsemble(ensembleId) {
+      $("view-onboarding").classList.add("hidden");
+      $("app-header").classList.remove("hidden");
+      $("app-nav").classList.remove("hidden");
+      switchTab("agenda");
+
+      if (unsubscribeEnsemble) unsubscribeEnsemble();
+
+      const ensembleRef = ref(db, `ensembles/${ensembleId}`);
+      unsubscribeEnsemble = onValue(ensembleRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          showToast("Cet ensemble n'existe plus.");
+          delete session.ensembles[ensembleId];
+          session.activeEnsembleId = null;
+          saveSession();
+          showOnboarding();
+          return;
+        }
+
+        currentEnsembleData = snapshot.val();
+        session.ensembles[ensembleId].ensembleName = currentEnsembleData.name;
+        saveSession();
+
+        // Déclenchement notification temps réel si événement créé par un autre membre
+        const myMemberId = session.ensembles[ensembleId]?.memberId;
+        const lastEvt = currentEnsembleData.lastEvent;
+        if (lastEvt && lastEvt.timestamp > lastNotifiedTimestamp && lastEvt.authorId !== myMemberId) {
+          lastNotifiedTimestamp = lastEvt.timestamp;
+          localStorage.setItem("cadenza_last_event_ts", String(lastNotifiedTimestamp));
+          triggerLocalSystemNotification(lastEvt.title, lastEvt.body);
+        }
+
+        renderAll();
+      });
+    }
+
+    async function publishEnsembleNotification(title, body) {
+      if (!session.activeEnsembleId) return;
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+      const ts = Date.now();
+      lastNotifiedTimestamp = ts;
+      localStorage.setItem("cadenza_last_event_ts", String(ts));
+
+      await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
+        lastEvent: {
+          title,
+          body,
+          timestamp: ts,
+          authorId: myMemberId
+        }
+      });
+    }
+
+    // Rendu complet de l'interface
+    function renderAll() {
+      if (!currentEnsembleData) return;
+      $("header-ensemble-name").textContent = `${currentEnsembleData.name} • ${currentEnsembleData.formation || ""}`;
+      renderAgenda();
+      renderPolls();
+      renderEnsembleInfo();
+    }
+
+    // 1. Rendu Agenda
+    function renderAgenda() {
+      const container = $("agenda-list");
+      const rehearsalsObj = currentEnsembleData.rehearsals || {};
+      const rehearsals = Object.values(rehearsalsObj).sort((a, b) =>
+        `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`)
+      );
+
+      if (rehearsals.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>Aucune répétition planifiée pour le moment.</p>
+            <button class="btn-secondary btn-sm" id="empty-go-avail">Proposer des disponibilités</button>
+          </div>
+        `;
+        $("empty-go-avail").addEventListener("click", () => switchTab("avail"));
+        return;
+      }
+
+      const todayStr = new Date().toISOString().split("T")[0];
+      const upcoming = rehearsals.filter((r) => r.date >= todayStr);
+      const past = rehearsals.filter((r) => r.date < todayStr);
+
+      let html = "";
+
+      upcoming.forEach((reh, idx) => {
+        const isNext = idx === 0;
+        html += `
+          <article class="card ${isNext ? "featured" : ""}">
+            ${isNext ? '<div class="card-kicker">Prochaine répétition</div>' : ""}
+            <h3 class="card-date">${escapeHtml(formatDateFr(reh.date))}</h3>
+            <div class="card-meta">${escapeHtml(reh.startTime)} – ${escapeHtml(reh.endTime)} • <strong>${escapeHtml(reh.location)}</strong></div>
+            ${reh.program ? `<div class="card-program"><strong>Programme :</strong> ${escapeHtml(reh.program)}</div>` : ""}
+            ${reh.notes ? `<div class="card-meta" style="margin-top:6px;">${escapeHtml(reh.notes)}</div>` : ""}
+            <div class="card-actions">
+              <button class="btn-secondary btn-sm" data-ics="${escapeHtml(reh.id)}">Ajouter à mon calendrier (.ics)</button>
+              <button class="btn-secondary btn-sm" data-del-reh="${escapeHtml(reh.id)}">Annuler</button>
+            </div>
+          </article>
+        `;
+      });
+
+      if (past.length > 0) {
+        html += `<div class="divider">Répétitions passées (${past.length})</div>`;
+        past.reverse().forEach((reh) => {
+          html += `
+            <article class="card" style="opacity: 0.65;">
+              <h3 class="card-date" style="font-size: 16px;">${escapeHtml(formatDateFr(reh.date))}</h3>
+              <div class="card-meta">${escapeHtml(reh.startTime)} – ${escapeHtml(reh.endTime)} • ${escapeHtml(reh.location)}</div>
+              ${reh.program ? `<div class="card-meta">${escapeHtml(reh.program)}</div>` : ""}
+            </article>
+          `;
+        });
+      }
+
+      container.innerHTML = html;
+
+      container.querySelectorAll("[data-ics]").forEach((btn) => {
+        btn.addEventListener("click", () => downloadICS(rehearsalsObj[btn.dataset.ics]));
+      });
+
+      container.querySelectorAll("[data-del-reh]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("Supprimer cette répétition de l'agenda ?")) return;
+          await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${btn.dataset.delReh}`));
+          showToast("Répétition retirée de l'agenda.");
+        });
+      });
+    }
+
+    // Export fichier calendrier natif (.ics)
+    function downloadICS(reh) {
+      if (!reh) return;
+      haptic();
+      const dtStart = `${reh.date.replace(/-/g, "")}T${reh.startTime.replace(":", "")}00`;
+      const dtEnd = `${reh.date.replace(/-/g, "")}T${reh.endTime.replace(":", "")}00`;
+      const summary = `Répétition — ${currentEnsembleData.name}`;
+      const desc = [reh.program ? `Programme: ${reh.program}` : "", reh.notes || ""].filter(Boolean).join("\\n");
+
+      const icsContent = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Cadenza//Ensemble Agenda//FR",
+        "BEGIN:VEVENT",
+        `UID:${reh.id}@cadenza.app`,
+        `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
+        `DTSTART:${dtStart}`,
+        `DTEND:${dtEnd}`,
+        `SUMMARY:${summary}`,
+        `LOCATION:${reh.location || ""}`,
+        `DESCRIPTION:${desc}`,
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ].join("\r\n");
+
+      const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cadenza-${reh.date}.ics`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Fichier calendrier (.ics) téléchargé.");
+    }
+
+    // 2. Rendu Disponibilités
+    function renderPolls() {
+      const container = $("polls-list");
+      const pollsObj = currentEnsembleData.polls || {};
+      const membersObj = currentEnsembleData.members || {};
+      const membersList = Object.values(membersObj);
+      const totalMembers = membersList.length;
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+
+      const polls = Object.values(pollsObj).sort((a, b) =>
+        `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`)
+      );
+
+      if (polls.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>Aucune date en cours de sondage.</p>
+            <button class="btn-primary btn-sm" id="empty-add-poll">Proposer des dates aux membres</button>
+          </div>
+        `;
+        $("empty-add-poll").addEventListener("click", () => openModal("modal-poll"));
+        return;
+      }
+
+      container.innerHTML = polls.map((poll) => {
+        const votes = poll.votes || {};
+        const myVote = votes[myMemberId] || "";
+        const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
+        const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
+
+        const chipsHtml = membersList.map((m) => {
+          const v = votes[m.id];
+          const symbol = v === "yes" ? "●" : v === "maybe" ? "◐" : v === "no" ? "✕" : "○";
+          const cls = v === "yes" ? "yes" : v === "no" ? "no" : "";
+          return `<span class="member-chip ${cls}">${symbol} ${escapeHtml(m.name)} (${escapeHtml(m.instrument)})</span>`;
+        }).join("");
+
+        return `
+          <article class="card ${isFullConsensus ? "featured" : ""}">
+            <span class="consensus-badge ${isFullConsensus ? "full" : ""}">
+              ${isFullConsensus ? `Tous disponibles (${yesCount}/${totalMembers})` : `${yesCount} / ${totalMembers} disponible${yesCount > 1 ? "s" : ""}`}
+            </span>
+            <h3 class="card-date">${escapeHtml(formatDateFr(poll.date))}</h3>
+            <div class="card-meta">
+              ${escapeHtml(poll.startTime)} – ${escapeHtml(poll.endTime)}
+              ${poll.location ? ` • ${escapeHtml(poll.location)}` : ""}
+            </div>
+            ${poll.note ? `<div class="card-meta">${escapeHtml(poll.note)}</div>` : ""}
+
+            <div class="vote-group" role="group" aria-label="Votre disponibilité">
+              <button class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes">Disponible</button>
+              <button class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe">Incertain</button>
+              <button class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no">Indisponible</button>
+            </div>
+
+            <div class="member-votes-list">${chipsHtml}</div>
+
+            <div class="card-actions">
+              <button class="btn-primary btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+              <button class="btn-secondary btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      // Écouteurs votes
+      container.querySelectorAll("[data-vote]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          haptic();
+          const pollId = btn.dataset.vote;
+          const val = btn.dataset.val;
+          await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}/votes/${myMemberId}`), val);
+        });
+      });
+
+      // Valider un sondage en répétition officielle
+      container.querySelectorAll("[data-confirm-poll]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          haptic();
+          const poll = pollsObj[btn.dataset.confirmPoll];
+          if (!poll) return;
+
+          const rehId = generateId("reh");
+          const location = poll.location || prompt("Lieu de la répétition :", "À confirmer") || "Lieu à confirmer";
+
+          await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+            id: rehId,
+            date: poll.date,
+            startTime: poll.startTime,
+            endTime: poll.endTime,
+            location,
+            program: poll.note || "",
+            notes: "",
+            createdAt: Date.now()
+          });
+
+          await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`));
+          await publishEnsembleNotification(
+            `Répétition confirmée — ${currentEnsembleData.name}`,
+            `${formatDateFr(poll.date)} • ${poll.startTime}–${poll.endTime} (${location})`
+          );
+
+          showToast("Répétition ajoutée à l'agenda centralisé.");
+          switchTab("agenda");
+        });
+      });
+
+      // Supprimer sondage
+      container.querySelectorAll("[data-del-poll]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${btn.dataset.delPoll}`));
+          showToast("Créneau supprimé.");
+        });
+      });
+    }
+
+    // 3. Rendu Infos Ensemble & Membres
+    function renderEnsembleInfo() {
+      const members = Object.values(currentEnsembleData.members || {});
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+
+      $("info-formation").textContent = currentEnsembleData.formation || "Ensemble";
+      $("info-name").textContent = currentEnsembleData.name;
+      $("info-code").textContent = session.activeEnsembleId;
+      $("members-count").textContent = members.length;
+
+      $("members-list").innerHTML = members.map((m) => `
+        <div class="member-row">
+          <div>
+            <strong>${escapeHtml(m.name)}</strong> ${m.id === myMemberId ? "(Vous)" : ""}
+            <div style="font-size: 12.5px; color: var(--muted);">${escapeHtml(m.instrument)}</div>
+          </div>
+          <span style="font-size: 12px; color: var(--muted);">
+            ${m.pushEnabled ? "Alertes actives" : "Sans alerte"}
+          </span>
+        </div>
+      `).join("");
+
+      // Liste des ensembles sauvegardés sur cet appareil
+      const savedIds = Object.keys(session.ensembles);
+      $("saved-ensembles-list").innerHTML = savedIds.map((id) => {
+        const item = session.ensembles[id];
+        const isCurrent = id === session.activeEnsembleId;
+        return `
+          <div class="member-row">
+            <div>
+              <strong>${escapeHtml(item.ensembleName || id)}</strong>
+              <div style="font-size: 12px; color: var(--muted);">${escapeHtml(item.name)} • ${escapeHtml(item.instrument)}</div>
+            </div>
+            ${isCurrent
+              ? `<span style="font-size: 12px; font-weight: 600;">Actif</span>`
+              : `<button class="btn-secondary btn-sm" data-switch-ens="${escapeHtml(id)}">Ouvrir</button>`
+            }
+          </div>
+        `;
+      }).join("");
+
+      $("saved-ensembles-list").querySelectorAll("[data-switch-ens]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          session.activeEnsembleId = btn.dataset.switchEns;
+          saveSession();
+          enterEnsemble(session.activeEnsembleId);
+        });
+      });
+    }
+
+    // Partage du lien d'invitation
+    async function shareInviteLink() {
+      haptic();
+      const url = getInviteUrl(session.activeEnsembleId);
+      const title = `Rejoindre ${currentEnsembleData.name} sur Cadenza`;
+      const text = `Voici le lien pour indiquer tes disponibilités et consulter l'agenda de ${currentEnsembleData.name} :`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, text, url });
+          return;
+        } catch (_) {}
+      }
+
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast("Lien d'invitation copié dans le presse-papiers.");
+      } catch (_) {
+        prompt("Copiez ce lien d'invitation :", url);
+      }
+    }
+
+    // Soumission formulaire : Proposer une date
+    $("form-poll").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      const date = $("poll-date").value;
+      const startTime = $("poll-start").value;
+      const endTime = $("poll-end").value;
+      const location = $("poll-location").value.trim();
+      const note = $("poll-note").value.trim();
+      const myMember = session.ensembles[session.activeEnsembleId];
+
+      const pollId = generateId("pol");
+      await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
+        id: pollId,
+        date,
+        startTime,
+        endTime,
+        location,
+        note,
+        createdBy: myMember.name,
+        votes: {
+          [myMember.memberId]: "yes"
+        }
+      });
+
+      await publishEnsembleNotification(
+        `Nouvelle date proposée — ${currentEnsembleData.name}`,
+        `${myMember.name} propose le ${formatDateFr(date)} (${startTime}–${endTime})`
+      );
+
+      $("form-poll").reset();
+      closeModal("modal-poll");
+      showToast("Date proposée aux membres.");
+    });
+
+    // Soumission formulaire : Ajouter directement une répétition
+    $("form-rehearsal").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      const date = $("reh-date").value;
+      const startTime = $("reh-start").value;
+      const endTime = $("reh-end").value;
+      const location = $("reh-location").value.trim();
+      const program = $("reh-program").value.trim();
+      const notes = $("reh-notes").value.trim();
+
+      const rehId = generateId("reh");
+      await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+        id: rehId,
+        date,
+        startTime,
+        endTime,
+        location,
+        program,
+        notes,
+        createdAt: Date.now()
+      });
+
+      await publishEnsembleNotification(
+        `Nouvelle répétition — ${currentEnsembleData.name}`,
+        `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`
+      );
+
+      $("form-rehearsal").reset();
+      closeModal("modal-rehearsal");
+      showToast("Répétition ajoutée à l'agenda.");
+    });
+
+    // Boutons d'actions globaux
+    $("btn-open-poll").addEventListener("click", () => openModal("modal-poll"));
+    $("btn-open-rehearsal").addEventListener("click", () => openModal("modal-rehearsal"));
+    $("btn-invite-top").addEventListener("click", shareInviteLink);
+    $("btn-share-invite").addEventListener("click", shareInviteLink);
+    $("btn-notif-top").addEventListener("click", requestPushPermission);
+    $("btn-enable-push").addEventListener("click", requestPushPermission);
+    $("btn-test-push").addEventListener("click", () => {
+      if (Notification.permission !== "granted") {
+        requestPushPermission();
+      } else {
+        triggerLocalSystemNotification(
+          `Cadenza — ${currentEnsembleData?.name || "Ensemble"}`,
+          "Exemple de notification système pour vos répétitions."
+        );
+      }
+    });
+    $("btn-switch-onboarding").addEventListener("click", () => {
+      $("join-card").classList.remove("featured");
+      $("join-code-field").classList.remove("hidden");
+      $("create-card").classList.remove("hidden");
+      $("onboarding-divider").classList.remove("hidden");
+      $("join-kicker").textContent = "Rejoindre un ensemble";
+      $("join-ensemble-title").textContent = "Accéder à un espace existant";
+      $("join-code").value = "";
+      showOnboarding();
+    });
+
+    // Démarrage
+    await initServiceWorkerAndPush();
+    await checkUrlInviteAndBoot();
+  </script>
+</body>
+</html>
