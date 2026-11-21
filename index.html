@@ -56,7 +56,6 @@
       flex-direction: column;
     }
 
-    /* En-tête fixe sobre */
     header {
       position: sticky;
       top: 0;
@@ -119,7 +118,6 @@
       flex-shrink: 0;
     }
 
-    /* Conteneur principal */
     main {
       flex: 1;
       width: 100%;
@@ -128,7 +126,6 @@
       padding: 18px 16px calc(92px + var(--safe-bottom));
     }
 
-    /* Boutons */
     button, .btn {
       font-family: var(--font-sans);
       font-size: 14px;
@@ -149,6 +146,11 @@
 
     button:active {
       transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: wait;
     }
 
     .btn-primary {
@@ -203,7 +205,6 @@
       border: 1px solid #888;
     }
 
-    /* Formulaires */
     .field {
       margin-bottom: 14px;
     }
@@ -241,7 +242,6 @@
       gap: 10px;
     }
 
-    /* Cartes & Sections */
     .section-head {
       display: flex;
       align-items: center;
@@ -305,7 +305,20 @@
       margin-top: 12px;
     }
 
-    /* Sondage disponibilités */
+    .alert-box {
+      border: 1.5px solid var(--fg);
+      background: var(--subtle);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .alert-box strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
     .consensus-badge {
       display: inline-block;
       font-size: 12px;
@@ -381,7 +394,6 @@
       text-decoration: line-through;
     }
 
-    /* Barre de navigation inférieure native */
     nav.tab-bar {
       position: fixed;
       bottom: 0;
@@ -422,7 +434,6 @@
       stroke-width: 1.75;
     }
 
-    /* Modales / Bottom Sheets */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -474,7 +485,6 @@
       margin: 0;
     }
 
-    /* Écran d'accueil / Onboarding */
     .onboarding-wrap {
       max-width: 440px;
       margin: 24px auto;
@@ -522,12 +532,11 @@
       background: var(--border);
     }
 
-    /* Toast feedback */
     .toast {
       position: fixed;
       top: calc(16px + var(--safe-top));
       left: 50%;
-      transform: translateX(-50%) translateY(-120%);
+      transform: translateX(-50%) translateY(-140%);
       z-index: 100;
       background: var(--fg);
       color: var(--bg);
@@ -535,7 +544,7 @@
       border-radius: 6px;
       font-size: 13.5px;
       transition: transform 0.22s ease;
-      max-width: 90vw;
+      max-width: 92vw;
       text-align: center;
     }
 
@@ -582,6 +591,18 @@
     .member-row:last-child {
       border-bottom: none;
     }
+
+    .invite-url-box {
+      font-family: monospace;
+      font-size: 12.5px;
+      background: var(--subtle);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 6px;
+      word-break: break-all;
+      margin-bottom: 12px;
+      user-select: all;
+    }
   </style>
 </head>
 <body>
@@ -592,19 +613,18 @@
   <header id="app-header" class="hidden">
     <div class="header-inner">
       <div class="brand">
-        <!-- Symbole de la cadence / point d'orgue -->
         <svg viewBox="0 0 100 100" aria-hidden="true">
           <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#000000"/>
           <circle cx="50" cy="57" r="6.5" fill="#000000"/>
         </svg>
         <div class="brand-titles">
           <h1 class="brand-name">Cadenza</h1>
-          <div id="header-ensemble-name" class="ensemble-subtitle">Chargement...</div>
+          <div id="header-ensemble-name" class="ensemble-subtitle">Synchronisation...</div>
         </div>
       </div>
       <div class="header-actions">
-        <button id="btn-invite-top" class="btn-secondary btn-sm" title="Inviter les membres">Inviter</button>
-        <button id="btn-notif-top" class="icon-btn" title="Notifications système" aria-label="Notifications">
+        <button type="button" id="btn-invite-top" class="btn-secondary btn-sm" title="Inviter les membres">Inviter</button>
+        <button type="button" id="btn-notif-top" class="icon-btn" title="Notifications système" aria-label="Notifications">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -617,6 +637,12 @@
 
   <!-- Contenu Principal -->
   <main>
+    <!-- Alerte Firebase si règles bloquées -->
+    <div id="firebase-error-banner" class="alert-box hidden" role="alert">
+      <strong>Connexion Firebase requise</strong>
+      <span id="firebase-error-text">Vérifiez les règles de votre Realtime Database dans la console Firebase.</span>
+    </div>
+
     <!-- ÉCRAN 0 : Création ou Jonction d'un ensemble -->
     <section id="view-onboarding" class="onboarding-wrap hidden">
       <div class="onboarding-logo">
@@ -628,7 +654,7 @@
         <p>Disponibilités et agenda centralisé pour ensembles musicaux.</p>
       </div>
 
-      <!-- Carte Rejoindre (mise en avant si lien d'invitation) -->
+      <!-- Carte Rejoindre -->
       <div id="join-card" class="card">
         <div class="card-kicker" id="join-kicker">Rejoindre un ensemble</div>
         <h2 class="modal-title" id="join-ensemble-title" style="margin-bottom: 12px;">Accéder à un espace existant</h2>
@@ -647,7 +673,7 @@
               <input type="text" id="join-instrument" placeholder="Ex: Violon I" required />
             </div>
           </div>
-          <button type="submit" class="btn-primary btn-full">Rejoindre l'ensemble</button>
+          <button type="submit" id="btn-submit-join" class="btn-primary btn-full">Rejoindre l'ensemble</button>
         </form>
       </div>
 
@@ -683,7 +709,7 @@
               <input type="text" id="create-member-instrument" placeholder="Ex: Violoncelle" required />
             </div>
           </div>
-          <button type="submit" class="btn-secondary btn-full">Créer et inviter les membres</button>
+          <button type="submit" id="btn-submit-create" class="btn-secondary btn-full">Créer et inviter les membres</button>
         </form>
       </div>
     </section>
@@ -691,16 +717,15 @@
     <!-- Bannière installation PWA -->
     <div id="install-banner" class="banner-install hidden">
       <span id="install-text">Installer Cadenza sur votre appareil pour recevoir les alertes.</span>
-      <button id="btn-install-pwa" class="btn-primary btn-sm">Installer</button>
+      <button type="button" id="btn-install-pwa" class="btn-primary btn-sm">Installer</button>
     </div>
 
     <!-- VUE 1 : AGENDA CENTRALISÉ -->
     <section id="view-agenda" class="hidden">
       <div class="section-head">
         <h2 class="section-title">Agenda de l'ensemble</h2>
-        <button id="btn-open-rehearsal" class="btn-primary btn-sm">+ Répétition</button>
+        <button type="button" id="btn-open-rehearsal" class="btn-primary btn-sm">+ Répétition</button>
       </div>
-
       <div id="agenda-list"></div>
     </section>
 
@@ -708,9 +733,8 @@
     <section id="view-avail" class="hidden">
       <div class="section-head">
         <h2 class="section-title">Disponibilités</h2>
-        <button id="btn-open-poll" class="btn-primary btn-sm">+ Proposer une date</button>
+        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer une date</button>
       </div>
-
       <div id="polls-list"></div>
     </section>
 
@@ -725,7 +749,7 @@
         <h3 class="card-date" id="info-name" style="font-family: var(--font-serif); font-size: 22px;">—</h3>
         <div class="card-meta">Code d'invitation : <strong id="info-code">—</strong></div>
         <div class="card-actions">
-          <button id="btn-share-invite" class="btn-primary btn-full">Envoyer le lien d'invitation</button>
+          <button type="button" id="btn-share-invite" class="btn-primary btn-full">Envoyer le lien d'invitation</button>
         </div>
       </div>
 
@@ -740,8 +764,8 @@
           Recevez une alerte native dès qu'une date est proposée ou qu'une répétition est validée, même lorsque l'application est fermée.
         </p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button id="btn-enable-push" class="btn-primary btn-sm">Activer les notifications</button>
-          <button id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
+          <button type="button" id="btn-enable-push" class="btn-primary btn-sm">Activer les notifications</button>
+          <button type="button" id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
         </div>
         <div id="push-status-msg" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
       </div>
@@ -749,26 +773,47 @@
       <div class="card">
         <div class="card-kicker">Mon profil & Mes ensembles</div>
         <div id="saved-ensembles-list" style="margin: 8px 0 12px;"></div>
-        <button id="btn-switch-onboarding" class="btn-secondary btn-sm btn-full">Créer ou rejoindre un autre ensemble</button>
+        <button type="button" id="btn-switch-onboarding" class="btn-secondary btn-sm btn-full">Créer ou rejoindre un autre ensemble</button>
       </div>
     </section>
   </main>
 
   <!-- Barre de navigation inférieure -->
   <nav id="app-nav" class="tab-bar hidden" aria-label="Navigation principale">
-    <button class="tab-item active" data-tab="agenda">
+    <button type="button" class="tab-item active" data-tab="agenda">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <span>Agenda</span>
     </button>
-    <button class="tab-item" data-tab="avail">
+    <button type="button" class="tab-item" data-tab="avail">
       <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       <span>Disponibilités</span>
     </button>
-    <button class="tab-item" data-tab="ensemble">
+    <button type="button" class="tab-item" data-tab="ensemble">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span>Ensemble</span>
     </button>
   </nav>
+
+  <!-- MODALE : INVITER LES MEMBRES -->
+  <div id="modal-invite" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Inviter les musiciens</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-invite">Fermer</button>
+      </div>
+      <p style="font-size: 13.5px; color: var(--muted); margin: 0 0 12px;">
+        Envoyez ce lien direct aux membres de votre ensemble. Ils pourront indiquer leurs disponibilités sans créer de compte.
+      </p>
+      <div class="invite-url-box" id="invite-link-display">—</div>
+      <div style="display: grid; gap: 8px;">
+        <button type="button" id="btn-copy-invite" class="btn-primary btn-full">Copier le lien d'invitation</button>
+        <button type="button" id="btn-native-share" class="btn-secondary btn-full">Partager via WhatsApp / SMS / Mail</button>
+      </div>
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--subtle); font-size: 12.5px; color: var(--muted);">
+        Code direct de l'ensemble : <strong id="invite-code-display" style="color: var(--fg);">—</strong>
+      </div>
+    </div>
+  </div>
 
   <!-- MODALE : PROPOSER UNE DATE DE DISPONIBILITÉ -->
   <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
@@ -844,7 +889,7 @@
     </div>
   </div>
 
-  <!-- Génération automatique de l'icône Apple Touch PNG 180x180 à partir du symbole de cadence -->
+  <!-- Génération icône Apple Touch PNG 180x180 -->
   <script>
     (function generateAppleTouchIcon() {
       try {
@@ -878,7 +923,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
-    import { getDatabase, ref, set, push, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
+    import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
     const firebaseConfig = {
@@ -892,19 +937,18 @@
       measurementId: "G-PT9W1RCJJR"
     };
 
-    // Optionnel : Collez ici votre clé publique VAPID (Console Firebase > Paramètres > Cloud Messaging > Certificats Push Web)
-    // pour activer le réveil serveur FCM 100% fermé sur tous les appareils.
     const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
 
     const app = initializeApp(firebaseConfig);
     try { getAnalytics(app); } catch (_) {}
     const db = getDatabase(app);
 
-    // État local persistant
     const STORAGE_KEY = "cadenza_session_v1";
+    const PENDING_INVITE_KEY = "cadenza_pending_invite";
+
     let session = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
       activeEnsembleId: null,
-      ensembles: {} // { [ensembleId]: { memberId, name, instrument, ensembleName } }
+      ensembles: {}
     };
 
     let currentEnsembleData = null;
@@ -914,7 +958,6 @@
     let lastNotifiedTimestamp = Number(localStorage.getItem("cadenza_last_event_ts") || Date.now());
     let deferredInstallPrompt = null;
 
-    // Utilitaires
     const $ = (id) => document.getElementById(id);
 
     function saveSession() {
@@ -930,7 +973,21 @@
       el.textContent = msg;
       el.classList.add("show");
       clearTimeout(el._timer);
-      el._timer = setTimeout(() => el.classList.remove("show"), 3200);
+      el._timer = setTimeout(() => el.classList.remove("show"), 3400);
+    }
+
+    function handleFirebaseError(err) {
+      console.error("Firebase error:", err);
+      const banner = $("firebase-error-banner");
+      const text = $("firebase-error-text");
+      const msg = String(err?.message || err || "");
+      if (msg.toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED") {
+        text.textContent = "Accès refusé par Firebase : ouvrez la console Firebase > Realtime Database > Règles et autorisez .read et .write sur \"ensembles\".";
+      } else {
+        text.textContent = `Erreur de synchronisation Firebase : ${msg}`;
+      }
+      banner.classList.remove("hidden");
+      showToast("Erreur de connexion à la base de données.");
     }
 
     function escapeHtml(str) {
@@ -962,7 +1019,31 @@
     }
 
     function getInviteUrl(ensembleId) {
-      return `${window.location.origin}${window.location.pathname}?ensemble=${encodeURIComponent(ensembleId)}`;
+      const base = `${window.location.origin}${window.location.pathname}`;
+      return `${base}?ensemble=${encodeURIComponent(ensembleId)}`;
+    }
+
+    async function copyTextReliable(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (_) {}
+      }
+      try {
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        temp.style.position = "fixed";
+        temp.style.opacity = "0";
+        document.body.appendChild(temp);
+        temp.focus();
+        temp.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(temp);
+        return ok;
+      } catch (_) {
+        return false;
+      }
     }
 
     // Service Worker & Notifications Push
@@ -974,8 +1055,8 @@
         if (supported) {
           messagingInstance = getMessaging(app);
           onMessage(messagingInstance, (payload) => {
-            const title = payload.notification?.title || "Cadenza";
-            const body = payload.notification?.body || "Mise à jour de votre ensemble.";
+            const title = payload.notification?.title || payload.data?.title || "Cadenza";
+            const body = payload.notification?.body || payload.data?.body || "Mise à jour de votre ensemble.";
             triggerLocalSystemNotification(title, body);
           });
         }
@@ -1007,7 +1088,6 @@
         return;
       }
 
-      // Sur iOS, les notifications PWA exigent l'installation sur l'écran d'accueil
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
       if (isIOS && !isStandalone) {
@@ -1026,6 +1106,7 @@
       let fcmToken = null;
       if (messagingInstance && swRegistration && FIREBASE_VAPID_KEY) {
         try {
+          await navigator.serviceWorker.ready;
           fcmToken = await getToken(messagingInstance, {
             vapidKey: FIREBASE_VAPID_KEY,
             serviceWorkerRegistration: swRegistration
@@ -1037,14 +1118,18 @@
 
       if (session.activeEnsembleId && session.ensembles[session.activeEnsembleId]) {
         const memberId = session.ensembles[session.activeEnsembleId].memberId;
-        await update(ref(db, `ensembles/${session.activeEnsembleId}/members/${memberId}`), {
-          pushEnabled: true,
-          ...(fcmToken ? { fcmToken } : {})
-        });
+        try {
+          await update(ref(db, `ensembles/${session.activeEnsembleId}/members/${memberId}`), {
+            pushEnabled: true,
+            ...(fcmToken ? { fcmToken } : {})
+          });
+        } catch (err) {
+          handleFirebaseError(err);
+        }
       }
 
-      showToast("Notifications système activées.");
-      await triggerLocalSystemNotification("Cadenza", "Les notifications de répétition sont actives sur cet appareil.");
+      showToast(fcmToken ? "Notifications Push FCM activées." : "Notifications système activées.");
+      await triggerLocalSystemNotification("Cadenza", "Les alertes de répétition sont actives sur cet appareil.");
     }
 
     function updatePushUI() {
@@ -1057,18 +1142,13 @@
       }
       if (Notification.permission === "granted") {
         dot.classList.remove("off");
-        if (msg) {
-          msg.textContent = FIREBASE_VAPID_KEY
-            ? "Statut : Actif (notifications système + arrière-plan FCM)."
-            : "Statut : Notifications système actives sur cet appareil.";
-        }
+        if (msg) msg.textContent = "Statut : Actif (clé VAPID FCM configurée).";
       } else {
         dot.classList.add("off");
-        if (msg) msg.textContent = "Statut : Désactivées. Cliquez sur le bouton ci-dessus pour les activer.";
+        if (msg) msg.textContent = "Statut : Désactivées. Appuyez sur Activer les notifications.";
       }
     }
 
-    // Installation PWA (Android / Desktop / iOS)
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredInstallPrompt = e;
@@ -1084,7 +1164,6 @@
       }
     });
 
-    // Navigation par onglets
     function switchTab(tabName) {
       haptic();
       ["agenda", "avail", "ensemble"].forEach((t) => {
@@ -1099,12 +1178,15 @@
       btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
 
-    // Modales
     function openModal(id) {
       haptic();
       const today = new Date().toISOString().split("T")[0];
       if (id === "modal-poll" && !$("poll-date").value) $("poll-date").value = today;
       if (id === "modal-rehearsal" && !$("reh-date").value) $("reh-date").value = today;
+      if (id === "modal-invite" && session.activeEnsembleId) {
+        $("invite-link-display").textContent = getInviteUrl(session.activeEnsembleId);
+        $("invite-code-display").textContent = session.activeEnsembleId;
+      }
       $(id).classList.add("open");
     }
 
@@ -1122,13 +1204,19 @@
       });
     });
 
-    // Gestion Onboarding (Création ou Rejoindre via lien)
+    // Détection lien d'invitation (URL ou mémoire locale iOS PWA)
     async function checkUrlInviteAndBoot() {
       const params = new URLSearchParams(window.location.search);
-      const invitedEnsembleId = params.get("ensemble");
+      const urlEnsembleId = params.get("ensemble");
+      if (urlEnsembleId) {
+        localStorage.setItem(PENDING_INVITE_KEY, urlEnsembleId);
+      }
+
+      const invitedEnsembleId = urlEnsembleId || localStorage.getItem(PENDING_INVITE_KEY);
 
       if (invitedEnsembleId) {
-        // Si l'utilisateur fait déjà partie de cet ensemble, on l'ouvre directement
+        localStorage.removeItem(PENDING_INVITE_KEY);
+
         if (session.ensembles[invitedEnsembleId]) {
           session.activeEnsembleId = invitedEnsembleId;
           saveSession();
@@ -1137,21 +1225,23 @@
           return;
         }
 
-        // Sinon on récupère le nom de l'ensemble invité pour un accueil dédié
+        $("join-code").value = invitedEnsembleId;
+        $("join-card").classList.add("featured");
+
         try {
           const snap = await get(ref(db, `ensembles/${invitedEnsembleId}`));
           if (snap.exists()) {
             const data = snap.val();
             $("join-kicker").textContent = `Invitation — ${data.formation || "Ensemble"}`;
             $("join-ensemble-title").textContent = `Rejoindre « ${data.name} »`;
-            $("join-code").value = invitedEnsembleId;
             $("join-code-field").classList.add("hidden");
-            $("join-card").classList.add("featured");
             $("create-card").classList.add("hidden");
             $("onboarding-divider").classList.add("hidden");
+          } else {
+            showToast("Cet ensemble est introuvable ou a été supprimé.");
           }
         } catch (err) {
-          console.warn(err);
+          handleFirebaseError(err);
         }
         showOnboarding();
         return;
@@ -1173,128 +1263,153 @@
       $("view-onboarding").classList.remove("hidden");
     }
 
-    // Formulaire : Créer un ensemble
+    // Créer un ensemble
     $("form-create").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
-      const ensembleName = $("create-ensemble-name").value.trim();
-      const formation = $("create-formation").value;
-      const memberName = $("create-member-name").value.trim();
-      const instrument = $("create-member-instrument").value.trim();
+      const btn = $("btn-submit-create");
+      btn.disabled = true;
 
-      const ensembleId = generateId("ens");
-      const memberId = generateId("mbr");
+      try {
+        const ensembleName = $("create-ensemble-name").value.trim();
+        const formation = $("create-formation").value;
+        const memberName = $("create-member-name").value.trim();
+        const instrument = $("create-member-instrument").value.trim();
 
-      const payload = {
-        id: ensembleId,
-        name: ensembleName,
-        formation,
-        createdAt: Date.now(),
-        members: {
-          [memberId]: {
-            id: memberId,
-            name: memberName,
-            instrument,
-            pushEnabled: Notification.permission === "granted",
-            joinedAt: Date.now()
+        const ensembleId = generateId("ens");
+        const memberId = generateId("mbr");
+
+        const payload = {
+          id: ensembleId,
+          name: ensembleName,
+          formation,
+          createdAt: Date.now(),
+          members: {
+            [memberId]: {
+              id: memberId,
+              name: memberName,
+              instrument,
+              pushEnabled: Notification.permission === "granted",
+              joinedAt: Date.now()
+            }
           }
-        }
-      };
+        };
 
-      await set(ref(db, `ensembles/${ensembleId}`), payload);
+        await set(ref(db, `ensembles/${ensembleId}`), payload);
+        $("firebase-error-banner").classList.add("hidden");
 
-      session.ensembles[ensembleId] = { memberId, name: memberName, instrument, ensembleName };
-      session.activeEnsembleId = ensembleId;
-      saveSession();
+        session.ensembles[ensembleId] = { memberId, name: memberName, instrument, ensembleName };
+        session.activeEnsembleId = ensembleId;
+        saveSession();
 
-      showToast("Ensemble créé.");
-      enterEnsemble(ensembleId);
+        enterEnsemble(ensembleId);
+        openModal("modal-invite");
+      } catch (err) {
+        handleFirebaseError(err);
+      } finally {
+        btn.disabled = false;
+      }
     });
 
-    // Formulaire : Rejoindre un ensemble
+    // Rejoindre un ensemble
     $("form-join").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
-      let rawCode = $("join-code").value.trim();
-      // Extrait l'ID si l'utilisateur a collé l'URL complète
-      if (rawCode.includes("ensemble=")) {
-        try {
-          const u = new URL(rawCode);
-          rawCode = u.searchParams.get("ensemble") || rawCode;
-        } catch (_) {
-          rawCode = rawCode.split("ensemble=")[1].split("&")[0];
+      const btn = $("btn-submit-join");
+      btn.disabled = true;
+
+      try {
+        let rawCode = $("join-code").value.trim();
+        if (rawCode.includes("ensemble=")) {
+          try {
+            const u = new URL(rawCode);
+            rawCode = u.searchParams.get("ensemble") || rawCode;
+          } catch (_) {
+            rawCode = rawCode.split("ensemble=")[1].split("&")[0];
+          }
         }
+
+        const memberName = $("join-name").value.trim();
+        const instrument = $("join-instrument").value.trim();
+
+        const snap = await get(ref(db, `ensembles/${rawCode}`));
+        $("firebase-error-banner").classList.add("hidden");
+
+        if (!snap.exists()) {
+          showToast("Ensemble introuvable. Vérifiez le lien ou le code.");
+          btn.disabled = false;
+          return;
+        }
+
+        const ensembleData = snap.val();
+        const memberId = generateId("mbr");
+
+        await set(ref(db, `ensembles/${rawCode}/members/${memberId}`), {
+          id: memberId,
+          name: memberName,
+          instrument,
+          pushEnabled: Notification.permission === "granted",
+          joinedAt: Date.now()
+        });
+
+        session.ensembles[rawCode] = {
+          memberId,
+          name: memberName,
+          instrument,
+          ensembleName: ensembleData.name
+        };
+        session.activeEnsembleId = rawCode;
+        saveSession();
+
+        window.history.replaceState({}, "", window.location.pathname);
+        showToast(`Bienvenue dans ${ensembleData.name}.`);
+        enterEnsemble(rawCode);
+      } catch (err) {
+        handleFirebaseError(err);
+      } finally {
+        btn.disabled = false;
       }
-
-      const memberName = $("join-name").value.trim();
-      const instrument = $("join-instrument").value.trim();
-
-      const snap = await get(ref(db, `ensembles/${rawCode}`));
-      if (!snap.exists()) {
-        showToast("Ensemble introuvable. Vérifiez le lien ou le code.");
-        return;
-      }
-
-      const ensembleData = snap.val();
-      const memberId = generateId("mbr");
-
-      await set(ref(db, `ensembles/${rawCode}/members/${memberId}`), {
-        id: memberId,
-        name: memberName,
-        instrument,
-        pushEnabled: Notification.permission === "granted",
-        joinedAt: Date.now()
-      });
-
-      session.ensembles[rawCode] = {
-        memberId,
-        name: memberName,
-        instrument,
-        ensembleName: ensembleData.name
-      };
-      session.activeEnsembleId = rawCode;
-      saveSession();
-
-      window.history.replaceState({}, "", window.location.pathname);
-      showToast(`Bienvenue dans ${ensembleData.name}.`);
-      enterEnsemble(rawCode);
     });
 
-    // Connexion temps réel à l'ensemble actif
     function enterEnsemble(ensembleId) {
       $("view-onboarding").classList.add("hidden");
       $("app-header").classList.remove("hidden");
       $("app-nav").classList.remove("hidden");
+      $("header-ensemble-name").textContent = session.ensembles[ensembleId]?.ensembleName || ensembleId;
       switchTab("agenda");
 
       if (unsubscribeEnsemble) unsubscribeEnsemble();
 
       const ensembleRef = ref(db, `ensembles/${ensembleId}`);
-      unsubscribeEnsemble = onValue(ensembleRef, (snapshot) => {
-        if (!snapshot.exists()) {
-          showToast("Cet ensemble n'existe plus.");
-          delete session.ensembles[ensembleId];
-          session.activeEnsembleId = null;
+      unsubscribeEnsemble = onValue(
+        ensembleRef,
+        (snapshot) => {
+          $("firebase-error-banner").classList.add("hidden");
+          if (!snapshot.exists()) {
+            showToast("Cet ensemble n'existe plus.");
+            delete session.ensembles[ensembleId];
+            session.activeEnsembleId = null;
+            saveSession();
+            showOnboarding();
+            return;
+          }
+
+          currentEnsembleData = snapshot.val();
+          session.ensembles[ensembleId].ensembleName = currentEnsembleData.name;
           saveSession();
-          showOnboarding();
-          return;
-        }
 
-        currentEnsembleData = snapshot.val();
-        session.ensembles[ensembleId].ensembleName = currentEnsembleData.name;
-        saveSession();
+          const myMemberId = session.ensembles[ensembleId]?.memberId;
+          const lastEvt = currentEnsembleData.lastEvent;
+          if (lastEvt && lastEvt.timestamp > lastNotifiedTimestamp && lastEvt.authorId !== myMemberId) {
+            lastNotifiedTimestamp = lastEvt.timestamp;
+            localStorage.setItem("cadenza_last_event_ts", String(lastNotifiedTimestamp));
+            triggerLocalSystemNotification(lastEvt.title, lastEvt.body);
+          }
 
-        // Déclenchement notification temps réel si événement créé par un autre membre
-        const myMemberId = session.ensembles[ensembleId]?.memberId;
-        const lastEvt = currentEnsembleData.lastEvent;
-        if (lastEvt && lastEvt.timestamp > lastNotifiedTimestamp && lastEvt.authorId !== myMemberId) {
-          lastNotifiedTimestamp = lastEvt.timestamp;
-          localStorage.setItem("cadenza_last_event_ts", String(lastNotifiedTimestamp));
-          triggerLocalSystemNotification(lastEvt.title, lastEvt.body);
-        }
-
-        renderAll();
-      });
+          renderAll();
+        },
+        (err) => handleFirebaseError(err)
+      );
     }
 
     async function publishEnsembleNotification(title, body) {
@@ -1304,17 +1419,20 @@
       lastNotifiedTimestamp = ts;
       localStorage.setItem("cadenza_last_event_ts", String(ts));
 
-      await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
-        lastEvent: {
-          title,
-          body,
-          timestamp: ts,
-          authorId: myMemberId
-        }
-      });
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
+          lastEvent: {
+            title,
+            body,
+            timestamp: ts,
+            authorId: myMemberId
+          }
+        });
+      } catch (err) {
+        handleFirebaseError(err);
+      }
     }
 
-    // Rendu complet de l'interface
     function renderAll() {
       if (!currentEnsembleData) return;
       $("header-ensemble-name").textContent = `${currentEnsembleData.name} • ${currentEnsembleData.formation || ""}`;
@@ -1323,7 +1441,6 @@
       renderEnsembleInfo();
     }
 
-    // 1. Rendu Agenda
     function renderAgenda() {
       const container = $("agenda-list");
       const rehearsalsObj = currentEnsembleData.rehearsals || {};
@@ -1335,7 +1452,7 @@
         container.innerHTML = `
           <div class="empty-state">
             <p>Aucune répétition planifiée pour le moment.</p>
-            <button class="btn-secondary btn-sm" id="empty-go-avail">Proposer des disponibilités</button>
+            <button type="button" class="btn-secondary btn-sm" id="empty-go-avail">Proposer des disponibilités</button>
           </div>
         `;
         $("empty-go-avail").addEventListener("click", () => switchTab("avail"));
@@ -1358,8 +1475,8 @@
             ${reh.program ? `<div class="card-program"><strong>Programme :</strong> ${escapeHtml(reh.program)}</div>` : ""}
             ${reh.notes ? `<div class="card-meta" style="margin-top:6px;">${escapeHtml(reh.notes)}</div>` : ""}
             <div class="card-actions">
-              <button class="btn-secondary btn-sm" data-ics="${escapeHtml(reh.id)}">Ajouter à mon calendrier (.ics)</button>
-              <button class="btn-secondary btn-sm" data-del-reh="${escapeHtml(reh.id)}">Annuler</button>
+              <button type="button" class="btn-secondary btn-sm" data-ics="${escapeHtml(reh.id)}">Ajouter à mon calendrier (.ics)</button>
+              <button type="button" class="btn-secondary btn-sm" data-del-reh="${escapeHtml(reh.id)}">Annuler</button>
             </div>
           </article>
         `;
@@ -1387,13 +1504,16 @@
       container.querySelectorAll("[data-del-reh]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           if (!confirm("Supprimer cette répétition de l'agenda ?")) return;
-          await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${btn.dataset.delReh}`));
-          showToast("Répétition retirée de l'agenda.");
+          try {
+            await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${btn.dataset.delReh}`));
+            showToast("Répétition retirée de l'agenda.");
+          } catch (err) {
+            handleFirebaseError(err);
+          }
         });
       });
     }
 
-    // Export fichier calendrier natif (.ics)
     function downloadICS(reh) {
       if (!reh) return;
       haptic();
@@ -1428,7 +1548,6 @@
       showToast("Fichier calendrier (.ics) téléchargé.");
     }
 
-    // 2. Rendu Disponibilités
     function renderPolls() {
       const container = $("polls-list");
       const pollsObj = currentEnsembleData.polls || {};
@@ -1445,7 +1564,7 @@
         container.innerHTML = `
           <div class="empty-state">
             <p>Aucune date en cours de sondage.</p>
-            <button class="btn-primary btn-sm" id="empty-add-poll">Proposer des dates aux membres</button>
+            <button type="button" class="btn-primary btn-sm" id="empty-add-poll">Proposer des dates aux membres</button>
           </div>
         `;
         $("empty-add-poll").addEventListener("click", () => openModal("modal-poll"));
@@ -1478,32 +1597,32 @@
             ${poll.note ? `<div class="card-meta">${escapeHtml(poll.note)}</div>` : ""}
 
             <div class="vote-group" role="group" aria-label="Votre disponibilité">
-              <button class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes">Disponible</button>
-              <button class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe">Incertain</button>
-              <button class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no">Indisponible</button>
+              <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes">Disponible</button>
+              <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe">Incertain</button>
+              <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no">Indisponible</button>
             </div>
 
             <div class="member-votes-list">${chipsHtml}</div>
 
             <div class="card-actions">
-              <button class="btn-primary btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
-              <button class="btn-secondary btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
+              <button type="button" class="btn-primary btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+              <button type="button" class="btn-secondary btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
             </div>
           </article>
         `;
       }).join("");
 
-      // Écouteurs votes
       container.querySelectorAll("[data-vote]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           haptic();
-          const pollId = btn.dataset.vote;
-          const val = btn.dataset.val;
-          await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}/votes/${myMemberId}`), val);
+          try {
+            await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${btn.dataset.vote}/votes/${myMemberId}`), btn.dataset.val);
+          } catch (err) {
+            handleFirebaseError(err);
+          }
         });
       });
 
-      // Valider un sondage en répétition officielle
       container.querySelectorAll("[data-confirm-poll]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           haptic();
@@ -1513,38 +1632,44 @@
           const rehId = generateId("reh");
           const location = poll.location || prompt("Lieu de la répétition :", "À confirmer") || "Lieu à confirmer";
 
-          await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
-            id: rehId,
-            date: poll.date,
-            startTime: poll.startTime,
-            endTime: poll.endTime,
-            location,
-            program: poll.note || "",
-            notes: "",
-            createdAt: Date.now()
-          });
+          try {
+            await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+              id: rehId,
+              date: poll.date,
+              startTime: poll.startTime,
+              endTime: poll.endTime,
+              location,
+              program: poll.note || "",
+              notes: "",
+              createdAt: Date.now()
+            });
 
-          await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`));
-          await publishEnsembleNotification(
-            `Répétition confirmée — ${currentEnsembleData.name}`,
-            `${formatDateFr(poll.date)} • ${poll.startTime}–${poll.endTime} (${location})`
-          );
+            await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`));
+            await publishEnsembleNotification(
+              `Répétition confirmée — ${currentEnsembleData.name}`,
+              `${formatDateFr(poll.date)} • ${poll.startTime}–${poll.endTime} (${location})`
+            );
 
-          showToast("Répétition ajoutée à l'agenda centralisé.");
-          switchTab("agenda");
+            showToast("Répétition ajoutée à l'agenda centralisé.");
+            switchTab("agenda");
+          } catch (err) {
+            handleFirebaseError(err);
+          }
         });
       });
 
-      // Supprimer sondage
       container.querySelectorAll("[data-del-poll]").forEach((btn) => {
         btn.addEventListener("click", async () => {
-          await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${btn.dataset.delPoll}`));
-          showToast("Créneau supprimé.");
+          try {
+            await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${btn.dataset.delPoll}`));
+            showToast("Créneau supprimé.");
+          } catch (err) {
+            handleFirebaseError(err);
+          }
         });
       });
     }
 
-    // 3. Rendu Infos Ensemble & Membres
     function renderEnsembleInfo() {
       const members = Object.values(currentEnsembleData.members || {});
       const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
@@ -1566,7 +1691,6 @@
         </div>
       `).join("");
 
-      // Liste des ensembles sauvegardés sur cet appareil
       const savedIds = Object.keys(session.ensembles);
       $("saved-ensembles-list").innerHTML = savedIds.map((id) => {
         const item = session.ensembles[id];
@@ -1579,7 +1703,7 @@
             </div>
             ${isCurrent
               ? `<span style="font-size: 12px; font-weight: 600;">Actif</span>`
-              : `<button class="btn-secondary btn-sm" data-switch-ens="${escapeHtml(id)}">Ouvrir</button>`
+              : `<button type="button" class="btn-secondary btn-sm" data-switch-ens="${escapeHtml(id)}">Ouvrir</button>`
             }
           </div>
         `;
@@ -1594,29 +1718,38 @@
       });
     }
 
-    // Partage du lien d'invitation
-    async function shareInviteLink() {
+    // Actions de la modale d'invitation
+    $("btn-copy-invite").addEventListener("click", async () => {
       haptic();
       const url = getInviteUrl(session.activeEnsembleId);
-      const title = `Rejoindre ${currentEnsembleData.name} sur Cadenza`;
-      const text = `Voici le lien pour indiquer tes disponibilités et consulter l'agenda de ${currentEnsembleData.name} :`;
+      const copied = await copyTextReliable(url);
+      if (copied) {
+        showToast("Lien d'invitation copié.");
+      } else {
+        showToast("Sélectionnez et copiez le lien affiché ci-dessus.");
+      }
+    });
+
+    $("btn-native-share").addEventListener("click", async () => {
+      haptic();
+      const url = getInviteUrl(session.activeEnsembleId);
+      const ensName = currentEnsembleData?.name || session.ensembles[session.activeEnsembleId]?.ensembleName || "notre ensemble";
+      const title = `Rejoindre ${ensName} sur Cadenza`;
+      const text = `Rejoins ${ensName} sur Cadenza pour indiquer tes disponibilités :`;
 
       if (navigator.share) {
         try {
           await navigator.share({ title, text, url });
           return;
-        } catch (_) {}
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+        }
       }
+      const copied = await copyTextReliable(url);
+      showToast(copied ? "Lien copié dans le presse-papiers." : "Copiez le lien affiché ci-dessus.");
+    });
 
-      try {
-        await navigator.clipboard.writeText(url);
-        showToast("Lien d'invitation copié dans le presse-papiers.");
-      } catch (_) {
-        prompt("Copiez ce lien d'invitation :", url);
-      }
-    }
-
-    // Soumission formulaire : Proposer une date
+    // Proposer une date
     $("form-poll").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
@@ -1627,31 +1760,35 @@
       const note = $("poll-note").value.trim();
       const myMember = session.ensembles[session.activeEnsembleId];
 
-      const pollId = generateId("pol");
-      await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
-        id: pollId,
-        date,
-        startTime,
-        endTime,
-        location,
-        note,
-        createdBy: myMember.name,
-        votes: {
-          [myMember.memberId]: "yes"
-        }
-      });
+      try {
+        const pollId = generateId("pol");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
+          id: pollId,
+          date,
+          startTime,
+          endTime,
+          location,
+          note,
+          createdBy: myMember.name,
+          votes: {
+            [myMember.memberId]: "yes"
+          }
+        });
 
-      await publishEnsembleNotification(
-        `Nouvelle date proposée — ${currentEnsembleData.name}`,
-        `${myMember.name} propose le ${formatDateFr(date)} (${startTime}–${endTime})`
-      );
+        await publishEnsembleNotification(
+          `Nouvelle date proposée — ${currentEnsembleData?.name || "Cadenza"}`,
+          `${myMember.name} propose le ${formatDateFr(date)} (${startTime}–${endTime})`
+        );
 
-      $("form-poll").reset();
-      closeModal("modal-poll");
-      showToast("Date proposée aux membres.");
+        $("form-poll").reset();
+        closeModal("modal-poll");
+        showToast("Date proposée aux membres.");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
     });
 
-    // Soumission formulaire : Ajouter directement une répétition
+    // Ajouter directement une répétition
     $("form-rehearsal").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
@@ -1662,33 +1799,37 @@
       const program = $("reh-program").value.trim();
       const notes = $("reh-notes").value.trim();
 
-      const rehId = generateId("reh");
-      await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
-        id: rehId,
-        date,
-        startTime,
-        endTime,
-        location,
-        program,
-        notes,
-        createdAt: Date.now()
-      });
+      try {
+        const rehId = generateId("reh");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+          id: rehId,
+          date,
+          startTime,
+          endTime,
+          location,
+          program,
+          notes,
+          createdAt: Date.now()
+        });
 
-      await publishEnsembleNotification(
-        `Nouvelle répétition — ${currentEnsembleData.name}`,
-        `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`
-      );
+        await publishEnsembleNotification(
+          `Nouvelle répétition — ${currentEnsembleData?.name || "Cadenza"}`,
+          `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`
+        );
 
-      $("form-rehearsal").reset();
-      closeModal("modal-rehearsal");
-      showToast("Répétition ajoutée à l'agenda.");
+        $("form-rehearsal").reset();
+        closeModal("modal-rehearsal");
+        showToast("Répétition ajoutée à l'agenda.");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
     });
 
-    // Boutons d'actions globaux
+    // Boutons globaux
     $("btn-open-poll").addEventListener("click", () => openModal("modal-poll"));
     $("btn-open-rehearsal").addEventListener("click", () => openModal("modal-rehearsal"));
-    $("btn-invite-top").addEventListener("click", shareInviteLink);
-    $("btn-share-invite").addEventListener("click", shareInviteLink);
+    $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
+    $("btn-share-invite").addEventListener("click", () => openModal("modal-invite"));
     $("btn-notif-top").addEventListener("click", requestPushPermission);
     $("btn-enable-push").addEventListener("click", requestPushPermission);
     $("btn-test-push").addEventListener("click", () => {
@@ -1697,7 +1838,7 @@
       } else {
         triggerLocalSystemNotification(
           `Cadenza — ${currentEnsembleData?.name || "Ensemble"}`,
-          "Exemple de notification système pour vos répétitions."
+          "Alerte système opérationnelle pour vos répétitions."
         );
       }
     });
@@ -1712,7 +1853,6 @@
       showOnboarding();
     });
 
-    // Démarrage
     await initServiceWorkerAndPush();
     await checkUrlInviteAndBoot();
   </script>
