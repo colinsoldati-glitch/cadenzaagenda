@@ -1413,26 +1413,40 @@ const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/
       );
     }
 
-    async function publishEnsembleNotification(title, body) {
-      if (!session.activeEnsembleId) return;
-      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
-      const ts = Date.now();
-      lastNotifiedTimestamp = ts;
-      localStorage.setItem("cadenza_last_event_ts", String(ts));
+  async function publishEnsembleNotification(title, body) {
+  if (!session.activeEnsembleId) return;
+  const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+  const ts = Date.now();
+  lastNotifiedTimestamp = ts;
+  localStorage.setItem("cadenza_last_event_ts", String(ts));
 
-      try {
-        await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
-          lastEvent: {
-            title,
-            body,
-            timestamp: ts,
-            authorId: myMemberId
-          }
-        });
-      } catch (err) {
-        handleFirebaseError(err);
+  try {
+    await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
+      lastEvent: {
+        title,
+        body,
+        timestamp: ts,
+        authorId: myMemberId
       }
+    });
+
+    if (PUSH_WORKER_URL) {
+      fetch(PUSH_WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ensembleId: session.activeEnsembleId,
+          title,
+          body,
+          authorId: myMemberId,
+          url: getInviteUrl(session.activeEnsembleId)
+        })
+      }).catch(() => {});
     }
+  } catch (err) {
+    handleFirebaseError(err);
+  }
+}
 
     function renderAll() {
       if (!currentEnsembleData) return;
