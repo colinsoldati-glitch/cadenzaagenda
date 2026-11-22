@@ -1138,6 +1138,14 @@
       margin-bottom: 12px;
       user-select: all;
     }
+
+    .app-version-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 0 4px;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
@@ -1432,6 +1440,11 @@
           </svg>
           <span>contact@cadenzaapp.ch</span>
         </a>
+      </div>
+
+      <!-- Version de l'application -->
+      <div class="app-version-footer" aria-label="Version de l'application">
+        Cadenza • Version <span id="app-version-label">—</span>
       </div>
     </section>
   </main>
@@ -1765,6 +1778,8 @@
     import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
+    const APP_VERSION = "v10";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
       authDomain: "cadenza-dad79.firebaseapp.com",
@@ -1806,6 +1821,8 @@
     let pendingDeleteCallback = null;
 
     const $ = (id) => document.getElementById(id);
+
+    $("app-version-label").textContent = APP_VERSION;
 
     function saveSession() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
@@ -3748,6 +3765,7 @@
       $("info-name").textContent = currentEnsembleData.name;
       $("info-code").textContent = session.activeEnsembleId;
       $("members-count").textContent = members.length;
+      $("app-version-label").textContent = APP_VERSION;
 
       $("toggle-auto-remind-eve").checked = currentEnsembleData.autoRemindEve !== false;
 
