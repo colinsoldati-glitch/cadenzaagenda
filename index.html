@@ -399,6 +399,25 @@
       text-decoration: line-through;
     }
 
+    .poll-slot-row {
+      border: 1px solid var(--border);
+      background: var(--subtle);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .poll-slot-row input {
+      background: var(--bg);
+    }
+
+    .poll-slot-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
     nav.tab-bar {
       position: fixed;
       bottom: 0;
@@ -774,15 +793,27 @@
         <p>Disponibilités et agenda centralisé pour ensembles musicaux.</p>
       </div>
 
-      <!-- Carte Rejoindre -->
+      <!-- Carte Rejoindre / Restaurer un profil -->
       <div id="join-card" class="card">
         <div class="card-kicker" id="join-kicker">Rejoindre un ensemble</div>
         <h2 class="modal-title" id="join-ensemble-title" style="margin-bottom: 12px;">Accéder à un espace existant</h2>
+
+        <div class="field" id="join-code-field">
+          <label for="join-code">Code ou lien de l'ensemble</label>
+          <input type="text" id="join-code" placeholder="Ex: ens-a1b2c3" required />
+        </div>
+
+        <!-- Récupération de profil existant (changement d'appareil) -->
+        <div id="join-existing-members-box" class="hidden" style="margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+          <div class="card-kicker" style="margin-bottom: 6px;">Déjà membre ? Récupérer mon profil</div>
+          <p style="font-size: 13px; color: var(--muted); margin: 0 0 10px;">
+            Touchez votre nom pour retrouver vos disponibilités sur ce nouvel appareil :
+          </p>
+          <div id="join-existing-members-list" style="display: grid; gap: 6px;"></div>
+        </div>
+
         <form id="form-join">
-          <div class="field" id="join-code-field">
-            <label for="join-code">Code ou lien de l'ensemble</label>
-            <input type="text" id="join-code" placeholder="Ex: ens-a1b2c3" required />
-          </div>
+          <div class="card-kicker" id="join-new-member-kicker" style="margin-bottom: 8px;">Nouveau musicien</div>
           <div class="row-2">
             <div class="field">
               <label for="join-name">Votre prénom</label>
@@ -853,7 +884,7 @@
     <section id="view-avail" class="hidden">
       <div class="section-head">
         <h2 class="section-title">Disponibilités</h2>
-        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer une date</button>
+        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer des dates</button>
       </div>
       <div id="polls-list"></div>
     </section>
@@ -895,11 +926,12 @@
         <div class="card-kicker">Mon profil &amp; Mes ensembles</div>
         <div id="saved-ensembles-list" style="margin: 8px 0 12px;"></div>
         <div style="display: grid; gap: 8px;">
+          <button type="button" id="btn-open-transfer" class="btn-secondary btn-sm btn-full">Sauvegarder / Transférer sur un autre appareil</button>
           <button type="button" id="btn-switch-onboarding" class="btn-secondary btn-sm btn-full">Créer ou rejoindre un autre ensemble</button>
           <button type="button" id="btn-reopen-tuto" class="btn-secondary btn-sm btn-full">Guide d'installation sur l'écran d'accueil</button>
         </div>
       </div>
-      
+
       <div class="card">
         <div class="card-kicker">Aide et contact</div>
         <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">
@@ -914,7 +946,8 @@
         </a>
       </div>
     </section>
-    
+  </main>
+
   <!-- Barre de navigation inférieure -->
   <nav id="app-nav" class="tab-bar hidden" aria-label="Navigation principale">
     <button type="button" class="tab-item active" data-tab="agenda">
@@ -981,6 +1014,46 @@
     </div>
   </div>
 
+  <!-- MODALE : MODIFIER UNE RÉPÉTITION EXISTANTE -->
+  <div id="modal-edit-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Modifier la répétition</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-edit-rehearsal">Fermer</button>
+      </div>
+      <form id="form-edit-rehearsal">
+        <input type="hidden" id="edit-reh-id" />
+        <div class="field">
+          <label for="edit-reh-date">Date</label>
+          <input type="date" id="edit-reh-date" required />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="edit-reh-start">Début</label>
+            <input type="time" id="edit-reh-start" required />
+          </div>
+          <div class="field">
+            <label for="edit-reh-end">Fin</label>
+            <input type="time" id="edit-reh-end" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="edit-reh-location">Lieu</label>
+          <input type="text" id="edit-reh-location" placeholder="Ex: Sion, Lausanne,..." required />
+        </div>
+        <div class="field">
+          <label for="edit-reh-program">Œuvres / Programme de travail</label>
+          <input type="text" id="edit-reh-program" placeholder="Ex: Beethoven Op. 18 n°4 — Allegro" />
+        </div>
+        <div class="field">
+          <label for="edit-reh-notes">Notes (optionnel)</label>
+          <textarea id="edit-reh-notes" rows="2" placeholder="Ex: Prendre des lutrins, réserver une salle,..."></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer les modifications</button>
+      </form>
+    </div>
+  </div>
+
   <!-- MODALE : INVITER LES MEMBRES -->
   <div id="modal-invite" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
@@ -1002,27 +1075,38 @@
     </div>
   </div>
 
-  <!-- MODALE : PROPOSER UNE DATE DE DISPONIBILITÉ -->
+  <!-- MODALE : SAUVEGARDE & TRANSFERT D'APPAREIL -->
+  <div id="modal-transfer-device" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Transférer mon profil</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-transfer-device">Fermer</button>
+      </div>
+      <p style="font-size: 13.5px; color: var(--muted); margin: 0 0 12px;">
+        Ouvrez ce lien personnel sur votre nouvel appareil (ou dans l'application installée sur votre écran d'accueil) pour restaurer instantanément votre profil et vos votes :
+      </p>
+      <div class="invite-url-box" id="transfer-link-display">—</div>
+      <div style="display: grid; gap: 8px;">
+        <button type="button" id="btn-copy-transfer" class="btn-primary btn-full">Copier mon lien personnel</button>
+        <button type="button" id="btn-share-transfer" class="btn-secondary btn-full">Envoyer vers mon autre appareil</button>
+      </div>
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--subtle); font-size: 12.5px; color: var(--muted);">
+        Vous pouvez aussi simplement saisir le code <strong id="transfer-code-display" style="color: var(--fg);">—</strong> sur l'écran d'accueil puis toucher votre prénom dans la liste.
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE : PROPOSER PLUSIEURS CRÉNEAUX DE DISPONIBILITÉ -->
   <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header">
-        <h3 class="modal-title">Proposer un créneau</h3>
+        <h3 class="modal-title">Proposer des créneaux</h3>
         <button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button>
       </div>
       <form id="form-poll">
-        <div class="field">
-          <label for="poll-date">Date</label>
-          <input type="date" id="poll-date" required />
-        </div>
-        <div class="row-2">
-          <div class="field">
-            <label for="poll-start">Début</label>
-            <input type="time" id="poll-start" value="14:00" required />
-          </div>
-          <div class="field">
-            <label for="poll-end">Fin</label>
-            <input type="time" id="poll-end" value="17:00" required />
-          </div>
+        <div id="poll-slots-container"></div>
+        <div style="margin-bottom: 16px;">
+          <button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter une autre date</button>
         </div>
         <div class="field">
           <label for="poll-location">Lieu envisagé (optionnel)</label>
@@ -1032,7 +1116,7 @@
           <label for="poll-note">Programme / Remarque (optionnel)</label>
           <input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement" />
         </div>
-        <button type="submit" class="btn-primary btn-full">Soumettre aux membres</button>
+        <button type="submit" id="btn-submit-poll" class="btn-primary btn-full">Soumettre ce créneau aux membres</button>
       </form>
     </div>
   </div>
@@ -1132,7 +1216,7 @@
     const db = getDatabase(app);
 
     const STORAGE_KEY = "cadenza_session_v1";
-    const PENDING_INVITE_KEY = "cadenza_pending_invite";
+    const PENDING_INVITE_KEY = "cadenza_pending_invite_v2";
     const INSTALL_TUTO_SEEN_KEY = "cadenza_install_tuto_seen_v1";
 
     let session = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
@@ -1146,6 +1230,7 @@
     let messagingInstance = null;
     let lastNotifiedTimestamp = Number(localStorage.getItem("cadenza_last_event_ts") || Date.now());
     let deferredInstallPrompt = null;
+    let joinPreviewEnsembleData = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -1195,6 +1280,19 @@
       return out;
     }
 
+    function extractEnsembleCode(raw) {
+      let code = String(raw || "").trim();
+      if (code.includes("ensemble=")) {
+        try {
+          const u = new URL(code);
+          code = u.searchParams.get("ensemble") || code;
+        } catch (_) {
+          code = code.split("ensemble=")[1].split("&")[0];
+        }
+      }
+      return code;
+    }
+
     function formatDateFr(isoDate) {
       if (!isoDate) return "";
       const [y, m, d] = isoDate.split("-").map(Number);
@@ -1210,6 +1308,11 @@
     function getInviteUrl(ensembleId) {
       const base = `${window.location.origin}${window.location.pathname}`;
       return `${base}?ensemble=${encodeURIComponent(ensembleId)}`;
+    }
+
+    function getTransferUrl(ensembleId, memberId) {
+      const base = `${window.location.origin}${window.location.pathname}`;
+      return `${base}?ensemble=${encodeURIComponent(ensembleId)}&member=${encodeURIComponent(memberId)}`;
     }
 
     async function copyTextReliable(text) {
@@ -1371,14 +1474,100 @@
       btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
 
+    // Gestion dynamique des créneaux multiples dans la modale Sondage
+    function refreshPollSlotsUI() {
+      const rows = $("poll-slots-container").querySelectorAll(".poll-slot-row");
+      rows.forEach((row, index) => {
+        const labelEl = row.querySelector(".slot-label");
+        if (labelEl) labelEl.textContent = `Créneau ${index + 1}`;
+        const removeBtn = row.querySelector(".btn-remove-slot");
+        if (removeBtn) removeBtn.classList.toggle("hidden", rows.length <= 1);
+      });
+      const submitBtn = $("btn-submit-poll");
+      if (submitBtn) {
+        submitBtn.textContent = rows.length > 1
+          ? `Soumettre ces ${rows.length} créneaux aux membres`
+          : "Soumettre ce créneau aux membres";
+      }
+    }
+
+    function addPollSlot(defaultDate = "", defaultStart = "", defaultEnd = "") {
+      const container = $("poll-slots-container");
+      const existingRows = container.querySelectorAll(".poll-slot-row");
+      const lastRow = existingRows[existingRows.length - 1];
+
+      const today = new Date().toISOString().split("T")[0];
+      const inheritedStart = defaultStart || (lastRow ? lastRow.querySelector(".slot-start").value : "14:00");
+      const inheritedEnd = defaultEnd || (lastRow ? lastRow.querySelector(".slot-end").value : "17:00");
+      let inheritedDate = defaultDate || today;
+
+      if (!defaultDate && lastRow && lastRow.querySelector(".slot-date").value) {
+        const [y, m, d] = lastRow.querySelector(".slot-date").value.split("-").map(Number);
+        const nextDay = new Date(y, m - 1, d + 1);
+        const ny = nextDay.getFullYear();
+        const nm = String(nextDay.getMonth() + 1).padStart(2, "0");
+        const nd = String(nextDay.getDate()).padStart(2, "0");
+        inheritedDate = `${ny}-${nm}-${nd}`;
+      }
+
+      const row = document.createElement("div");
+      row.className = "poll-slot-row";
+      row.innerHTML = `
+        <div class="poll-slot-head">
+          <span class="slot-label" style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Créneau</span>
+          <button type="button" class="btn-secondary btn-xs btn-remove-slot">Retirer</button>
+        </div>
+        <div class="field" style="margin-bottom: 10px;">
+          <label>Date</label>
+          <input type="date" class="slot-date" value="${escapeHtml(inheritedDate)}" required />
+        </div>
+        <div class="row-2">
+          <div class="field" style="margin-bottom: 0;">
+            <label>Début</label>
+            <input type="time" class="slot-start" value="${escapeHtml(inheritedStart)}" required />
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label>Fin</label>
+            <input type="time" class="slot-end" value="${escapeHtml(inheritedEnd)}" required />
+          </div>
+        </div>
+      `;
+
+      row.querySelector(".btn-remove-slot").addEventListener("click", () => {
+        haptic();
+        row.remove();
+        refreshPollSlotsUI();
+      });
+
+      container.appendChild(row);
+      refreshPollSlotsUI();
+    }
+
+    function resetPollSlots() {
+      $("poll-slots-container").innerHTML = "";
+      addPollSlot();
+    }
+
+    $("btn-add-poll-slot").addEventListener("click", () => {
+      haptic();
+      addPollSlot();
+    });
+
     function openModal(id) {
       haptic();
       const today = new Date().toISOString().split("T")[0];
-      if (id === "modal-poll" && !$("poll-date").value) $("poll-date").value = today;
+      if (id === "modal-poll" && $("poll-slots-container").children.length === 0) {
+        resetPollSlots();
+      }
       if (id === "modal-rehearsal" && !$("reh-date").value) $("reh-date").value = today;
       if (id === "modal-invite" && session.activeEnsembleId) {
         $("invite-link-display").textContent = getInviteUrl(session.activeEnsembleId);
         $("invite-code-display").textContent = session.activeEnsembleId;
+      }
+      if (id === "modal-transfer-device" && session.activeEnsembleId) {
+        const myId = session.ensembles[session.activeEnsembleId]?.memberId || "";
+        $("transfer-link-display").textContent = getTransferUrl(session.activeEnsembleId, myId);
+        $("transfer-code-display").textContent = session.activeEnsembleId;
       }
       if (id === "modal-edit-ensemble" && currentEnsembleData) {
         $("edit-ensemble-name").value = currentEnsembleData.name || "";
@@ -1430,18 +1619,97 @@
       showInstallTutorial();
     });
 
-    // Détection lien d'invitation & premier démarrage
+    // Affichage des profils existants pour récupération sur un nouvel appareil
+    function renderClaimableMembers(ensembleId, ensembleData) {
+      joinPreviewEnsembleData = ensembleData || null;
+      const box = $("join-existing-members-box");
+      const list = $("join-existing-members-list");
+      const kicker = $("join-new-member-kicker");
+
+      const members = ensembleData && ensembleData.members ? Object.values(ensembleData.members) : [];
+      if (!ensembleData || members.length === 0) {
+        box.classList.add("hidden");
+        list.innerHTML = "";
+        kicker.classList.add("hidden");
+        return;
+      }
+
+      kicker.classList.remove("hidden");
+      box.classList.remove("hidden");
+      list.innerHTML = members.map((m) => `
+        <button type="button" class="btn-secondary btn-sm btn-full" style="justify-content: space-between;" data-claim-member="${escapeHtml(m.id)}">
+          <span><strong>${escapeHtml(m.name)}</strong> • ${escapeHtml(m.instrument)}</span>
+          <span style="font-size: 12px; color: var(--muted);">Reprendre →</span>
+        </button>
+      `).join("");
+
+      list.querySelectorAll("[data-claim-member]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          haptic();
+          const memberId = btn.dataset.claimMember;
+          const member = ensembleData.members[memberId];
+          if (!member) return;
+
+          session.ensembles[ensembleId] = {
+            memberId: member.id,
+            name: member.name,
+            instrument: member.instrument,
+            ensembleName: ensembleData.name
+          };
+          session.activeEnsembleId = ensembleId;
+          saveSession();
+
+          if (Notification.permission === "granted") {
+            update(ref(db, `ensembles/${ensembleId}/members/${member.id}`), { pushEnabled: true }).catch(() => {});
+          }
+
+          window.history.replaceState({}, "", window.location.pathname);
+          showToast(`Profil de ${member.name} restauré.`);
+          enterEnsemble(ensembleId);
+        });
+      });
+    }
+
+    // Détection automatique lorsqu'on saisit ou colle un code/lien dans l'écran Rejoindre
+    let codeLookupTimer = null;
+    $("join-code").addEventListener("input", () => {
+      clearTimeout(codeLookupTimer);
+      const code = extractEnsembleCode($("join-code").value);
+      if (!code || code.length < 6) {
+        renderClaimableMembers(null, null);
+        return;
+      }
+      codeLookupTimer = setTimeout(async () => {
+        try {
+          const snap = await get(ref(db, `ensembles/${code}`));
+          if (snap.exists()) {
+            const data = snap.val();
+            $("join-kicker").textContent = `Ensemble trouvé — ${data.formation || "Ensemble"}`;
+            $("join-ensemble-title").textContent = data.name;
+            renderClaimableMembers(code, data);
+          } else {
+            renderClaimableMembers(null, null);
+          }
+        } catch (_) {}
+      }, 300);
+    });
+
+    // Détection lien d'invitation / transfert & premier démarrage
     async function bootApp() {
       const params = new URLSearchParams(window.location.search);
       const urlEnsembleId = params.get("ensemble");
+      const urlMemberId = params.get("member");
+
       if (urlEnsembleId) {
-        localStorage.setItem(PENDING_INVITE_KEY, urlEnsembleId);
+        localStorage.setItem(PENDING_INVITE_KEY, JSON.stringify({
+          ensembleId: urlEnsembleId,
+          memberId: urlMemberId || null
+        }));
       }
 
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches || Boolean(window.navigator.standalone);
       const hasSeenTuto = localStorage.getItem(INSTALL_TUTO_SEEN_KEY) === "1";
 
-      // Si premier démarrage dans un navigateur classique (pas encore installée), afficher le tuto en premier
       if (!isStandalone && !hasSeenTuto) {
         showInstallTutorial();
         return;
@@ -1453,11 +1721,47 @@
     async function proceedAfterTutorial() {
       const params = new URLSearchParams(window.location.search);
       const urlEnsembleId = params.get("ensemble");
-      const invitedEnsembleId = urlEnsembleId || localStorage.getItem(PENDING_INVITE_KEY);
+      const urlMemberId = params.get("member");
+
+      let pending = null;
+      try {
+        pending = JSON.parse(localStorage.getItem(PENDING_INVITE_KEY) || "null");
+      } catch (_) {}
+
+      const invitedEnsembleId = urlEnsembleId || pending?.ensembleId || null;
+      const invitedMemberId = urlMemberId || pending?.memberId || null;
 
       if (invitedEnsembleId) {
         localStorage.removeItem(PENDING_INVITE_KEY);
 
+        // Cas 1 : Lien personnel de transfert (?ensemble=...&member=...)
+        if (invitedMemberId) {
+          try {
+            const snap = await get(ref(db, `ensembles/${invitedEnsembleId}`));
+            if (snap.exists()) {
+              const data = snap.val();
+              const targetMember = data.members && data.members[invitedMemberId];
+              if (targetMember) {
+                session.ensembles[invitedEnsembleId] = {
+                  memberId: targetMember.id,
+                  name: targetMember.name,
+                  instrument: targetMember.instrument,
+                  ensembleName: data.name
+                };
+                session.activeEnsembleId = invitedEnsembleId;
+                saveSession();
+                window.history.replaceState({}, "", window.location.pathname);
+                showToast(`Profil de ${targetMember.name} restauré sur cet appareil.`);
+                enterEnsemble(invitedEnsembleId);
+                return;
+              }
+            }
+          } catch (err) {
+            handleFirebaseError(err);
+          }
+        }
+
+        // Cas 2 : Ensemble déjà enregistré localement
         if (session.ensembles[invitedEnsembleId]) {
           session.activeEnsembleId = invitedEnsembleId;
           saveSession();
@@ -1466,6 +1770,7 @@
           return;
         }
 
+        // Cas 3 : Ouverture de l'invitation avec proposition de reprendre un profil existant
         $("join-code").value = invitedEnsembleId;
         $("join-card").classList.add("featured");
 
@@ -1478,6 +1783,7 @@
             $("join-code-field").classList.add("hidden");
             $("create-card").classList.add("hidden");
             $("onboarding-divider").classList.add("hidden");
+            renderClaimableMembers(invitedEnsembleId, data);
           } else {
             showToast("Cet ensemble est introuvable ou a été supprimé.");
           }
@@ -1561,16 +1867,7 @@
       btn.disabled = true;
 
       try {
-        let rawCode = $("join-code").value.trim();
-        if (rawCode.includes("ensemble=")) {
-          try {
-            const u = new URL(rawCode);
-            rawCode = u.searchParams.get("ensemble") || rawCode;
-          } catch (_) {
-            rawCode = rawCode.split("ensemble=")[1].split("&")[0];
-          }
-        }
-
+        const rawCode = extractEnsembleCode($("join-code").value);
         const memberName = $("join-name").value.trim();
         const instrument = $("join-instrument").value.trim();
 
@@ -1584,6 +1881,36 @@
         }
 
         const ensembleData = snap.val();
+        const existingMembers = ensembleData.members ? Object.values(ensembleData.members) : [];
+        const duplicate = existingMembers.find(
+          (m) => m.name && m.name.trim().toLowerCase() === memberName.toLowerCase()
+        );
+
+        // Proposition de fusion si un profil portant le même prénom existe déjà
+        if (
+          duplicate &&
+          confirm(`Un membre nommé « ${duplicate.name} (${duplicate.instrument}) » existe déjà. Voulez-vous restaurer ce profil existant et vos votes plutôt que d'en créer un nouveau ?`)
+        ) {
+          await update(ref(db, `ensembles/${rawCode}/members/${duplicate.id}`), {
+            instrument,
+            ...(Notification.permission === "granted" ? { pushEnabled: true } : {})
+          });
+
+          session.ensembles[rawCode] = {
+            memberId: duplicate.id,
+            name: duplicate.name,
+            instrument,
+            ensembleName: ensembleData.name
+          };
+          session.activeEnsembleId = rawCode;
+          saveSession();
+
+          window.history.replaceState({}, "", window.location.pathname);
+          showToast(`Profil de ${duplicate.name} restauré.`);
+          enterEnsemble(rawCode);
+          return;
+        }
+
         const memberId = generateId("mbr");
 
         await set(ref(db, `ensembles/${rawCode}/members/${memberId}`), {
@@ -1650,7 +1977,8 @@
 
           const myMemberId = session.ensembles[ensembleId]?.memberId;
           const lastEvt = currentEnsembleData.lastEvent;
-          if (lastEvt && lastEvt.timestamp > lastNotifiedTimestamp && lastEvt.authorId !== myMemberId) {
+          const isTargeted = !Array.isArray(lastEvt?.targetMemberIds) || lastEvt.targetMemberIds.includes(myMemberId);
+          if (lastEvt && lastEvt.timestamp > lastNotifiedTimestamp && lastEvt.authorId !== myMemberId && isTargeted) {
             lastNotifiedTimestamp = lastEvt.timestamp;
             localStorage.setItem("cadenza_last_event_ts", String(lastNotifiedTimestamp));
             triggerLocalSystemNotification(lastEvt.title, lastEvt.body);
@@ -1662,12 +1990,14 @@
       );
     }
 
-    async function publishEnsembleNotification(title, body) {
+    async function publishEnsembleNotification(title, body, options = {}) {
       if (!session.activeEnsembleId) return;
       const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
       const ts = Date.now();
       lastNotifiedTimestamp = ts;
       localStorage.setItem("cadenza_last_event_ts", String(ts));
+
+      const targetMemberIds = Array.isArray(options.targetMemberIds) ? options.targetMemberIds : null;
 
       try {
         await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
@@ -1675,7 +2005,8 @@
             title,
             body,
             timestamp: ts,
-            authorId: myMemberId
+            authorId: myMemberId,
+            ...(targetMemberIds ? { targetMemberIds } : {})
           }
         });
 
@@ -1688,6 +2019,7 @@
               title,
               body,
               authorId: myMemberId,
+              ...(targetMemberIds ? { targetMemberIds } : {}),
               url: getInviteUrl(session.activeEnsembleId)
             })
           }).catch(() => {});
@@ -1739,7 +2071,8 @@
             ${reh.program ? `<div class="card-program"><strong>Programme :</strong> ${escapeHtml(reh.program)}</div>` : ""}
             ${reh.notes ? `<div class="card-meta" style="margin-top:6px;">${escapeHtml(reh.notes)}</div>` : ""}
             <div class="card-actions">
-              <button type="button" class="btn-secondary btn-sm" data-ics="${escapeHtml(reh.id)}">Ajouter à mon calendrier (.ics)</button>
+              <button type="button" class="btn-secondary btn-sm" data-ics="${escapeHtml(reh.id)}">Calendrier (.ics)</button>
+              <button type="button" class="btn-secondary btn-sm" data-edit-reh="${escapeHtml(reh.id)}">Modifier</button>
               <button type="button" class="btn-secondary btn-sm" data-del-reh="${escapeHtml(reh.id)}">Annuler</button>
             </div>
           </article>
@@ -1765,6 +2098,21 @@
         btn.addEventListener("click", () => downloadICS(rehearsalsObj[btn.dataset.ics]));
       });
 
+      container.querySelectorAll("[data-edit-reh]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const reh = rehearsalsObj[btn.dataset.editReh];
+          if (!reh) return;
+          $("edit-reh-id").value = reh.id;
+          $("edit-reh-date").value = reh.date || "";
+          $("edit-reh-start").value = reh.startTime || "14:00";
+          $("edit-reh-end").value = reh.endTime || "17:00";
+          $("edit-reh-location").value = reh.location || "";
+          $("edit-reh-program").value = reh.program || "";
+          $("edit-reh-notes").value = reh.notes || "";
+          openModal("modal-edit-rehearsal");
+        });
+      });
+
       container.querySelectorAll("[data-del-reh]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           if (!confirm("Supprimer cette répétition de l'agenda ?")) return;
@@ -1777,6 +2125,43 @@
         });
       });
     }
+
+    // Soumission : Modifier une répétition existante
+    $("form-edit-rehearsal").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      const rehId = $("edit-reh-id").value;
+      const date = $("edit-reh-date").value;
+      const startTime = $("edit-reh-start").value;
+      const endTime = $("edit-reh-end").value;
+      const location = $("edit-reh-location").value.trim();
+      const program = $("edit-reh-program").value.trim();
+      const notes = $("edit-reh-notes").value.trim();
+
+      if (!rehId || !session.activeEnsembleId) return;
+
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+          date,
+          startTime,
+          endTime,
+          location,
+          program,
+          notes,
+          updatedAt: Date.now()
+        });
+
+        await publishEnsembleNotification(
+          `Répétition modifiée — ${currentEnsembleData?.name || "Cadenza"}`,
+          `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`
+        );
+
+        closeModal("modal-edit-rehearsal");
+        showToast("Répétition mise à jour.");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
+    });
 
     function downloadICS(reh) {
       if (!reh) return;
@@ -1831,7 +2216,10 @@
             <button type="button" class="btn-primary btn-sm" id="empty-add-poll">Proposer des dates aux membres</button>
           </div>
         `;
-        $("empty-add-poll").addEventListener("click", () => openModal("modal-poll"));
+        $("empty-add-poll").addEventListener("click", () => {
+          resetPollSlots();
+          openModal("modal-poll");
+        });
         return;
       }
 
@@ -1839,6 +2227,7 @@
         const votes = poll.votes || {};
         const myVote = votes[myMemberId] || "";
         const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
+        const missingMembers = membersList.filter((m) => !votes[m.id]);
         const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
 
         const chipsHtml = membersList.map((m) => {
@@ -1870,6 +2259,9 @@
 
             <div class="card-actions">
               <button type="button" class="btn-primary btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+              ${missingMembers.length > 0
+                ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${escapeHtml(poll.id)}">Relancer (${missingMembers.length})</button>`
+                : ""}
               <button type="button" class="btn-secondary btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
             </div>
           </article>
@@ -1881,6 +2273,41 @@
           haptic();
           try {
             await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${btn.dataset.vote}/votes/${myMemberId}`), btn.dataset.val);
+          } catch (err) {
+            handleFirebaseError(err);
+          }
+        });
+      });
+
+      // Relance ciblée des musiciens sans réponse
+      container.querySelectorAll("[data-remind-poll]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          haptic();
+          const poll = pollsObj[btn.dataset.remindPoll];
+          if (!poll) return;
+
+          const votes = poll.votes || {};
+          const missing = membersList.filter((m) => !votes[m.id]);
+          if (missing.length === 0) {
+            showToast("Tous les membres ont déjà répondu.");
+            return;
+          }
+
+          const targetIds = missing.map((m) => m.id);
+          const namesStr = missing.map((m) => m.name).join(", ");
+
+          try {
+            await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`), {
+              lastRemindedAt: Date.now()
+            });
+
+            await publishEnsembleNotification(
+              `Rappel disponibilités — ${currentEnsembleData.name}`,
+              `${namesStr} : merci d'indiquer votre disponibilité pour le ${formatDateFr(poll.date)} (${poll.startTime}–${poll.endTime}).`,
+              { targetMemberIds: targetIds }
+            );
+
+            showToast(`Relance envoyée à ${namesStr}.`);
           } catch (err) {
             handleFirebaseError(err);
           }
@@ -1963,7 +2390,6 @@
         `;
       }).join("");
 
-      // Boutons Modifier un membre
       $("members-list").querySelectorAll("[data-edit-member]").forEach((btn) => {
         btn.addEventListener("click", () => {
           const member = membersObj[btn.dataset.editMember];
@@ -1975,7 +2401,6 @@
         });
       });
 
-      // Boutons Retirer / Quitter un membre
       $("members-list").querySelectorAll("[data-remove-member]").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const targetId = btn.dataset.removeMember;
@@ -1994,7 +2419,6 @@
             const ensId = session.activeEnsembleId;
             await remove(ref(db, `ensembles/${ensId}/members/${targetId}`));
 
-            // Nettoyage des votes de ce membre dans les sondages en cours
             const pollsObj = currentEnsembleData.polls || {};
             await Promise.all(
               Object.keys(pollsObj).map((pollId) =>
@@ -2023,7 +2447,6 @@
         });
       });
 
-      // Liste des ensembles sauvegardés sur cet appareil
       const savedIds = Object.keys(session.ensembles);
       $("saved-ensembles-list").innerHTML = savedIds.map((id) => {
         const item = session.ensembles[id];
@@ -2135,40 +2558,92 @@
       showToast(copied ? "Lien copié dans le presse-papiers." : "Copiez le lien affiché ci-dessus.");
     });
 
-    // Proposer une date
+    // Actions de la modale de transfert d'appareil
+    $("btn-copy-transfer").addEventListener("click", async () => {
+      haptic();
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId || "";
+      const url = getTransferUrl(session.activeEnsembleId, myId);
+      const copied = await copyTextReliable(url);
+      showToast(copied ? "Lien personnel copié." : "Sélectionnez et copiez le lien affiché ci-dessus.");
+    });
+
+    $("btn-share-transfer").addEventListener("click", async () => {
+      haptic();
+      const mySession = session.ensembles[session.activeEnsembleId];
+      const url = getTransferUrl(session.activeEnsembleId, mySession?.memberId || "");
+      const ensName = currentEnsembleData?.name || mySession?.ensembleName || "Cadenza";
+      const title = `Mon profil Cadenza — ${ensName}`;
+      const text = `Lien personnel pour restaurer mon profil (${mySession?.name || ""}) sur Cadenza :`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, text, url });
+          return;
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+        }
+      }
+      const copied = await copyTextReliable(url);
+      showToast(copied ? "Lien personnel copié dans le presse-papiers." : "Copiez le lien affiché ci-dessus.");
+    });
+
+    // Proposer un ou plusieurs créneaux
     $("form-poll").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
-      const date = $("poll-date").value;
-      const startTime = $("poll-start").value;
-      const endTime = $("poll-end").value;
+      const slotRows = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row"));
+      if (slotRows.length === 0) return;
+
       const location = $("poll-location").value.trim();
       const note = $("poll-note").value.trim();
       const myMember = session.ensembles[session.activeEnsembleId];
 
+      const slots = slotRows.map((row) => ({
+        date: row.querySelector(".slot-date").value,
+        startTime: row.querySelector(".slot-start").value,
+        endTime: row.querySelector(".slot-end").value
+      })).filter((s) => s.date && s.startTime && s.endTime);
+
+      if (slots.length === 0) return;
+
       try {
-        const pollId = generateId("pol");
-        await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
-          id: pollId,
-          date,
-          startTime,
-          endTime,
-          location,
-          note,
-          createdBy: myMember.name,
-          votes: {
-            [myMember.memberId]: "yes"
-          }
+        const pollsUpdates = {};
+        slots.forEach((slot) => {
+          const pollId = generateId("pol");
+          pollsUpdates[pollId] = {
+            id: pollId,
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            location,
+            note,
+            createdBy: myMember.name,
+            votes: {
+              [myMember.memberId]: "yes"
+            }
+          };
         });
 
-        await publishEnsembleNotification(
-          `Nouvelle date proposée — ${currentEnsembleData?.name || "Cadenza"}`,
-          `${myMember.name} propose le ${formatDateFr(date)} (${startTime}–${endTime})`
-        );
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/polls`), pollsUpdates);
+
+        const ensName = currentEnsembleData?.name || "Cadenza";
+        if (slots.length === 1) {
+          const s = slots[0];
+          await publishEnsembleNotification(
+            `Nouvelle date proposée — ${ensName}`,
+            `${myMember.name} propose le ${formatDateFr(s.date)} (${s.startTime}–${s.endTime})`
+          );
+        } else {
+          await publishEnsembleNotification(
+            `${slots.length} nouvelles dates proposées — ${ensName}`,
+            `${myMember.name} propose ${slots.length} créneaux de répétition à voter.`
+          );
+        }
 
         $("form-poll").reset();
+        resetPollSlots();
         closeModal("modal-poll");
-        showToast("Date proposée aux membres.");
+        showToast(slots.length > 1 ? `${slots.length} créneaux proposés aux membres.` : "Date proposée aux membres.");
       } catch (err) {
         handleFirebaseError(err);
       }
@@ -2212,9 +2687,13 @@
     });
 
     // Boutons globaux
-    $("btn-open-poll").addEventListener("click", () => openModal("modal-poll"));
+    $("btn-open-poll").addEventListener("click", () => {
+      resetPollSlots();
+      openModal("modal-poll");
+    });
     $("btn-open-rehearsal").addEventListener("click", () => openModal("modal-rehearsal"));
     $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
+    $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
     $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
     $("btn-share-invite").addEventListener("click", () => openModal("modal-invite"));
     $("btn-notif-top").addEventListener("click", requestPushPermission);
@@ -2237,6 +2716,7 @@
       $("join-kicker").textContent = "Rejoindre un ensemble";
       $("join-ensemble-title").textContent = "Accéder à un espace existant";
       $("join-code").value = "";
+      renderClaimableMembers(null, null);
       showOnboarding();
     });
 
