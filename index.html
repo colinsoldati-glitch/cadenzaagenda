@@ -195,6 +195,29 @@
       background: #166534;
     }
 
+    .btn-danger {
+      background: var(--no-solid);
+      color: #ffffff;
+      border-color: var(--no-solid);
+      font-weight: 600;
+    }
+
+    .btn-danger:hover {
+      background: var(--no-fg);
+      border-color: var(--no-fg);
+    }
+
+    .btn-del-subtle {
+      background: var(--surface);
+      color: var(--no-fg);
+      border-color: var(--no-border);
+    }
+
+    .btn-del-subtle:hover {
+      background: var(--no-bg);
+      border-color: var(--no-solid);
+    }
+
     .btn-secondary {
       background: var(--surface);
       color: var(--fg);
@@ -497,6 +520,23 @@
       border-radius: 999px;
     }
 
+    .link-clear-vote {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 6px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .link-clear-vote:hover {
+      color: var(--no-fg);
+      background: var(--no-bg);
+    }
+
     .consensus-bar {
       display: flex;
       gap: 4px;
@@ -655,7 +695,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
-      min-width: 460px;
+      min-width: 480px;
     }
 
     .avail-matrix th,
@@ -880,7 +920,7 @@
       position: fixed;
       inset: 0;
       z-index: 50;
-      background: rgba(15, 23, 42, 0.4);
+      background: rgba(15, 23, 42, 0.45);
       display: none;
       align-items: flex-end;
       justify-content: center;
@@ -1413,6 +1453,24 @@
     </button>
   </nav>
 
+  <!-- MODALE : CONFIRMATION DE SUPPRESSION (CRÉNEAU OU VOTE) -->
+  <div id="modal-confirm-delete" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirm-delete-title">Confirmer la suppression</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-confirm-delete">Fermer</button>
+      </div>
+      <div id="confirm-delete-context" class="unavail-notice" style="margin-bottom: 12px; font-weight: 600;">—</div>
+      <p id="confirm-delete-message" style="font-size: 14px; color: var(--muted); margin: 0 0 18px;">
+        Voulez-vous vraiment supprimer cet élément ?
+      </p>
+      <div class="row-2">
+        <button type="button" class="btn-secondary btn-full" data-close="modal-confirm-delete">Annuler</button>
+        <button type="button" id="btn-execute-delete" class="btn-danger btn-full">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODALE : VALIDER UN CRÉNEAU DANS L'AGENDA -->
   <div id="modal-confirm-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
@@ -1745,6 +1803,7 @@
     let availViewMode = "cards"; // "cards" | "table"
     let availFilterMode = "all"; // "all" | "unvoted" | "consensus"
     let pendingScrollToPollId = null;
+    let pendingDeleteCallback = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -1851,6 +1910,13 @@
       return poll.startTime || poll.period || "";
     }
 
+    function formatVoteLabelFr(voteVal) {
+      if (voteVal === "yes") return "Disponible";
+      if (voteVal === "maybe") return "Incertain";
+      if (voteVal === "no") return "Indisponible";
+      return "";
+    }
+
     function getPollSortKey(poll) {
       if (poll.timeMode === "period") {
         const orderMap = { "Matin": "09:00", "Après-midi": "14:00", "Soir": "19:00" };
@@ -1911,6 +1977,99 @@
       } catch (_) {
         return false;
       }
+    }
+
+    // Fenêtre modale de confirmation de suppression
+    function openDeleteConfirmation({ title, context, message, confirmLabel, onConfirm }) {
+      haptic();
+      $("confirm-delete-title").textContent = title || "Confirmer la suppression";
+      const ctxEl = $("confirm-delete-context");
+      if (context) {
+        ctxEl.textContent = context;
+        ctxEl.classList.remove("hidden");
+      } else {
+        ctxEl.classList.add("hidden");
+      }
+      $("confirm-delete-message").textContent = message || "Voulez-vous vraiment supprimer cet élément ?";
+      const execBtn = $("btn-execute-delete");
+      execBtn.textContent = confirmLabel || "Supprimer";
+      execBtn.disabled = false;
+      pendingDeleteCallback = onConfirm;
+      $("modal-confirm-delete").classList.add("open");
+    }
+
+    $("btn-execute-delete").addEventListener("click", async () => {
+      if (!pendingDeleteCallback) return;
+      haptic();
+      const btn = $("btn-execute-delete");
+      btn.disabled = true;
+      const fn = pendingDeleteCallback;
+      pendingDeleteCallback = null;
+      try {
+        await fn();
+      } finally {
+        btn.disabled = false;
+        closeModal("modal-confirm-delete");
+      }
+    });
+
+    function promptDeletePoll(poll) {
+      if (!poll) return;
+      const votes = poll.votes || {};
+      const votedCount = Object.keys(votes).length;
+      const timeLabel = formatPollTimeLabel(poll);
+      const contextStr = `${formatDateFr(poll.date)}${timeLabel ? ` • ${timeLabel}` : ""}${poll.location ? ` (${poll.location})` : ""}`;
+      const msgStr = votedCount > 0
+        ? `${votedCount} musicien${votedCount > 1 ? "s ont" : " a"} déjà répondu sur cette date. Le créneau et tous les votes associés seront supprimés pour tout l'ensemble.`
+        : "Ce créneau proposé sera retiré de la liste des disponibilités pour tout l'ensemble.";
+
+      openDeleteConfirmation({
+        title: "Supprimer ce créneau ?",
+        context: contextStr,
+        message: msgStr,
+        confirmLabel: "Supprimer",
+        onConfirm: async () => {
+          try {
+            await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`));
+            showToast("Créneau supprimé.");
+          } catch (err) {
+            handleFirebaseError(err);
+          }
+        }
+      });
+    }
+
+    function promptClearMyVote(poll) {
+      if (!poll || !session.activeEnsembleId) return;
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!myMemberId) return;
+
+      const myVote = poll.votes?.[myMemberId] || "";
+      if (!myVote) return;
+
+      const myNote = poll.voteNotes?.[myMemberId] || "";
+      const timeLabel = formatPollTimeLabel(poll);
+      const voteLabel = formatVoteLabelFr(myVote);
+
+      openDeleteConfirmation({
+        title: "Retirer votre vote ?",
+        context: `${formatDateFr(poll.date)}${timeLabel ? ` • ${timeLabel}` : ""}`,
+        message: myNote
+          ? `Votre réponse (« ${voteLabel} ») et votre note seront effacées, et votre statut repassera en attente.`
+          : `Votre réponse (« ${voteLabel} ») sera effacée et votre statut repassera en attente.`,
+        confirmLabel: "Retirer le vote",
+        onConfirm: async () => {
+          try {
+            await Promise.all([
+              remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}/votes/${myMemberId}`)),
+              remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}/voteNotes/${myMemberId}`))
+            ]);
+            showToast("Votre vote a été retiré.");
+          } catch (err) {
+            handleFirebaseError(err);
+          }
+        }
+      });
     }
 
     // Service Worker & Notifications Push
@@ -2283,6 +2442,9 @@
     }
 
     function closeModal(id) {
+      if (id === "modal-confirm-delete") {
+        pendingDeleteCallback = null;
+      }
       $(id).classList.remove("open");
     }
 
@@ -2824,14 +2986,23 @@
       });
 
       container.querySelectorAll("[data-del-reh]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          if (!confirm("Supprimer cette répétition de l'agenda ?")) return;
-          try {
-            await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${btn.dataset.delReh}`));
-            showToast("Répétition retirée de l'agenda.");
-          } catch (err) {
-            handleFirebaseError(err);
-          }
+        btn.addEventListener("click", () => {
+          const reh = rehearsalsObj[btn.dataset.delReh];
+          if (!reh) return;
+          openDeleteConfirmation({
+            title: "Annuler cette répétition ?",
+            context: `${formatDateFr(reh.date)} • ${reh.startTime}–${reh.endTime} (${reh.location})`,
+            message: "Cette répétition sera retirée de l'agenda de tout l'ensemble.",
+            confirmLabel: "Annuler la répétition",
+            onConfirm: async () => {
+              try {
+                await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${reh.id}`));
+                showToast("Répétition retirée de l'agenda.");
+              } catch (err) {
+                handleFirebaseError(err);
+              }
+            }
+          });
         });
       });
     }
@@ -3154,11 +3325,15 @@
           ? `★ Tous disponibles (${yesCount}/${totalMembers})`
           : `${yesCount} / ${totalMembers} disponible${yesCount > 1 ? "s" : ""}`;
 
+        const headerRightHtml = !myVote
+          ? `<span class="to-vote-tag">À voter</span>`
+          : `<button type="button" class="link-clear-vote" data-clear-vote="${escapeHtml(poll.id)}">Retirer mon vote</button>`;
+
         return `
           <article class="card ${isFullConsensus ? "consensus-ready" : ""}" data-poll-card="${escapeHtml(poll.id)}">
             <div class="consensus-header">
               <span class="consensus-badge ${badgeClass}">${badgeText}</span>
-              ${!myVote ? `<span class="to-vote-tag">À voter</span>` : ""}
+              ${headerRightHtml}
             </div>
             <div class="consensus-bar" aria-hidden="true">${consensusBarHtml}</div>
 
@@ -3171,9 +3346,9 @@
             ${unavailNoticeHtml}
 
             <div class="vote-group" role="group" aria-label="Votre disponibilité">
-              <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes">✓ Disponible</button>
-              <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe">? Incertain</button>
-              <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no">✕ Indisponible</button>
+              <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes" ${myVote === "yes" ? 'title="Toucher à nouveau pour retirer votre vote"' : ""}>✓ Disponible</button>
+              <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe" ${myVote === "maybe" ? 'title="Toucher à nouveau pour retirer votre vote"' : ""}>? Incertain</button>
+              <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no" ${myVote === "no" ? 'title="Toucher à nouveau pour retirer votre vote"' : ""}>✕ Indisponible</button>
             </div>
 
             <div class="vote-note-bar">
@@ -3189,7 +3364,7 @@
               ${missingMembers.length > 0
                 ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${escapeHtml(poll.id)}">Relancer (${missingMembers.length})</button>`
                 : ""}
-              <button type="button" class="btn-secondary btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
+              <button type="button" class="btn-del-subtle btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
             </div>
           </article>
         `;
@@ -3198,7 +3373,20 @@
       // Attacher les événements des cartes
       container.querySelectorAll("[data-vote]").forEach((btn) => {
         btn.addEventListener("click", () => {
+          const poll = pollsObj[btn.dataset.vote];
+          const currentVote = poll?.votes?.[myMemberId] || "";
+          if (currentVote === btn.dataset.val) {
+            promptClearMyVote(poll);
+            return;
+          }
           castPollVote(btn.dataset.vote, btn.dataset.val, filteredPolls, true);
+        });
+      });
+
+      container.querySelectorAll("[data-clear-vote]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = pollsObj[btn.dataset.clearVote];
+          if (poll) promptClearMyVote(poll);
         });
       });
 
@@ -3285,13 +3473,9 @@
       });
 
       container.querySelectorAll("[data-del-poll]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          try {
-            await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${btn.dataset.delPoll}`));
-            showToast("Créneau supprimé.");
-          } catch (err) {
-            handleFirebaseError(err);
-          }
+        btn.addEventListener("click", () => {
+          const poll = pollsObj[btn.dataset.delPoll];
+          if (poll) promptDeletePoll(poll);
         });
       });
 
@@ -3338,7 +3522,6 @@
         const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
         const timeDisplay = formatPollTimeLabel(poll);
 
-        // Collecter les notes et absences pour affichage clair sous le tableau
         membersList.forEach((m) => {
           if (voteNotes[m.id]) {
             notesSummaryList.push({
@@ -3394,6 +3577,7 @@
             <td style="white-space: nowrap; text-align: right; padding-right: 12px;">
               <button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-primary"} btn-xs" data-matrix-confirm="${escapeHtml(poll.id)}">Valider</button>
               <button type="button" class="btn-secondary btn-xs" data-matrix-counter="${escapeHtml(poll.id)}" title="Proposer un autre horaire ce jour">+ Horaire</button>
+              <button type="button" class="btn-del-subtle btn-xs" data-matrix-del="${escapeHtml(poll.id)}" title="Supprimer ce créneau">Suppr.</button>
             </td>
           </tr>
         `;
@@ -3458,6 +3642,13 @@
           if (poll) openCounterProposalModal(poll);
         });
       });
+
+      container.querySelectorAll("[data-matrix-del]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = currentEnsembleData?.polls?.[btn.dataset.matrixDel];
+          if (poll) promptDeletePoll(poll);
+        });
+      });
     }
 
     // Rendu Onglet Ensemble & Gestion des Membres + Indisponibilités
@@ -3518,14 +3709,27 @@
         }).join("");
 
         $("my-unavailabilities-list").querySelectorAll("[data-del-unavail]").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            haptic();
-            try {
-              await remove(ref(db, `ensembles/${session.activeEnsembleId}/members/${myMemberId}/unavailabilities/${btn.dataset.delUnavail}`));
-              showToast("Période d'indisponibilité supprimée.");
-            } catch (err) {
-              handleFirebaseError(err);
-            }
+          btn.addEventListener("click", () => {
+            const unavailObj = myMemberObj.unavailabilities?.[btn.dataset.delUnavail];
+            if (!unavailObj) return;
+            const rangeText = unavailObj.startDate === unavailObj.endDate
+              ? `Le ${formatShortDateFr(unavailObj.startDate)}`
+              : `Du ${formatShortDateFr(unavailObj.startDate)} au ${formatShortDateFr(unavailObj.endDate)}`;
+
+            openDeleteConfirmation({
+              title: "Supprimer cette absence ?",
+              context: `${rangeText}${unavailObj.reason ? ` — ${unavailObj.reason}` : ""}`,
+              message: "Cette période d'indisponibilité ne sera plus signalée lors de la proposition de dates.",
+              confirmLabel: "Supprimer",
+              onConfirm: async () => {
+                try {
+                  await remove(ref(db, `ensembles/${session.activeEnsembleId}/members/${myMemberId}/unavailabilities/${unavailObj.id}`));
+                  showToast("Période d'indisponibilité supprimée.");
+                } catch (err) {
+                  handleFirebaseError(err);
+                }
+              }
+            });
           });
         });
       }
@@ -3542,49 +3746,53 @@
       });
 
       $("members-list").querySelectorAll("[data-remove-member]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", () => {
           const targetId = btn.dataset.removeMember;
           const member = membersObj[targetId];
           if (!member) return;
 
           const isMe = targetId === myMemberId;
-          const confirmText = isMe
-            ? `Quitter l'ensemble « ${currentEnsembleData.name} » ?`
-            : `Retirer ${member.name} (${member.instrument}) de l'ensemble ?`;
 
-          if (!confirm(confirmText)) return;
-          haptic();
+          openDeleteConfirmation({
+            title: isMe ? "Quitter cet ensemble ?" : `Retirer ${member.name} ?`,
+            context: `${member.name} • ${member.instrument}`,
+            message: isMe
+              ? `Vous quitterez « ${currentEnsembleData.name} » et vos votes seront retirés.`
+              : `${member.name} sera retiré de « ${currentEnsembleData.name} » ainsi que ses votes.`,
+            confirmLabel: isMe ? "Quitter" : "Retirer",
+            onConfirm: async () => {
+              try {
+                const ensId = session.activeEnsembleId;
+                await remove(ref(db, `ensembles/${ensId}/members/${targetId}`));
 
-          try {
-            const ensId = session.activeEnsembleId;
-            await remove(ref(db, `ensembles/${ensId}/members/${targetId}`));
+                const pollsObj = currentEnsembleData.polls || {};
+                await Promise.all(
+                  Object.keys(pollsObj).flatMap((pollId) => [
+                    remove(ref(db, `ensembles/${ensId}/polls/${pollId}/votes/${targetId}`)),
+                    remove(ref(db, `ensembles/${ensId}/polls/${pollId}/voteNotes/${targetId}`))
+                  ])
+                );
 
-            const pollsObj = currentEnsembleData.polls || {};
-            await Promise.all(
-              Object.keys(pollsObj).flatMap((pollId) => [
-                remove(ref(db, `ensembles/${ensId}/polls/${pollId}/votes/${targetId}`)),
-                remove(ref(db, `ensembles/${ensId}/polls/${pollId}/voteNotes/${targetId}`))
-              ])
-            );
-
-            if (isMe) {
-              delete session.ensembles[ensId];
-              const remainingIds = Object.keys(session.ensembles);
-              session.activeEnsembleId = remainingIds[0] || null;
-              saveSession();
-              showToast("Vous avez quitté l'ensemble.");
-              if (session.activeEnsembleId) {
-                enterEnsemble(session.activeEnsembleId);
-              } else {
-                if (unsubscribeEnsemble) unsubscribeEnsemble();
-                showOnboarding();
+                if (isMe) {
+                  delete session.ensembles[ensId];
+                  const remainingIds = Object.keys(session.ensembles);
+                  session.activeEnsembleId = remainingIds[0] || null;
+                  saveSession();
+                  showToast("Vous avez quitté l'ensemble.");
+                  if (session.activeEnsembleId) {
+                    enterEnsemble(session.activeEnsembleId);
+                  } else {
+                    if (unsubscribeEnsemble) unsubscribeEnsemble();
+                    showOnboarding();
+                  }
+                } else {
+                  showToast(`${member.name} a été retiré de l'ensemble.`);
+                }
+              } catch (err) {
+                handleFirebaseError(err);
               }
-            } else {
-              showToast(`${member.name} a été retiré de l'ensemble.`);
             }
-          } catch (err) {
-            handleFirebaseError(err);
-          }
+          });
         });
       });
 
