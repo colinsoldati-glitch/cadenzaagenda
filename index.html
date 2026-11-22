@@ -343,7 +343,7 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
-      margin: 12px 0;
+      margin: 12px 0 8px;
     }
 
     .vote-btn {
@@ -374,6 +374,24 @@
       border-color: var(--border);
     }
 
+    .vote-note-bar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .vote-note-bar input {
+      font-size: 13px;
+      padding: 7px 10px;
+      background: var(--subtle);
+      border-color: var(--border);
+    }
+
+    .vote-note-bar input:focus {
+      background: var(--bg);
+    }
+
     .member-votes-list {
       display: flex;
       flex-wrap: wrap;
@@ -383,10 +401,12 @@
 
     .member-chip {
       font-size: 12px;
-      padding: 3px 8px;
+      padding: 4px 8px;
       border-radius: 4px;
       border: 1px solid var(--border);
       background: var(--bg);
+      line-height: 1.35;
+      white-space: normal;
     }
 
     .member-chip.yes {
@@ -396,7 +416,26 @@
 
     .member-chip.no {
       color: var(--muted);
+    }
+
+    .member-chip.no .chip-name {
       text-decoration: line-through;
+    }
+
+    .chip-note {
+      color: var(--muted);
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    .unavail-notice {
+      font-size: 12.5px;
+      background: var(--subtle);
+      border-left: 2.5px solid var(--fg);
+      padding: 7px 10px;
+      border-radius: 4px;
+      margin: 8px 0;
+      color: var(--fg);
     }
 
     .poll-slot-row {
@@ -416,6 +455,28 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 8px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--subtle);
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: normal;
+      font-weight: 500;
+      font-size: 13.5px;
+    }
+
+    .toggle-row input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      margin: 2px 0 0;
+      flex-shrink: 0;
+      accent-color: #000000;
     }
 
     nav.tab-bar {
@@ -726,14 +787,12 @@
         <p>Installez l'application sur votre écran d'accueil pour l'utiliser en plein écran et recevoir les notifications de répétition.</p>
       </div>
 
-      <!-- Bouton d'installation directe si supporté par le navigateur -->
       <div id="tuto-direct-install-card" class="card featured hidden">
         <div class="card-kicker">Installation rapide</div>
         <p style="margin: 4px 0 12px; font-size: 14px;">Votre appareil permet l'installation directe de Cadenza en un clic.</p>
         <button type="button" id="btn-tuto-direct-install" class="btn-primary btn-full">Installer Cadenza maintenant</button>
       </div>
 
-      <!-- Guide iPhone / iPad -->
       <div id="tuto-ios-card" class="card">
         <div class="card-kicker">Sur iPhone &amp; iPad (Safari)</div>
         <div class="tuto-step">
@@ -760,7 +819,6 @@
         </div>
       </div>
 
-      <!-- Guide Android / Chrome -->
       <div id="tuto-android-card" class="card">
         <div class="card-kicker">Sur Android (Chrome) &amp; Ordinateur</div>
         <div class="tuto-step">
@@ -910,6 +968,16 @@
         <div id="members-list"></div>
       </div>
 
+      <!-- Périodes d'indisponibilité déclarées -->
+      <div class="card">
+        <div class="card-kicker">Mes indisponibilités déclarées</div>
+        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">
+          Signalez vos périodes d'absence (vacances, examens, tournée). Elles seront affichées lors de la proposition de nouvelles dates.
+        </p>
+        <div id="my-unavailabilities-list"></div>
+        <button type="button" id="btn-open-unavail" class="btn-secondary btn-sm btn-full" style="margin-top: 8px;">+ Déclarer une période d'absence</button>
+      </div>
+
       <div class="card">
         <div class="card-kicker">Notifications push système</div>
         <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">
@@ -920,6 +988,10 @@
           <button type="button" id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
         </div>
         <div id="push-status-msg" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
+        <label class="toggle-row" for="toggle-auto-remind-eve">
+          <input type="checkbox" id="toggle-auto-remind-eve" checked />
+          <span>Rappel automatique la veille des répétitions à 19h00</span>
+        </label>
       </div>
 
       <div class="card">
@@ -963,6 +1035,33 @@
       <span>Ensemble</span>
     </button>
   </nav>
+
+  <!-- MODALE : DÉCLARER UNE PÉRIODE D'INDISPONIBILITÉ -->
+  <div id="modal-unavailability" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Déclarer une indisponibilité</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-unavailability">Fermer</button>
+      </div>
+      <form id="form-unavailability">
+        <div class="row-2">
+          <div class="field">
+            <label for="unavail-start">Du</label>
+            <input type="date" id="unavail-start" required />
+          </div>
+          <div class="field">
+            <label for="unavail-end">Au (inclus)</label>
+            <input type="date" id="unavail-end" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="unavail-reason">Motif (optionnel)</label>
+          <input type="text" id="unavail-reason" maxlength="60" placeholder="Ex: Vacances, Session d'examens, Tournée" />
+        </div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer cette période</button>
+      </form>
+    </div>
+  </div>
 
   <!-- MODALE : MODIFIER L'ENSEMBLE -->
   <div id="modal-edit-ensemble" class="modal-backdrop" role="dialog" aria-modal="true">
@@ -1108,6 +1207,7 @@
         <div style="margin-bottom: 16px;">
           <button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter une autre date</button>
         </div>
+        <div id="poll-unavail-warning" class="alert-box hidden" style="margin-bottom: 14px;"></div>
         <div class="field">
           <label for="poll-location">Lieu envisagé (optionnel)</label>
           <input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" />
@@ -1230,7 +1330,6 @@
     let messagingInstance = null;
     let lastNotifiedTimestamp = Number(localStorage.getItem("cadenza_last_event_ts") || Date.now());
     let deferredInstallPrompt = null;
-    let joinPreviewEnsembleData = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -1303,6 +1402,38 @@
         month: "long",
         year: "numeric"
       });
+    }
+
+    function formatShortDateFr(isoDate) {
+      if (!isoDate) return "";
+      const [y, m, d] = isoDate.split("-").map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      return dateObj.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function getUnavailabilityConflictsForDate(isoDate) {
+      if (!isoDate || !currentEnsembleData?.members) return [];
+      const conflicts = [];
+      Object.values(currentEnsembleData.members).forEach((member) => {
+        const unavails = Object.values(member.unavailabilities || {});
+        unavails.forEach((u) => {
+          if (u.startDate && u.endDate && isoDate >= u.startDate && isoDate <= u.endDate) {
+            conflicts.push({
+              memberId: member.id,
+              memberName: member.name,
+              instrument: member.instrument,
+              startDate: u.startDate,
+              endDate: u.endDate,
+              reason: u.reason || ""
+            });
+          }
+        });
+      });
+      return conflicts;
     }
 
     function getInviteUrl(ensembleId) {
@@ -1474,6 +1605,35 @@
       btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
 
+    // Vérification des conflits d'indisponibilité lors de la proposition de dates
+    function updatePollConflictsWarning() {
+      const warningBox = $("poll-unavail-warning");
+      if (!warningBox) return;
+
+      const dateInputs = Array.from($("poll-slots-container").querySelectorAll(".slot-date"));
+      const checkedDates = [...new Set(dateInputs.map((inp) => inp.value).filter(Boolean))];
+      const lines = [];
+
+      checkedDates.forEach((d) => {
+        const conflicts = getUnavailabilityConflictsForDate(d);
+        conflicts.forEach((c) => {
+          const period = c.startDate === c.endDate
+            ? formatShortDateFr(c.startDate)
+            : `du ${formatShortDateFr(c.startDate)} au ${formatShortDateFr(c.endDate)}`;
+          const reasonTxt = c.reason ? ` — ${escapeHtml(c.reason)}` : "";
+          lines.push(`• <strong>${escapeHtml(formatDateFr(d))}</strong> : ${escapeHtml(c.memberName)} (${escapeHtml(c.instrument)}) absent (${period}${reasonTxt})`);
+        });
+      });
+
+      if (lines.length === 0) {
+        warningBox.classList.add("hidden");
+        warningBox.innerHTML = "";
+      } else {
+        warningBox.classList.remove("hidden");
+        warningBox.innerHTML = `<strong>Indisponibilité signalée sur ces dates</strong>${lines.join("<br>")}`;
+      }
+    }
+
     // Gestion dynamique des créneaux multiples dans la modale Sondage
     function refreshPollSlotsUI() {
       const rows = $("poll-slots-container").querySelectorAll(".poll-slot-row");
@@ -1489,6 +1649,7 @@
           ? `Soumettre ces ${rows.length} créneaux aux membres`
           : "Soumettre ce créneau aux membres";
       }
+      updatePollConflictsWarning();
     }
 
     function addPollSlot(defaultDate = "", defaultStart = "", defaultEnd = "") {
@@ -1533,6 +1694,8 @@
         </div>
       `;
 
+      row.querySelector(".slot-date").addEventListener("change", updatePollConflictsWarning);
+
       row.querySelector(".btn-remove-slot").addEventListener("click", () => {
         haptic();
         row.remove();
@@ -1556,10 +1719,18 @@
     function openModal(id) {
       haptic();
       const today = new Date().toISOString().split("T")[0];
-      if (id === "modal-poll" && $("poll-slots-container").children.length === 0) {
-        resetPollSlots();
+      if (id === "modal-poll") {
+        if ($("poll-slots-container").children.length === 0) {
+          resetPollSlots();
+        } else {
+          updatePollConflictsWarning();
+        }
       }
       if (id === "modal-rehearsal" && !$("reh-date").value) $("reh-date").value = today;
+      if (id === "modal-unavailability") {
+        if (!$("unavail-start").value) $("unavail-start").value = today;
+        if (!$("unavail-end").value) $("unavail-end").value = $("unavail-start").value;
+      }
       if (id === "modal-invite" && session.activeEnsembleId) {
         $("invite-link-display").textContent = getInviteUrl(session.activeEnsembleId);
         $("invite-code-display").textContent = session.activeEnsembleId;
@@ -1588,6 +1759,15 @@
       backdrop.addEventListener("click", (e) => {
         if (e.target === backdrop) closeModal(backdrop.id);
       });
+    });
+
+    // Synchronisation automatique date de fin d'indisponibilité
+    $("unavail-start").addEventListener("change", () => {
+      const startVal = $("unavail-start").value;
+      const endVal = $("unavail-end").value;
+      if (startVal && (!endVal || endVal < startVal)) {
+        $("unavail-end").value = startVal;
+      }
     });
 
     // Gestion de l'écran Tutoriel d'installation au premier démarrage
@@ -1621,7 +1801,6 @@
 
     // Affichage des profils existants pour récupération sur un nouvel appareil
     function renderClaimableMembers(ensembleId, ensembleData) {
-      joinPreviewEnsembleData = ensembleData || null;
       const box = $("join-existing-members-box");
       const list = $("join-existing-members-list");
       const kicker = $("join-new-member-kicker");
@@ -1670,7 +1849,6 @@
       });
     }
 
-    // Détection automatique lorsqu'on saisit ou colle un code/lien dans l'écran Rejoindre
     let codeLookupTimer = null;
     $("join-code").addEventListener("input", () => {
       clearTimeout(codeLookupTimer);
@@ -1734,7 +1912,6 @@
       if (invitedEnsembleId) {
         localStorage.removeItem(PENDING_INVITE_KEY);
 
-        // Cas 1 : Lien personnel de transfert (?ensemble=...&member=...)
         if (invitedMemberId) {
           try {
             const snap = await get(ref(db, `ensembles/${invitedEnsembleId}`));
@@ -1761,7 +1938,6 @@
           }
         }
 
-        // Cas 2 : Ensemble déjà enregistré localement
         if (session.ensembles[invitedEnsembleId]) {
           session.activeEnsembleId = invitedEnsembleId;
           saveSession();
@@ -1770,7 +1946,6 @@
           return;
         }
 
-        // Cas 3 : Ouverture de l'invitation avec proposition de reprendre un profil existant
         $("join-code").value = invitedEnsembleId;
         $("join-card").classList.add("featured");
 
@@ -1831,6 +2006,7 @@
           id: ensembleId,
           name: ensembleName,
           formation,
+          autoRemindEve: true,
           createdAt: Date.now(),
           members: {
             [memberId]: {
@@ -1886,7 +2062,6 @@
           (m) => m.name && m.name.trim().toLowerCase() === memberName.toLowerCase()
         );
 
-        // Proposition de fusion si un profil portant le même prénom existe déjà
         if (
           duplicate &&
           confirm(`Un membre nommé « ${duplicate.name} (${duplicate.instrument}) » existe déjà. Voulez-vous restaurer ce profil existant et vos votes plutôt que d'en créer un nouveau ?`)
@@ -2197,6 +2372,26 @@
       showToast("Fichier calendrier (.ics) téléchargé.");
     }
 
+    async function saveVoteNote(pollId, rawValue) {
+      if (!session.activeEnsembleId) return;
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!myMemberId) return;
+
+      const trimmed = String(rawValue || "").trim();
+      const noteRef = ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}/voteNotes/${myMemberId}`);
+      try {
+        if (trimmed) {
+          await set(noteRef, trimmed);
+          showToast("Note enregistrée sur votre vote.");
+        } else {
+          await remove(noteRef);
+          showToast("Note retirée.");
+        }
+      } catch (err) {
+        handleFirebaseError(err);
+      }
+    }
+
     function renderPolls() {
       const container = $("polls-list");
       const pollsObj = currentEnsembleData.polls || {};
@@ -2204,6 +2399,17 @@
       const membersList = Object.values(membersObj);
       const totalMembers = membersList.length;
       const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+
+      // Préserver la saisie en cours si une mise à jour Firebase survient pendant l'écriture d'une note
+      let activeNoteState = null;
+      const activeEl = document.activeElement;
+      if (activeEl && activeEl.classList && activeEl.classList.contains("vote-note-input")) {
+        activeNoteState = {
+          pollId: activeEl.dataset.noteInput,
+          value: activeEl.value,
+          selStart: activeEl.selectionStart
+        };
+      }
 
       const polls = Object.values(pollsObj).sort((a, b) =>
         `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`)
@@ -2225,16 +2431,24 @@
 
       container.innerHTML = polls.map((poll) => {
         const votes = poll.votes || {};
+        const voteNotes = poll.voteNotes || {};
         const myVote = votes[myMemberId] || "";
+        const myNote = voteNotes[myMemberId] || "";
         const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
         const missingMembers = membersList.filter((m) => !votes[m.id]);
         const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
 
+        const conflicts = getUnavailabilityConflictsForDate(poll.date).filter((c) => votes[c.memberId] !== "yes");
+        const unavailNoticeHtml = conflicts.length > 0
+          ? `<div class="unavail-notice">Absence déclarée : ${conflicts.map((c) => `<strong>${escapeHtml(c.memberName)}</strong>${c.reason ? ` (${escapeHtml(c.reason)})` : ""}`).join(", ")}</div>`
+          : "";
+
         const chipsHtml = membersList.map((m) => {
           const v = votes[m.id];
+          const mNote = voteNotes[m.id] || "";
           const symbol = v === "yes" ? "●" : v === "maybe" ? "◐" : v === "no" ? "✕" : "○";
           const cls = v === "yes" ? "yes" : v === "no" ? "no" : "";
-          return `<span class="member-chip ${cls}">${symbol} ${escapeHtml(m.name)} (${escapeHtml(m.instrument)})</span>`;
+          return `<span class="member-chip ${cls}">${symbol} <span class="chip-name">${escapeHtml(m.name)} (${escapeHtml(m.instrument)})</span>${mNote ? ` <span class="chip-note">— « ${escapeHtml(mNote)} »</span>` : ""}</span>`;
         }).join("");
 
         return `
@@ -2248,11 +2462,17 @@
               ${poll.location ? ` • ${escapeHtml(poll.location)}` : ""}
             </div>
             ${poll.note ? `<div class="card-meta">${escapeHtml(poll.note)}</div>` : ""}
+            ${unavailNoticeHtml}
 
             <div class="vote-group" role="group" aria-label="Votre disponibilité">
               <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes">Disponible</button>
               <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe">Incertain</button>
               <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no">Indisponible</button>
+            </div>
+
+            <div class="vote-note-bar">
+              <input type="text" class="vote-note-input" data-note-input="${escapeHtml(poll.id)}" maxlength="90" placeholder="Note courte (ex: dispo jusqu'à 16h30)..." value="${escapeHtml(myNote)}" />
+              <button type="button" class="btn-secondary btn-xs" data-save-note="${escapeHtml(poll.id)}">OK</button>
             </div>
 
             <div class="member-votes-list">${chipsHtml}</div>
@@ -2278,6 +2498,38 @@
           }
         });
       });
+
+      container.querySelectorAll("[data-save-note]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          haptic();
+          const pollId = btn.dataset.saveNote;
+          const input = container.querySelector(`.vote-note-input[data-note-input="${CSS.escape(pollId)}"]`);
+          saveVoteNote(pollId, input ? input.value : "");
+        });
+      });
+
+      container.querySelectorAll(".vote-note-input").forEach((input) => {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            haptic();
+            input.blur();
+            saveVoteNote(input.dataset.noteInput, input.value);
+          }
+        });
+      });
+
+      // Restauration du focus si le musicien était en train d'écrire une note
+      if (activeNoteState) {
+        const restoredInput = container.querySelector(`.vote-note-input[data-note-input="${CSS.escape(activeNoteState.pollId)}"]`);
+        if (restoredInput) {
+          restoredInput.value = activeNoteState.value;
+          restoredInput.focus();
+          if (typeof activeNoteState.selStart === "number") {
+            restoredInput.setSelectionRange(activeNoteState.selStart, activeNoteState.selStart);
+          }
+        }
+      }
 
       // Relance ciblée des musiciens sans réponse
       container.querySelectorAll("[data-remind-poll]").forEach((btn) => {
@@ -2361,7 +2613,7 @@
       });
     }
 
-    // Rendu Onglet Ensemble & Gestion des Membres
+    // Rendu Onglet Ensemble & Gestion des Membres + Indisponibilités
     function renderEnsembleInfo() {
       const membersObj = currentEnsembleData.members || {};
       const members = Object.values(membersObj);
@@ -2372,14 +2624,20 @@
       $("info-code").textContent = session.activeEnsembleId;
       $("members-count").textContent = members.length;
 
+      // État du rappel automatique la veille (actif par défaut)
+      $("toggle-auto-remind-eve").checked = currentEnsembleData.autoRemindEve !== false;
+
       $("members-list").innerHTML = members.map((m) => {
         const isMe = m.id === myMemberId;
+        const activeUnavailsCount = Object.values(m.unavailabilities || {}).filter(
+          (u) => u.endDate >= new Date().toISOString().split("T")[0]
+        ).length;
         return `
           <div class="member-row">
             <div style="min-width: 0;">
               <div><strong>${escapeHtml(m.name)}</strong> ${isMe ? "(Vous)" : ""}</div>
               <div style="font-size: 12.5px; color: var(--muted);">
-                ${escapeHtml(m.instrument)} • ${m.pushEnabled ? "Alertes actives" : "Sans alerte"}
+                ${escapeHtml(m.instrument)} • ${m.pushEnabled ? "Alertes actives" : "Sans alerte"}${activeUnavailsCount > 0 ? ` • ${activeUnavailsCount} absence${activeUnavailsCount > 1 ? "s" : ""}` : ""}
               </div>
             </div>
             <div class="member-row-actions">
@@ -2389,6 +2647,43 @@
           </div>
         `;
       }).join("");
+
+      // Liste des périodes d'indisponibilité de l'utilisateur courant
+      const myMemberObj = membersObj[myMemberId] || {};
+      const myUnavails = Object.values(myMemberObj.unavailabilities || {}).sort((a, b) =>
+        (a.startDate || "").localeCompare(b.startDate || "")
+      );
+
+      if (myUnavails.length === 0) {
+        $("my-unavailabilities-list").innerHTML = `<div style="font-size: 13px; color: var(--muted); padding-bottom: 4px;">Aucune période d'indisponibilité enregistrée.</div>`;
+      } else {
+        $("my-unavailabilities-list").innerHTML = myUnavails.map((u) => {
+          const rangeText = u.startDate === u.endDate
+            ? `Le ${formatShortDateFr(u.startDate)}`
+            : `Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`;
+          return `
+            <div class="member-row">
+              <div style="min-width: 0;">
+                <div style="font-size: 13.5px;"><strong>${escapeHtml(rangeText)}</strong></div>
+                ${u.reason ? `<div style="font-size: 12.5px; color: var(--muted);">${escapeHtml(u.reason)}</div>` : ""}
+              </div>
+              <button type="button" class="btn-secondary btn-xs" data-del-unavail="${escapeHtml(u.id)}">Supprimer</button>
+            </div>
+          `;
+        }).join("");
+
+        $("my-unavailabilities-list").querySelectorAll("[data-del-unavail]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            haptic();
+            try {
+              await remove(ref(db, `ensembles/${session.activeEnsembleId}/members/${myMemberId}/unavailabilities/${btn.dataset.delUnavail}`));
+              showToast("Période d'indisponibilité supprimée.");
+            } catch (err) {
+              handleFirebaseError(err);
+            }
+          });
+        });
+      }
 
       $("members-list").querySelectorAll("[data-edit-member]").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -2421,9 +2716,10 @@
 
             const pollsObj = currentEnsembleData.polls || {};
             await Promise.all(
-              Object.keys(pollsObj).map((pollId) =>
-                remove(ref(db, `ensembles/${ensId}/polls/${pollId}/votes/${targetId}`))
-              )
+              Object.keys(pollsObj).flatMap((pollId) => [
+                remove(ref(db, `ensembles/${ensId}/polls/${pollId}/votes/${targetId}`)),
+                remove(ref(db, `ensembles/${ensId}/polls/${pollId}/voteNotes/${targetId}`))
+              ])
             );
 
             if (isMe) {
@@ -2473,6 +2769,56 @@
         });
       });
     }
+
+    // Soumission : Déclarer une période d'indisponibilité
+    $("form-unavailability").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      const startDate = $("unavail-start").value;
+      const endDate = $("unavail-end").value;
+      const reason = $("unavail-reason").value.trim();
+
+      if (!startDate || !endDate || !session.activeEnsembleId) return;
+      if (endDate < startDate) {
+        showToast("La date de fin doit être postérieure ou égale à la date de début.");
+        return;
+      }
+
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!myMemberId) return;
+
+      try {
+        const unavailId = generateId("una");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/members/${myMemberId}/unavailabilities/${unavailId}`), {
+          id: unavailId,
+          startDate,
+          endDate,
+          reason,
+          createdAt: Date.now()
+        });
+
+        $("form-unavailability").reset();
+        closeModal("modal-unavailability");
+        showToast("Période d'indisponibilité enregistrée.");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
+    });
+
+    // Activation / Désactivation du rappel automatique la veille (Cloudflare Cron)
+    $("toggle-auto-remind-eve").addEventListener("change", async (e) => {
+      haptic();
+      if (!session.activeEnsembleId) return;
+      const enabled = Boolean(e.target.checked);
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
+          autoRemindEve: enabled
+        });
+        showToast(enabled ? "Rappel automatique la veille à 19h00 activé." : "Rappel automatique la veille désactivé.");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
+    });
 
     // Soumission : Modifier l'ensemble
     $("form-edit-ensemble").addEventListener("submit", async (e) => {
@@ -2692,6 +3038,7 @@
       openModal("modal-poll");
     });
     $("btn-open-rehearsal").addEventListener("click", () => openModal("modal-rehearsal"));
+    $("btn-open-unavail").addEventListener("click", () => openModal("modal-unavailability"));
     $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
     $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
     $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
