@@ -1159,7 +1159,7 @@
       </div>
       <div class="header-actions">
         <button type="button" id="btn-invite-top" class="btn-secondary btn-sm" title="Inviter les membres">Inviter</button>
-        <button type="button" id="btn-notif-top" class="icon-btn" title="Notifications système" aria-label="Notifications">
+        <button type="button" id="btn-notif-top" class="icon-btn" title="Activer / désactiver les notifications de cet ensemble" aria-label="Notifications">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -1395,12 +1395,12 @@
       </div>
 
       <div class="card">
-        <div class="card-kicker">Notifications push système</div>
+        <div class="card-kicker">Notifications push (cet ensemble)</div>
         <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">
-          Recevez une alerte native dès qu'une date est proposée ou qu'une répétition est validée, même lorsque l'application est fermée.
+          Activez ou coupez les alertes sur votre téléphone pour cet ensemble lorsqu'une date est proposée ou qu'une répétition est validée.
         </p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" id="btn-enable-push" class="btn-primary btn-sm">Activer les notifications</button>
+          <button type="button" id="btn-toggle-push" class="btn-primary btn-sm">Activer les notifications</button>
           <button type="button" id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
         </div>
         <div id="push-status-msg" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
@@ -2072,7 +2072,7 @@
       });
     }
 
-    // Service Worker & Notifications Push
+    // Service Worker & Notifications Push par ensemble (activation / désactivation)
     async function initServiceWorkerAndPush() {
       if (!("serviceWorker" in navigator)) return;
       try {
@@ -2081,6 +2081,7 @@
         if (supported) {
           messagingInstance = getMessaging(app);
           onMessage(messagingInstance, (payload) => {
+            if (!isEnsemblePushActive()) return;
             const title = payload.notification?.title || payload.data?.title || "Cadenza";
             const body = payload.notification?.body || payload.data?.body || "Mise à jour de votre ensemble.";
             triggerLocalSystemNotification(title, body);
@@ -2090,6 +2091,14 @@
         console.warn("SW init:", err);
       }
       updatePushUI();
+    }
+
+    function isEnsemblePushActive() {
+      if (!("Notification" in window) || Notification.permission !== "granted") return false;
+      if (!session.activeEnsembleId || !currentEnsembleData?.members) return false;
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+      const myMember = myMemberId ? currentEnsembleData.members[myMemberId] : null;
+      return Boolean(myMember && myMember.pushEnabled === true);
     }
 
     async function triggerLocalSystemNotification(title, body) {
@@ -2107,8 +2116,21 @@
       }
     }
 
-    async function requestPushPermission() {
-      haptic();
+    async function fetchFcmTokenSafe() {
+      if (!messagingInstance || !swRegistration || !FIREBASE_VAPID_KEY) return null;
+      try {
+        await navigator.serviceWorker.ready;
+        return await getToken(messagingInstance, {
+          vapidKey: FIREBASE_VAPID_KEY,
+          serviceWorkerRegistration: swRegistration
+        });
+      } catch (err) {
+        console.warn("FCM Token:", err);
+        return null;
+      }
+    }
+
+    async function enablePushForEnsemble() {
       if (!("Notification" in window)) {
         showToast("Les notifications ne sont pas supportées sur ce navigateur.");
         return;
@@ -2122,25 +2144,13 @@
       }
 
       const permission = await Notification.requestPermission();
-      updatePushUI();
-
       if (permission !== "granted") {
+        updatePushUI();
         showToast("Autorisation refusée dans les réglages du navigateur.");
         return;
       }
 
-      let fcmToken = null;
-      if (messagingInstance && swRegistration && FIREBASE_VAPID_KEY) {
-        try {
-          await navigator.serviceWorker.ready;
-          fcmToken = await getToken(messagingInstance, {
-            vapidKey: FIREBASE_VAPID_KEY,
-            serviceWorkerRegistration: swRegistration
-          });
-        } catch (err) {
-          console.warn("FCM Token:", err);
-        }
-      }
+      const fcmToken = await fetchFcmTokenSafe();
 
       if (session.activeEnsembleId && session.ensembles[session.activeEnsembleId]) {
         const memberId = session.ensembles[session.activeEnsembleId].memberId;
@@ -2151,27 +2161,88 @@
           });
         } catch (err) {
           handleFirebaseError(err);
+          return;
         }
       }
 
-      showToast(fcmToken ? "Notifications Push FCM activées." : "Notifications système activées.");
-      await triggerLocalSystemNotification("Cadenza", "Les alertes de répétition sont actives sur cet appareil.");
+      updatePushUI();
+      const ensName = currentEnsembleData?.name || "cet ensemble";
+      showToast(`Notifications activées pour ${ensName}.`);
+      await triggerLocalSystemNotification(
+        `Cadenza — ${ensName}`,
+        "Les alertes de répétition sont activées pour cet ensemble."
+      );
+    }
+
+    async function disablePushForEnsemble() {
+      if (!session.activeEnsembleId || !session.ensembles[session.activeEnsembleId]) return;
+      const memberId = session.ensembles[session.activeEnsembleId].memberId;
+
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/members/${memberId}`), {
+          pushEnabled: false,
+          fcmToken: null
+        });
+      } catch (err) {
+        handleFirebaseError(err);
+        return;
+      }
+
+      updatePushUI();
+      const ensName = currentEnsembleData?.name || "cet ensemble";
+      showToast(`Notifications désactivées pour ${ensName}.`);
+    }
+
+    async function togglePushForEnsemble() {
+      haptic();
+      if (isEnsemblePushActive()) {
+        await disablePushForEnsemble();
+      } else {
+        await enablePushForEnsemble();
+      }
     }
 
     function updatePushUI() {
       const dot = $("notif-status-dot");
+      const topBtn = $("btn-notif-top");
       const msg = $("push-status-msg");
+      const toggleBtn = $("btn-toggle-push");
+      const testBtn = $("btn-test-push");
+
       if (!("Notification" in window)) {
         dot.classList.add("off");
         if (msg) msg.textContent = "Navigateur non compatible avec les notifications push.";
+        if (toggleBtn) toggleBtn.disabled = true;
         return;
       }
-      if (Notification.permission === "granted") {
+
+      const activeForGroup = isEnsemblePushActive();
+      const ensName = currentEnsembleData?.name || "cet ensemble";
+
+      if (activeForGroup) {
         dot.classList.remove("off");
-        if (msg) msg.textContent = "Statut : Actif (notifications push prêtes).";
+        if (topBtn) topBtn.title = `Notifications actives pour ${ensName} (appuyer pour couper)`;
+        if (toggleBtn) {
+          toggleBtn.textContent = "Désactiver pour cet ensemble";
+          toggleBtn.classList.remove("btn-primary");
+          toggleBtn.classList.add("btn-del-subtle");
+        }
+        if (testBtn) testBtn.classList.remove("hidden");
+        if (msg) msg.textContent = `Statut : Actives pour « ${ensName} ».`;
       } else {
         dot.classList.add("off");
-        if (msg) msg.textContent = "Statut : Désactivées. Appuyez sur Activer les notifications.";
+        if (topBtn) topBtn.title = `Notifications coupées pour ${ensName} (appuyer pour activer)`;
+        if (toggleBtn) {
+          toggleBtn.textContent = "Activer les notifications";
+          toggleBtn.classList.remove("btn-del-subtle");
+          toggleBtn.classList.add("btn-primary");
+        }
+        if (testBtn) testBtn.classList.add("hidden");
+        if (msg) {
+          msg.textContent = Notification.permission === "denied"
+            ? "Statut : Bloquées dans les réglages de votre navigateur."
+            : `Statut : Désactivées pour « ${ensName} ».`;
+        }
       }
     }
 
@@ -2535,8 +2606,11 @@
           session.activeEnsembleId = ensembleId;
           saveSession();
 
-          if (Notification.permission === "granted") {
-            update(ref(db, `ensembles/${ensembleId}/members/${member.id}`), { pushEnabled: true }).catch(() => {});
+          if (member.pushEnabled && Notification.permission === "granted") {
+            const fcmToken = await fetchFcmTokenSafe();
+            if (fcmToken) {
+              update(ref(db, `ensembles/${ensembleId}/members/${member.id}`), { fcmToken }).catch(() => {});
+            }
           }
 
           window.history.replaceState({}, "", window.location.pathname);
@@ -2698,6 +2772,8 @@
 
         const ensembleId = generateId("ens");
         const memberId = generateId("mbr");
+        const pushAllowed = "Notification" in window && Notification.permission === "granted";
+        const fcmToken = pushAllowed ? await fetchFcmTokenSafe() : null;
 
         const payload = {
           id: ensembleId,
@@ -2710,7 +2786,8 @@
               id: memberId,
               name: memberName,
               instrument,
-              pushEnabled: Notification.permission === "granted",
+              pushEnabled: pushAllowed,
+              ...(fcmToken ? { fcmToken } : {}),
               joinedAt: Date.now()
             }
           }
@@ -2763,9 +2840,13 @@
           duplicate &&
           confirm(`Un membre nommé « ${duplicate.name} (${duplicate.instrument}) » existe déjà. Voulez-vous restaurer ce profil existant et vos votes plutôt que d'en créer un nouveau ?`)
         ) {
+          const fcmToken = duplicate.pushEnabled && Notification.permission === "granted"
+            ? await fetchFcmTokenSafe()
+            : null;
+
           await update(ref(db, `ensembles/${rawCode}/members/${duplicate.id}`), {
             instrument,
-            ...(Notification.permission === "granted" ? { pushEnabled: true } : {})
+            ...(fcmToken ? { fcmToken } : {})
           });
 
           session.ensembles[rawCode] = {
@@ -2784,12 +2865,15 @@
         }
 
         const memberId = generateId("mbr");
+        const pushAllowed = "Notification" in window && Notification.permission === "granted";
+        const fcmToken = pushAllowed ? await fetchFcmTokenSafe() : null;
 
         await set(ref(db, `ensembles/${rawCode}/members/${memberId}`), {
           id: memberId,
           name: memberName,
           instrument,
-          pushEnabled: Notification.permission === "granted",
+          pushEnabled: pushAllowed,
+          ...(fcmToken ? { fcmToken } : {}),
           joinedAt: Date.now()
         });
 
@@ -2848,9 +2932,11 @@
           }
 
           const myMemberId = session.ensembles[ensembleId]?.memberId;
+          const myMemberObj = currentEnsembleData.members?.[myMemberId];
+          const isMyPushEnabled = Boolean(myMemberObj && myMemberObj.pushEnabled === true);
           const lastEvt = currentEnsembleData.lastEvent;
           const isTargeted = !Array.isArray(lastEvt?.targetMemberIds) || lastEvt.targetMemberIds.includes(myMemberId);
-          if (lastEvt && lastEvt.timestamp > lastNotifiedTimestamp && lastEvt.authorId !== myMemberId && isTargeted) {
+          if (isMyPushEnabled && lastEvt && lastEvt.timestamp > lastNotifiedTimestamp && lastEvt.authorId !== myMemberId && isTargeted) {
             lastNotifiedTimestamp = lastEvt.timestamp;
             localStorage.setItem("cadenza_last_event_ts", String(lastNotifiedTimestamp));
             triggerLocalSystemNotification(lastEvt.title, lastEvt.body);
@@ -2904,6 +2990,7 @@
     function renderAll() {
       if (!currentEnsembleData) return;
       $("header-ensemble-name").textContent = `${currentEnsembleData.name} • ${currentEnsembleData.formation || ""}`;
+      updatePushUI();
       renderAgenda();
       renderPolls();
       renderEnsembleInfo();
@@ -4104,11 +4191,11 @@
     $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
     $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
     $("btn-share-invite").addEventListener("click", () => openModal("modal-invite"));
-    $("btn-notif-top").addEventListener("click", requestPushPermission);
-    $("btn-enable-push").addEventListener("click", requestPushPermission);
+    $("btn-notif-top").addEventListener("click", togglePushForEnsemble);
+    $("btn-toggle-push").addEventListener("click", togglePushForEnsemble);
     $("btn-test-push").addEventListener("click", () => {
-      if (Notification.permission !== "granted") {
-        requestPushPermission();
+      if (!isEnsemblePushActive()) {
+        enablePushForEnsemble();
       } else {
         triggerLocalSystemNotification(
           `Cadenza — ${currentEnsembleData?.name || "Ensemble"}`,
