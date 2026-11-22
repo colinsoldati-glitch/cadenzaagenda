@@ -1,4 +1,4 @@
-const CACHE_NAME = "cadenza-cache-v3.3";
+const CACHE_NAME = "cadenza-cache-v6";
 const APP_SHELL = ["./", "./index.html", "./manifest.json"];
 
 // Installation et mise en cache de l'interface
