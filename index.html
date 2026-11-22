@@ -457,6 +457,29 @@
       margin-bottom: 8px;
     }
 
+    .slot-mode-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .slot-mode-btn {
+      padding: 7px 8px;
+      font-size: 12.5px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--fg);
+      border-radius: 5px;
+    }
+
+    .slot-mode-btn.active {
+      background: var(--fg);
+      color: var(--bg);
+      border-color: var(--fg);
+      font-weight: 600;
+    }
+
     .toggle-row {
       display: flex;
       align-items: flex-start;
@@ -1036,6 +1059,39 @@
     </button>
   </nav>
 
+  <!-- MODALE : VALIDER UN CRÉNEAU DANS L'AGENDA -->
+  <div id="modal-confirm-poll" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Valider dans l'agenda</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-confirm-poll">Fermer</button>
+      </div>
+      <div id="confirm-poll-summary" class="card-meta" style="margin-bottom: 14px; font-weight: 500; color: var(--fg);">—</div>
+      <form id="form-confirm-poll">
+        <input type="hidden" id="confirm-poll-id" />
+        <div class="row-2">
+          <div class="field">
+            <label for="confirm-poll-start">Heure de début</label>
+            <input type="time" id="confirm-poll-start" required />
+          </div>
+          <div class="field">
+            <label for="confirm-poll-end">Heure de fin</label>
+            <input type="time" id="confirm-poll-end" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="confirm-poll-location">Lieu de la répétition</label>
+          <input type="text" id="confirm-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" required />
+        </div>
+        <div class="field">
+          <label for="confirm-poll-program">Programme (optionnel)</label>
+          <input type="text" id="confirm-poll-program" placeholder="Ex: Lecture du 2e mouvement" />
+        </div>
+        <button type="submit" class="btn-primary btn-full">Ajouter à l'agenda centralisé</button>
+      </form>
+    </div>
+  </div>
+
   <!-- MODALE : DÉCLARER UNE PÉRIODE D'INDISPONIBILITÉ -->
   <div id="modal-unavailability" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
@@ -1415,6 +1471,24 @@
       });
     }
 
+    function formatPollTimeLabel(poll) {
+      if (poll.timeMode === "period" && poll.period) {
+        return poll.period;
+      }
+      if (poll.startTime && poll.endTime) {
+        return `${poll.startTime} – ${poll.endTime}`;
+      }
+      return poll.startTime || poll.period || "";
+    }
+
+    function getPollSortKey(poll) {
+      if (poll.timeMode === "period") {
+        const orderMap = { "Matin": "09:00", "Après-midi": "14:00", "Soir": "19:00" };
+        return `${poll.date}T${orderMap[poll.period] || "12:00"}`;
+      }
+      return `${poll.date}T${poll.startTime || "00:00"}`;
+    }
+
     function getUnavailabilityConflictsForDate(isoDate) {
       if (!isoDate || !currentEnsembleData?.members) return [];
       const conflicts = [];
@@ -1634,7 +1708,31 @@
       }
     }
 
-    // Gestion dynamique des créneaux multiples dans la modale Sondage
+    // Gestion dynamique des créneaux multiples (Matin / Après-midi / Soir / Heure précise)
+    function applySlotModeUI(row, mode, period) {
+      row.dataset.mode = mode;
+      row.dataset.period = mode === "period" ? period : "";
+
+      const exactBox = row.querySelector(".slot-exact-times");
+      const startInput = row.querySelector(".slot-start");
+      const endInput = row.querySelector(".slot-end");
+
+      if (mode === "exact") {
+        exactBox.classList.remove("hidden");
+        startInput.required = true;
+        endInput.required = true;
+      } else {
+        exactBox.classList.add("hidden");
+        startInput.required = false;
+        endInput.required = false;
+      }
+
+      row.querySelectorAll(".slot-mode-btn").forEach((btn) => {
+        const isMatch = btn.dataset.mode === mode && (mode === "exact" || btn.dataset.period === period);
+        btn.classList.toggle("active", isMatch);
+      });
+    }
+
     function refreshPollSlotsUI() {
       const rows = $("poll-slots-container").querySelectorAll(".poll-slot-row");
       rows.forEach((row, index) => {
@@ -1652,12 +1750,14 @@
       updatePollConflictsWarning();
     }
 
-    function addPollSlot(defaultDate = "", defaultStart = "", defaultEnd = "") {
+    function addPollSlot(defaultDate = "", defaultMode = "", defaultPeriod = "", defaultStart = "", defaultEnd = "") {
       const container = $("poll-slots-container");
       const existingRows = container.querySelectorAll(".poll-slot-row");
       const lastRow = existingRows[existingRows.length - 1];
 
       const today = new Date().toISOString().split("T")[0];
+      const inheritedMode = defaultMode || (lastRow ? lastRow.dataset.mode : "exact");
+      const inheritedPeriod = defaultPeriod || (lastRow ? lastRow.dataset.period : "Après-midi");
       const inheritedStart = defaultStart || (lastRow ? lastRow.querySelector(".slot-start").value : "14:00");
       const inheritedEnd = defaultEnd || (lastRow ? lastRow.querySelector(".slot-end").value : "17:00");
       let inheritedDate = defaultDate || today;
@@ -1682,19 +1782,35 @@
           <label>Date</label>
           <input type="date" class="slot-date" value="${escapeHtml(inheritedDate)}" required />
         </div>
-        <div class="row-2">
+        <div class="field" style="margin-bottom: 0;">
+          <label>Moment ou horaire</label>
+          <div class="slot-mode-group">
+            <button type="button" class="slot-mode-btn" data-mode="period" data-period="Matin">Matin</button>
+            <button type="button" class="slot-mode-btn" data-mode="period" data-period="Après-midi">Après-midi</button>
+            <button type="button" class="slot-mode-btn" data-mode="period" data-period="Soir">Soir</button>
+            <button type="button" class="slot-mode-btn" data-mode="exact" data-period="">Heure précise</button>
+          </div>
+        </div>
+        <div class="row-2 slot-exact-times" style="margin-top: 8px;">
           <div class="field" style="margin-bottom: 0;">
             <label>Début</label>
-            <input type="time" class="slot-start" value="${escapeHtml(inheritedStart)}" required />
+            <input type="time" class="slot-start" value="${escapeHtml(inheritedStart)}" />
           </div>
           <div class="field" style="margin-bottom: 0;">
             <label>Fin</label>
-            <input type="time" class="slot-end" value="${escapeHtml(inheritedEnd)}" required />
+            <input type="time" class="slot-end" value="${escapeHtml(inheritedEnd)}" />
           </div>
         </div>
       `;
 
       row.querySelector(".slot-date").addEventListener("change", updatePollConflictsWarning);
+
+      row.querySelectorAll(".slot-mode-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          haptic();
+          applySlotModeUI(row, btn.dataset.mode, btn.dataset.period || "Après-midi");
+        });
+      });
 
       row.querySelector(".btn-remove-slot").addEventListener("click", () => {
         haptic();
@@ -1703,6 +1819,7 @@
       });
 
       container.appendChild(row);
+      applySlotModeUI(row, inheritedMode, inheritedPeriod);
       refreshPollSlotsUI();
     }
 
@@ -2392,6 +2509,71 @@
       }
     }
 
+    function openConfirmPollModal(poll) {
+      if (!poll) return;
+      $("confirm-poll-id").value = poll.id;
+      const timeLabel = formatPollTimeLabel(poll);
+      $("confirm-poll-summary").textContent = `${formatDateFr(poll.date)}${timeLabel ? ` • ${timeLabel}` : ""}`;
+
+      if (poll.timeMode === "period") {
+        const defaultHours = {
+          "Matin": ["09:00", "12:00"],
+          "Après-midi": ["14:00", "17:00"],
+          "Soir": ["19:30", "22:00"]
+        };
+        const [defStart, defEnd] = defaultHours[poll.period] || ["14:00", "17:00"];
+        $("confirm-poll-start").value = defStart;
+        $("confirm-poll-end").value = defEnd;
+      } else {
+        $("confirm-poll-start").value = poll.startTime || "14:00";
+        $("confirm-poll-end").value = poll.endTime || "17:00";
+      }
+
+      $("confirm-poll-location").value = poll.location || "";
+      $("confirm-poll-program").value = poll.note || "";
+      openModal("modal-confirm-poll");
+    }
+
+    // Validation définitive d'un sondage dans l'agenda
+    $("form-confirm-poll").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      const pollId = $("confirm-poll-id").value;
+      const poll = currentEnsembleData?.polls?.[pollId];
+      if (!poll || !session.activeEnsembleId) return;
+
+      const startTime = $("confirm-poll-start").value;
+      const endTime = $("confirm-poll-end").value;
+      const location = $("confirm-poll-location").value.trim() || "Lieu à confirmer";
+      const program = $("confirm-poll-program").value.trim();
+
+      try {
+        const rehId = generateId("reh");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+          id: rehId,
+          date: poll.date,
+          startTime,
+          endTime,
+          location,
+          program,
+          notes: "",
+          createdAt: Date.now()
+        });
+
+        await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`));
+        await publishEnsembleNotification(
+          `Répétition confirmée — ${currentEnsembleData.name}`,
+          `${formatDateFr(poll.date)} • ${startTime}–${endTime} (${location})`
+        );
+
+        closeModal("modal-confirm-poll");
+        showToast("Répétition ajoutée à l'agenda centralisé.");
+        switchTab("agenda");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
+    });
+
     function renderPolls() {
       const container = $("polls-list");
       const pollsObj = currentEnsembleData.polls || {};
@@ -2400,7 +2582,6 @@
       const totalMembers = membersList.length;
       const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
 
-      // Préserver la saisie en cours si une mise à jour Firebase survient pendant l'écriture d'une note
       let activeNoteState = null;
       const activeEl = document.activeElement;
       if (activeEl && activeEl.classList && activeEl.classList.contains("vote-note-input")) {
@@ -2412,7 +2593,7 @@
       }
 
       const polls = Object.values(pollsObj).sort((a, b) =>
-        `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`)
+        getPollSortKey(a).localeCompare(getPollSortKey(b))
       );
 
       if (polls.length === 0) {
@@ -2437,6 +2618,7 @@
         const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
         const missingMembers = membersList.filter((m) => !votes[m.id]);
         const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
+        const timeDisplay = formatPollTimeLabel(poll);
 
         const conflicts = getUnavailabilityConflictsForDate(poll.date).filter((c) => votes[c.memberId] !== "yes");
         const unavailNoticeHtml = conflicts.length > 0
@@ -2458,7 +2640,7 @@
             </span>
             <h3 class="card-date">${escapeHtml(formatDateFr(poll.date))}</h3>
             <div class="card-meta">
-              ${escapeHtml(poll.startTime)} – ${escapeHtml(poll.endTime)}
+              ${escapeHtml(timeDisplay)}
               ${poll.location ? ` • ${escapeHtml(poll.location)}` : ""}
             </div>
             ${poll.note ? `<div class="card-meta">${escapeHtml(poll.note)}</div>` : ""}
@@ -2519,7 +2701,6 @@
         });
       });
 
-      // Restauration du focus si le musicien était en train d'écrire une note
       if (activeNoteState) {
         const restoredInput = container.querySelector(`.vote-note-input[data-note-input="${CSS.escape(activeNoteState.pollId)}"]`);
         if (restoredInput) {
@@ -2555,7 +2736,7 @@
 
             await publishEnsembleNotification(
               `Rappel disponibilités — ${currentEnsembleData.name}`,
-              `${namesStr} : merci d'indiquer votre disponibilité pour le ${formatDateFr(poll.date)} (${poll.startTime}–${poll.endTime}).`,
+              `${namesStr} : merci d'indiquer votre disponibilité pour le ${formatDateFr(poll.date)} (${formatPollTimeLabel(poll)}).`,
               { targetMemberIds: targetIds }
             );
 
@@ -2567,37 +2748,11 @@
       });
 
       container.querySelectorAll("[data-confirm-poll]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", () => {
           haptic();
           const poll = pollsObj[btn.dataset.confirmPoll];
           if (!poll) return;
-
-          const rehId = generateId("reh");
-          const location = poll.location || prompt("Lieu de la répétition :", "À confirmer") || "Lieu à confirmer";
-
-          try {
-            await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
-              id: rehId,
-              date: poll.date,
-              startTime: poll.startTime,
-              endTime: poll.endTime,
-              location,
-              program: poll.note || "",
-              notes: "",
-              createdAt: Date.now()
-            });
-
-            await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`));
-            await publishEnsembleNotification(
-              `Répétition confirmée — ${currentEnsembleData.name}`,
-              `${formatDateFr(poll.date)} • ${poll.startTime}–${poll.endTime} (${location})`
-            );
-
-            showToast("Répétition ajoutée à l'agenda centralisé.");
-            switchTab("agenda");
-          } catch (err) {
-            handleFirebaseError(err);
-          }
+          openConfirmPollModal(poll);
         });
       });
 
@@ -2624,7 +2779,6 @@
       $("info-code").textContent = session.activeEnsembleId;
       $("members-count").textContent = members.length;
 
-      // État du rappel automatique la veille (actif par défaut)
       $("toggle-auto-remind-eve").checked = currentEnsembleData.autoRemindEve !== false;
 
       $("members-list").innerHTML = members.map((m) => {
@@ -2648,7 +2802,6 @@
         `;
       }).join("");
 
-      // Liste des périodes d'indisponibilité de l'utilisateur courant
       const myMemberObj = membersObj[myMemberId] || {};
       const myUnavails = Object.values(myMemberObj.unavailabilities || {}).sort((a, b) =>
         (a.startDate || "").localeCompare(b.startDate || "")
@@ -2933,7 +3086,7 @@
       showToast(copied ? "Lien personnel copié dans le presse-papiers." : "Copiez le lien affiché ci-dessus.");
     });
 
-    // Proposer un ou plusieurs créneaux
+    // Proposer un ou plusieurs créneaux (Matin / Après-midi / Soir / Heure précise)
     $("form-poll").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
@@ -2944,11 +3097,17 @@
       const note = $("poll-note").value.trim();
       const myMember = session.ensembles[session.activeEnsembleId];
 
-      const slots = slotRows.map((row) => ({
-        date: row.querySelector(".slot-date").value,
-        startTime: row.querySelector(".slot-start").value,
-        endTime: row.querySelector(".slot-end").value
-      })).filter((s) => s.date && s.startTime && s.endTime);
+      const slots = slotRows.map((row) => {
+        const mode = row.dataset.mode || "exact";
+        const period = row.dataset.period || "";
+        return {
+          date: row.querySelector(".slot-date").value,
+          timeMode: mode,
+          period: mode === "period" ? period : "",
+          startTime: mode === "exact" ? row.querySelector(".slot-start").value : "",
+          endTime: mode === "exact" ? row.querySelector(".slot-end").value : ""
+        };
+      }).filter((s) => s.date && (s.timeMode === "period" ? Boolean(s.period) : Boolean(s.startTime && s.endTime)));
 
       if (slots.length === 0) return;
 
@@ -2959,6 +3118,8 @@
           pollsUpdates[pollId] = {
             id: pollId,
             date: slot.date,
+            timeMode: slot.timeMode,
+            period: slot.period,
             startTime: slot.startTime,
             endTime: slot.endTime,
             location,
@@ -2977,7 +3138,7 @@
           const s = slots[0];
           await publishEnsembleNotification(
             `Nouvelle date proposée — ${ensName}`,
-            `${myMember.name} propose le ${formatDateFr(s.date)} (${s.startTime}–${s.endTime})`
+            `${myMember.name} propose le ${formatDateFr(s.date)} (${formatPollTimeLabel(s)})`
           );
         } else {
           await publishEnsembleNotification(
