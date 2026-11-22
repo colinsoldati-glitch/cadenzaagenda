@@ -1,0 +1,2445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="background-color" content="#f8fafc" />
+  <meta name="description" content="Cadenza — Disponibilités et agenda centralisé pour ensembles de musique." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Cadenza" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Cadenza</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ffffff'/%3E%3Cpath d='M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z' fill='%23111827'/%3E%3Ccircle cx='50' cy='57' r='6.5' fill='%23111827'/%3E%3C/svg%3E" />
+
+  <style>
+    :root {
+      --bg: #f8fafc; --surface: #ffffff; --fg: #111827; --muted: #64748b;
+      --subtle: #f1f5f9; --border: #e2e8f0; --border-strong: #111827;
+      --yes-fg: #15803d; --yes-bg: #f0fdf4; --yes-border: #86efac; --yes-solid: #16a34a;
+      --maybe-fg: #b45309; --maybe-bg: #fffbeb; --maybe-border: #fcd34d; --maybe-solid: #f59e0b;
+      --no-fg: #b91c1c; --no-bg: #fef2f2; --no-border: #fca5a5; --no-solid: #ef4444;
+      --accent-fg: #1d4ed8; --accent-bg: #eff6ff; --accent-border: #bfdbfe;
+      --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --font-serif: "Georgia", "Times New Roman", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+      font-family: var(--font-sans); font-size: 15px; line-height: 1.45;
+      -webkit-font-smoothing: antialiased; overscroll-behavior-y: none;
+    }
+    body { min-height: 100dvh; display: flex; flex-direction: column; }
+
+    /* En-tête & navigation */
+    header {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(255, 255, 255, .96); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border); padding: calc(12px + var(--safe-top)) 16px 12px;
+    }
+    .header-inner, main { max-width: 720px; width: 100%; margin: 0 auto; }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand svg { width: 28px; height: 28px; flex-shrink: 0; }
+    .brand-titles { min-width: 0; }
+    .brand-name { font-family: var(--font-serif); font-size: 20px; font-weight: 400; letter-spacing: .02em; margin: 0; line-height: 1.1; }
+    .ensemble-subtitle { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    main { flex: 1; padding: 18px 16px calc(96px + var(--safe-bottom)); }
+
+    /* Boutons */
+    button, .btn {
+      font-family: var(--font-sans); font-size: 14px; font-weight: 500; border-radius: 8px;
+      padding: 10px 14px; cursor: pointer; border: 1px solid var(--border-strong);
+      background: var(--surface); color: var(--fg); transition: all .14s ease;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none;
+    }
+    button:active { transform: scale(.98); }
+    button:disabled { opacity: .5; cursor: wait; }
+    .btn-primary { background: var(--fg); color: #fff; border-color: var(--fg); }
+    .btn-primary:hover { background: #1f2937; }
+    .btn-confirm { background: var(--yes-fg); color: #fff; border-color: var(--yes-fg); }
+    .btn-confirm:hover { background: #166534; }
+    .btn-danger { background: var(--no-solid); color: #fff; border-color: var(--no-solid); font-weight: 600; }
+    .btn-danger:hover { background: var(--no-fg); border-color: var(--no-fg); }
+    .btn-del-subtle { background: var(--surface); color: var(--no-fg); border-color: var(--no-border); }
+    .btn-del-subtle:hover { background: var(--no-bg); border-color: var(--no-solid); }
+    .btn-secondary { background: var(--surface); color: var(--fg); border-color: var(--border); }
+    .btn-secondary:hover { border-color: var(--muted); background: var(--subtle); }
+    .btn-sm { padding: 6px 11px; font-size: 12.5px; }
+    .btn-xs { padding: 4px 8px; font-size: 11.5px; }
+    .btn-full { width: 100%; }
+    .icon-btn { width: 36px; height: 36px; padding: 0; border-color: var(--border); position: relative; }
+    .notif-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--yes-solid); }
+    .notif-dot.off { background: transparent; border: 1.5px solid var(--muted); }
+
+    /* Formulaires */
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+    input, select, textarea {
+      width: 100%; font-family: var(--font-sans); font-size: 15px; color: var(--fg);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--fg); box-shadow: 0 0 0 2px rgba(17, 24, 39, .06); }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .section-title { font-family: var(--font-serif); font-size: 21px; font-weight: 400; margin: 0; }
+
+    /* Outils Disponibilités */
+    .avail-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .segmented-control { display: inline-flex; background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px; }
+    .seg-btn { border: none; background: transparent; color: var(--muted); padding: 5px 11px; font-size: 12.5px; border-radius: 6px; }
+    .seg-btn.active { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+    .filter-pills { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+    .filter-pill { border: 1px solid var(--border); background: var(--surface); color: var(--muted); padding: 5px 10px; font-size: 12px; border-radius: 999px; }
+    .filter-pill.active { background: var(--fg); color: #fff; border-color: var(--fg); font-weight: 600; }
+
+    /* Cartes & Sondages */
+    .card {
+      border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px;
+      background: var(--surface); box-shadow: 0 1px 2px rgba(15, 23, 42, .03); transition: border-color .2s, box-shadow .2s;
+    }
+    .card.featured { border: 1.5px solid var(--fg); }
+    .poll-card { position: relative; overflow: hidden; padding: 14px 15px 12px; }
+    .poll-card.consensus-ready { border: 1.5px solid var(--yes-fg); background: linear-gradient(to bottom, #f7fee7 0%, #fff 36px); }
+    .poll-card.unvoted-highlight { border-left: 3px solid var(--accent-fg); }
+    .card.archived-card { background: #fafafa; }
+    @keyframes pulseCard {
+      0% { box-shadow: 0 0 0 0 rgba(29, 78, 216, .35); border-color: var(--accent-fg); }
+      70% { box-shadow: 0 0 0 8px rgba(29, 78, 216, 0); border-color: var(--accent-fg); }
+      100% { box-shadow: 0 1px 2px rgba(15, 23, 42, .03); }
+    }
+    .card.just-focused { animation: pulseCard 1.1s ease-out; }
+
+    .poll-top-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; display: flex; gap: 2px; background: var(--subtle); }
+    .poll-top-seg { flex: 1; background: var(--border); transition: background-color .2s; }
+    .poll-top-seg.yes { background: var(--yes-solid); }
+    .poll-top-seg.maybe { background: var(--maybe-solid); }
+    .poll-top-seg.no { background: var(--no-solid); opacity: .65; }
+
+    .poll-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+    .card-kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
+    .card-kicker.emerald { color: var(--yes-fg); }
+    .card-date { font-family: var(--font-serif); font-size: 17.5px; margin: 0; line-height: 1.25; text-transform: capitalize; }
+    .card-meta { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .poll-subline { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .time-pill {
+      display: inline-block; font-size: 12px; font-weight: 600; color: var(--accent-fg);
+      background: var(--accent-bg); border: 1px solid var(--accent-border); padding: 1px 7px; border-radius: 5px;
+    }
+    .time-pill.day-mode { color: var(--fg); background: var(--subtle); border-color: var(--border); }
+    .card-program { font-size: 14px; padding-top: 8px; border-top: 1px solid var(--subtle); margin-top: 8px; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--subtle); }
+    .poll-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--subtle); }
+    .poll-footer-main { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+    .btn-more-dots { width: 32px; height: 30px; padding: 0; border-color: var(--border); color: var(--muted); font-weight: 700; letter-spacing: 1px; flex-shrink: 0; }
+    .btn-more-dots:hover { color: var(--fg); background: var(--subtle); }
+
+    /* Alertes & Badges */
+    .alert-box, .info-banner-box { border-radius: 10px; padding: 11px 14px; margin-bottom: 14px; font-size: 13px; }
+    .alert-box { border: 1px solid var(--no-border); background: var(--no-bg); color: var(--no-fg); }
+    .alert-box strong { display: block; margin-bottom: 4px; }
+    .info-banner-box { border: 1px solid var(--yes-border); background: var(--yes-bg); color: var(--fg); }
+    .archive-lock-banner {
+      display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: var(--muted);
+      background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; margin-top: 10px;
+    }
+    .consensus-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--subtle); color: var(--fg);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .consensus-badge.full { background: var(--yes-fg); color: #fff; border-color: var(--yes-fg); }
+    .consensus-badge.partial-good { background: var(--yes-bg); color: var(--yes-fg); border-color: var(--yes-border); }
+    .consensus-badge.archived { background: var(--no-bg); color: var(--no-fg); border-color: var(--no-border); }
+
+    /* Votes & Participants */
+    .vote-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 6px; }
+    .vote-btn { padding: 7px 4px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 7px; white-space: nowrap; }
+    .vote-btn.active-yes { background: var(--yes-fg); color: #fff; border-color: var(--yes-fg); font-weight: 600; }
+    .vote-btn.active-maybe { background: var(--maybe-bg); color: var(--maybe-fg); border: 1.5px solid var(--maybe-solid); font-weight: 600; }
+    .vote-btn.active-no { background: var(--no-bg); color: var(--no-fg); border-color: var(--no-border); font-weight: 600; }
+
+    .note-trigger-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+    .btn-add-note-link { border: none; background: transparent; color: var(--muted); font-size: 11.5px; padding: 2px 4px; border-radius: 4px; }
+    .btn-add-note-link:hover { color: var(--fg); background: var(--subtle); }
+    .vote-note-bar { display: flex; gap: 6px; align-items: center; margin: 6px 0 8px; }
+    .vote-note-bar input { font-size: 12.5px; padding: 6px 9px; background: var(--subtle); }
+    .vote-note-bar input:focus { background: var(--surface); }
+
+    .member-votes-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .member-chip { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--subtle); color: var(--muted); line-height: 1.35; }
+    .member-chip.yes { background: var(--yes-bg); border-color: var(--yes-border); color: var(--yes-fg); font-weight: 500; }
+    .member-chip.maybe { background: var(--maybe-bg); border-color: var(--maybe-border); color: var(--maybe-fg); font-weight: 500; }
+    .member-chip.no { background: var(--no-bg); border-color: var(--no-border); color: var(--no-fg); }
+    .member-chip.no .chip-name { text-decoration: line-through; opacity: .85; }
+    .member-chip.summary-toggle { cursor: pointer; background: var(--surface); color: var(--fg); font-weight: 500; }
+    .chip-note { color: var(--fg); font-weight: 400; font-style: italic; }
+    .unavail-notice { font-size: 12px; background: var(--no-bg); border: 1px solid var(--no-border); border-left: 3px solid var(--no-solid); padding: 5px 9px; border-radius: 6px; margin: 6px 0; color: var(--no-fg); }
+
+    .action-sheet-list { display: grid; gap: 8px; }
+    .action-sheet-btn { width: 100%; justify-content: flex-start; padding: 11px 14px; font-size: 14px; border-color: var(--border); }
+    .action-sheet-btn:hover { background: var(--subtle); }
+    .action-sheet-btn.danger { color: var(--no-fg); border-color: var(--no-border); background: var(--no-bg); }
+
+    /* Tableau comparatif */
+    .matrix-card { padding: 0; overflow: hidden; }
+    .matrix-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .avail-matrix { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
+    .avail-matrix th, .avail-matrix td { padding: 10px 8px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+    .avail-matrix th { background: var(--subtle); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .avail-matrix th.col-me { background: var(--accent-bg); color: var(--accent-fg); }
+    .avail-matrix td:first-child, .avail-matrix th:first-child {
+      text-align: left; padding-left: 12px; position: sticky; left: 0; z-index: 2;
+      background: var(--surface); border-right: 1px solid var(--border); min-width: 148px;
+    }
+    .avail-matrix th:first-child { background: var(--subtle); z-index: 3; }
+    .avail-matrix tr.row-consensus td:first-child { background: var(--yes-bg); }
+    .matrix-cell-badge {
+      display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+      border-radius: 7px; font-weight: 700; font-size: 13px; border: 1px solid var(--border);
+      background: var(--subtle); color: var(--muted); position: relative;
+    }
+    .matrix-cell-badge.yes { background: var(--yes-bg); border-color: var(--yes-border); color: var(--yes-fg); }
+    .matrix-cell-badge.maybe { background: var(--maybe-bg); border-color: var(--maybe-border); color: var(--maybe-fg); }
+    .matrix-cell-badge.no { background: var(--no-bg); border-color: var(--no-border); color: var(--no-fg); }
+    .matrix-cell-btn { padding: 0; border: none; background: transparent; }
+    .matrix-cell-btn .matrix-cell-badge { box-shadow: 0 0 0 1.5px var(--accent-fg); }
+    .matrix-note-dot { position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-fg); }
+
+    /* Sélecteurs de créneaux & switches */
+    .poll-slot-row { border: 1px solid var(--border); background: var(--subtle); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .poll-slot-row input { background: var(--surface); }
+    .poll-slot-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .slot-mode-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+    .slot-mode-btn { padding: 7px 8px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; }
+    .slot-mode-btn.span-full { grid-column: 1 / -1; }
+    .slot-mode-btn.active { background: var(--fg); color: #fff; border-color: var(--fg); font-weight: 600; }
+    .toggle-row {
+      display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--subtle); cursor: pointer; text-transform: none; letter-spacing: normal; font-weight: 500; font-size: 13.5px;
+    }
+    .toggle-row input[type="checkbox"] { width: 17px; height: 17px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--fg); }
+
+    /* Barre d'onglets */
+    nav.tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+      background: rgba(255, 255, 255, .97); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border); padding: 6px 8px calc(6px + var(--safe-bottom));
+      display: grid; grid-template-columns: repeat(3, 1fr);
+    }
+    .tab-item {
+      border: none; background: transparent; color: var(--muted); flex-direction: column;
+      gap: 3px; padding: 6px 4px; font-size: 11px; border-radius: 8px; position: relative;
+    }
+    .tab-item.active { color: var(--fg); font-weight: 600; }
+    .tab-item svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.75; }
+    .tab-badge {
+      position: absolute; top: 3px; right: calc(50% - 22px); background: var(--accent-fg); color: #fff;
+      font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+
+    /* Modales */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 50; background: rgba(15, 23, 42, .45);
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-sheet {
+      background: var(--surface); width: 100%; max-width: 680px; border-top-left-radius: 16px; border-top-right-radius: 16px;
+      border-top: 1px solid var(--border); padding: 20px 18px calc(24px + var(--safe-bottom)); max-height: 90dvh; overflow-y: auto;
+    }
+    @media (min-width: 640px) {
+      .modal-backdrop { align-items: center; padding: 16px; }
+      .modal-sheet { border-radius: 12px; border: 1px solid var(--border); max-width: 460px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1); }
+    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .modal-title { font-family: var(--font-serif); font-size: 19px; margin: 0; }
+
+    /* Portail Admin, Nouveautés & Onboarding */
+    .pin-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 26px; font-weight: 700; letter-spacing: .45em; text-align: center; padding: 12px 14px; }
+    .whats-new-hero { background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border: 1px solid var(--accent-border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .whats-new-badge { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-fg); background: #fff; border: 1px solid var(--accent-border); padding: 2px 8px; border-radius: 999px; margin-bottom: 6px; }
+    .release-notes-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 9px; }
+    .release-notes-list li { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; background: var(--subtle); padding: 9px 11px; border-radius: 8px; }
+    .release-notes-check { color: var(--yes-fg); font-weight: 700; flex-shrink: 0; }
+
+    .onboarding-wrap { max-width: 460px; margin: 20px auto; }
+    .onboarding-logo { text-align: center; margin-bottom: 24px; }
+    .onboarding-logo svg { width: 56px; height: 56px; margin-bottom: 8px; }
+    .onboarding-logo h1 { font-family: var(--font-serif); font-size: 28px; font-weight: 400; margin: 0; }
+    .onboarding-logo p { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+
+    .tuto-step { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--subtle); }
+    .tuto-step:last-child { border-bottom: none; padding-bottom: 0; }
+    .tuto-num { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--fg); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .tuto-icon-inline { display: inline-flex; align-items: center; vertical-align: middle; border: 1px solid var(--border); border-radius: 4px; padding: 2px 5px; margin: 0 2px; background: var(--subtle); }
+
+    .divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin: 22px 0; }
+    .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+    /* Toast masqué tant qu'il n'est pas actif (évite toute barre noire en haut de l'écran) */
+    .toast {
+      position: fixed; top: calc(16px + var(--safe-top)); left: 50%;
+      transform: translateX(-50%) translateY(-16px); z-index: 100;
+      background: var(--fg); color: #fff; padding: 10px 16px; border-radius: 8px;
+      font-size: 13.5px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .15);
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease, visibility .2s;
+      max-width: 92vw; text-align: center;
+    }
+    .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+    .empty-state { text-align: center; padding: 36px 16px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); }
+    .empty-state p { margin: 0 0 14px; }
+    .banner-install { border: 1px solid var(--accent-border); background: var(--accent-bg); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+    .hidden { display: none !important; }
+    .member-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--subtle); }
+    .member-row:last-child { border-bottom: none; }
+    .member-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .invite-url-box { font-family: monospace; font-size: 12.5px; background: var(--subtle); border: 1px solid var(--border); padding: 10px; border-radius: 8px; word-break: break-all; margin-bottom: 12px; user-select: all; }
+    .app-version-footer { text-align: center; font-size: 12px; color: var(--muted); padding: 6px 0 4px; letter-spacing: .02em; }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- En-tête -->
+  <header id="app-header" class="hidden">
+    <div class="header-inner">
+      <div class="brand">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#111827"/>
+          <circle cx="50" cy="57" r="6.5" fill="#111827"/>
+        </svg>
+        <div class="brand-titles">
+          <h1 class="brand-name">Cadenza</h1>
+          <div id="header-ensemble-name" class="ensemble-subtitle">Synchronisation...</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" id="btn-invite-top" class="btn-secondary btn-sm">Inviter</button>
+        <button type="button" id="btn-notif-top" class="icon-btn" aria-label="Notifications">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span id="notif-status-dot" class="notif-dot off"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="firebase-error-banner" class="alert-box hidden" role="alert">
+      <strong>Connexion Firebase requise</strong>
+      <span id="firebase-error-text">Vérifiez les règles de votre Realtime Database.</span>
+    </div>
+
+    <!-- Tutoriel d'installation PWA -->
+    <section id="view-install-tuto" class="onboarding-wrap hidden">
+      <div class="onboarding-logo">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#111827"/>
+          <circle cx="50" cy="57" r="6.5" fill="#111827"/>
+        </svg>
+        <h1>Bienvenue sur Cadenza</h1>
+        <p>Installez l'application sur votre écran d'accueil pour l'utiliser en plein écran et recevoir les notifications de répétition.</p>
+      </div>
+
+      <div id="tuto-direct-install-card" class="card featured hidden">
+        <div class="card-kicker">Installation rapide</div>
+        <p style="margin: 4px 0 12px; font-size: 14px;">Votre appareil permet l'installation directe de Cadenza en un clic.</p>
+        <button type="button" id="btn-tuto-direct-install" class="btn-primary btn-full">Installer Cadenza maintenant</button>
+      </div>
+
+      <div id="tuto-ios-card" class="card">
+        <div class="card-kicker">Sur iPhone &amp; iPad (Safari)</div>
+        <div class="tuto-step">
+          <span class="tuto-num">1</span>
+          <div>Ouvrez cette page dans <strong>Safari</strong> puis appuyez sur <strong>Partager</strong>
+            <span class="tuto-icon-inline" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            </span>.
+          </div>
+        </div>
+        <div class="tuto-step"><span class="tuto-num">2</span><div>Appuyez sur <strong>Sur l'écran d'accueil</strong>.</div></div>
+        <div class="tuto-step"><span class="tuto-num">3</span><div>Appuyez sur <strong>Ajouter</strong> puis lancez <strong>Cadenza</strong> depuis votre écran d'accueil.</div></div>
+      </div>
+
+      <div id="tuto-android-card" class="card">
+        <div class="card-kicker">Sur Android (Chrome) &amp; Ordinateur</div>
+        <div class="tuto-step"><span class="tuto-num">1</span><div>Ouvrez le menu <strong>⋮</strong> de Chrome (ou l'icône d'installation dans la barre d'adresse).</div></div>
+        <div class="tuto-step"><span class="tuto-num">2</span><div>Sélectionnez <strong>Ajouter à l'écran d'accueil</strong> ou <strong>Installer l'application</strong>.</div></div>
+        <div class="tuto-step"><span class="tuto-num">3</span><div>Confirmez en appuyant sur <strong>Installer</strong>.</div></div>
+      </div>
+
+      <div style="margin-top: 18px;">
+        <button type="button" id="btn-finish-tuto" class="btn-primary btn-full">Continuer vers Cadenza</button>
+      </div>
+    </section>
+
+    <!-- Onboarding : Rejoindre ou créer un ensemble -->
+    <section id="view-onboarding" class="onboarding-wrap hidden">
+      <div class="onboarding-logo">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#111827"/>
+          <circle cx="50" cy="57" r="6.5" fill="#111827"/>
+        </svg>
+        <h1>Cadenza</h1>
+        <p>Disponibilités et agenda centralisé pour ensembles musicaux.</p>
+      </div>
+
+      <div id="join-card" class="card">
+        <div class="card-kicker" id="join-kicker">Rejoindre un ensemble</div>
+        <h2 class="modal-title" id="join-ensemble-title" style="margin-bottom: 12px;">Accéder à un espace existant</h2>
+        <div class="field" id="join-code-field">
+          <label for="join-code">Code ou lien de l'ensemble</label>
+          <input type="text" id="join-code" placeholder="Ex: ens-a1b2c3" required />
+        </div>
+        <div id="join-existing-members-box" class="hidden" style="margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+          <div class="card-kicker" style="margin-bottom: 6px;">Déjà membre ? Récupérer mon profil</div>
+          <p style="font-size: 13px; color: var(--muted); margin: 0 0 10px;">Touchez votre nom pour retrouver vos disponibilités sur cet appareil :</p>
+          <div id="join-existing-members-list" style="display: grid; gap: 6px;"></div>
+        </div>
+        <form id="form-join">
+          <div class="card-kicker" id="join-new-member-kicker" style="margin-bottom: 8px;">Nouveau musicien</div>
+          <div class="row-2">
+            <div class="field"><label for="join-name">Votre prénom</label><input type="text" id="join-name" placeholder="Ex: Clara" required /></div>
+            <div class="field"><label for="join-instrument">Instrument</label><input type="text" id="join-instrument" placeholder="Ex: Violon I" required /></div>
+          </div>
+          <button type="submit" id="btn-submit-join" class="btn-primary btn-full">Rejoindre l'ensemble</button>
+        </form>
+      </div>
+
+      <div id="onboarding-divider" class="divider">ou</div>
+
+      <div id="create-card" class="card">
+        <div class="card-kicker">Nouvel espace</div>
+        <h2 class="modal-title" style="margin-bottom: 12px;">Créer un ensemble</h2>
+        <form id="form-create">
+          <div class="field"><label for="create-ensemble-name">Nom de l'ensemble</label><input type="text" id="create-ensemble-name" placeholder="Ex: Quatuor Lumière" required /></div>
+          <div class="field">
+            <label for="create-formation">Formation</label>
+            <select id="create-formation">
+              <option>Duo</option><option>Trio</option><option selected>Quatuor</option>
+              <option>Quintette</option><option>Sextuor / Octuor</option><option>Ensemble de chambre</option>
+            </select>
+          </div>
+          <div class="row-2">
+            <div class="field"><label for="create-member-name">Votre prénom</label><input type="text" id="create-member-name" placeholder="Ex: Colin" required /></div>
+            <div class="field"><label for="create-member-instrument">Instrument</label><input type="text" id="create-member-instrument" placeholder="Ex: Violoncelle" required /></div>
+          </div>
+          <button type="submit" id="btn-submit-create" class="btn-secondary btn-full">Créer et inviter les membres</button>
+        </form>
+      </div>
+    </section>
+
+    <div id="install-banner" class="banner-install hidden">
+      <span id="install-text">Installer Cadenza sur votre appareil pour recevoir les alertes.</span>
+      <button type="button" id="btn-install-pwa" class="btn-primary btn-sm">Installer</button>
+    </div>
+
+    <!-- VUE 1 : AGENDA -->
+    <section id="view-agenda" class="hidden">
+      <div class="section-head">
+        <h2 class="section-title">Agenda de l'ensemble</h2>
+        <button type="button" id="btn-open-rehearsal" class="btn-primary btn-sm">+ Répétition</button>
+      </div>
+      <div id="agenda-list"></div>
+    </section>
+
+    <!-- VUE 2 : DISPONIBILITÉS -->
+    <section id="view-avail" class="hidden">
+      <div class="section-head">
+        <h2 class="section-title">Disponibilités</h2>
+        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer des dates</button>
+      </div>
+      <div id="avail-toolbar" class="avail-toolbar hidden">
+        <div class="segmented-control" role="tablist">
+          <button type="button" class="seg-btn active" data-avail-view="cards">Cartes</button>
+          <button type="button" class="seg-btn" data-avail-view="table">Tableau</button>
+        </div>
+        <div class="filter-pills" role="group">
+          <button type="button" class="filter-pill active" data-avail-filter="all">Actives</button>
+          <button type="button" class="filter-pill" data-avail-filter="unvoted" id="pill-filter-unvoted">À voter</button>
+          <button type="button" class="filter-pill" data-avail-filter="consensus">Unanimité</button>
+          <button type="button" class="filter-pill" data-avail-filter="archived" id="pill-filter-archived">Archives</button>
+        </div>
+      </div>
+      <div id="polls-list"></div>
+    </section>
+
+    <!-- VUE 3 : ENSEMBLE -->
+    <section id="view-ensemble" class="hidden">
+      <div class="section-head">
+        <h2 class="section-title">Ensemble</h2>
+        <button type="button" id="btn-open-edit-ensemble" class="btn-secondary btn-sm">Modifier l'ensemble</button>
+      </div>
+
+      <div class="card featured">
+        <div class="card-kicker" id="info-formation">Formation</div>
+        <h3 class="card-date" id="info-name" style="font-size: 22px;">—</h3>
+        <div class="card-meta">Code d'invitation : <strong id="info-code">—</strong></div>
+        <div class="card-actions" style="border-top: none; padding-top: 0;">
+          <button type="button" id="btn-share-invite" class="btn-primary btn-full">Envoyer le lien d'invitation</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Musiciens (<span id="members-count">0</span>)</div>
+        <div id="members-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Mes indisponibilités déclarées</div>
+        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">Signalez vos périodes d'absence (vacances, examens, tournée). Elles seront affichées lors de la proposition de dates.</p>
+        <div id="my-unavailabilities-list"></div>
+        <button type="button" id="btn-open-unavail" class="btn-secondary btn-sm btn-full" style="margin-top: 8px;">+ Déclarer une période d'absence</button>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Notifications push (cet ensemble)</div>
+        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">Activez ou coupez les alertes sur votre téléphone pour cet ensemble.</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" id="btn-toggle-push" class="btn-primary btn-sm">Activer les notifications</button>
+          <button type="button" id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
+        </div>
+        <div id="push-status-msg" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
+        <label class="toggle-row" for="toggle-auto-remind-eve">
+          <input type="checkbox" id="toggle-auto-remind-eve" checked />
+          <span>Rappel automatique la veille des répétitions à 19h00</span>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Mon profil &amp; Mes ensembles</div>
+        <div id="saved-ensembles-list" style="margin: 8px 0 12px;"></div>
+        <div style="display: grid; gap: 8px;">
+          <button type="button" id="btn-open-transfer" class="btn-secondary btn-sm btn-full">Sauvegarder / Transférer sur un autre appareil</button>
+          <button type="button" id="btn-switch-onboarding" class="btn-secondary btn-sm btn-full">Créer ou rejoindre un autre ensemble</button>
+          <button type="button" id="btn-reopen-tuto" class="btn-secondary btn-sm btn-full">Guide d'installation sur l'écran d'accueil</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-kicker">Aide et contact</div>
+        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">Une question, un problème technique ou une suggestion ?</p>
+        <a href="mailto:contact@cadenzaapp.ch?subject=Cadenza%20%E2%80%94%20Demande%20d'aide" class="btn btn-secondary btn-sm btn-full">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>contact@cadenzaapp.ch</span>
+        </a>
+      </div>
+
+      <div class="app-version-footer">Cadenza • Version <span id="app-version-label">—</span></div>
+    </section>
+  </main>
+
+  <!-- Barre de navigation -->
+  <nav id="app-nav" class="tab-bar hidden" aria-label="Navigation principale">
+    <button type="button" class="tab-item active" data-tab="agenda">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Agenda</span>
+    </button>
+    <button type="button" class="tab-item" data-tab="avail">
+      <span id="nav-avail-badge" class="tab-badge hidden">0</span>
+      <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Disponibilités</span>
+    </button>
+    <button type="button" class="tab-item" data-tab="ensemble">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Ensemble</span>
+    </button>
+  </nav>
+
+  <!-- MODALES -->
+  <div id="modal-poll-actions" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="poll-actions-title">Options du créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll-actions">Fermer</button></div>
+      <div id="poll-actions-subtitle" class="card-meta" style="margin-bottom: 14px; font-weight: 600; color: var(--fg);">—</div>
+      <div id="poll-actions-list" class="action-sheet-list"></div>
+    </div>
+  </div>
+
+  <div id="modal-admin-pin" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Administration Cadenza</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-admin-pin">Fermer</button></div>
+      <p style="font-size: 13.5px; color: var(--muted); margin: 0 0 14px;">Saisissez votre code secret à 4 chiffres pour accéder au portail d'administration.</p>
+      <form id="form-admin-pin">
+        <div class="field"><label for="admin-pin-input">Code secret (4 chiffres)</label><input type="password" id="admin-pin-input" class="pin-input" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" autocomplete="off" required /></div>
+        <div id="admin-pin-error" class="unavail-notice hidden" style="margin-bottom: 12px;">Code secret incorrect.</div>
+        <button type="submit" id="btn-submit-admin-pin" class="btn-primary btn-full">Déverrouiller le portail</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-admin-portal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Portail d'administration</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-admin-portal">Fermer</button></div>
+      <div id="admin-firebase-warning" class="alert-box hidden"><strong>Accès refusé par Firebase</strong><span>Vérifiez <code>admin_config/secret_pin</code> dans Firebase.</span></div>
+      <div class="card" style="padding: 12px 14px; margin-bottom: 16px;">
+        <div class="card-kicker">Annonce actuellement active</div>
+        <div id="admin-current-announcement" style="font-size: 13.5px; color: var(--muted); margin-top: 4px;">Aucune annonce publiée.</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+          <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Revoir la pop-up</button>
+          <button type="button" id="btn-admin-clear-announcement" class="btn-del-subtle btn-xs hidden">Désactiver</button>
+        </div>
+      </div>
+      <form id="form-admin-announcement">
+        <div class="row-2">
+          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v15" required /></div>
+          <div class="field"><label for="admin-ann-title">Titre</label><input type="text" id="admin-ann-title" value="Nouveautés sur Cadenza" required /></div>
+        </div>
+        <div class="field"><label for="admin-ann-subtitle">Sous-titre (optionnel)</label><input type="text" id="admin-ann-subtitle" placeholder="Ex: Une nouvelle mise à jour est disponible :" /></div>
+        <div class="field"><label for="admin-ann-notes">Nouveautés (une par ligne)</label><textarea id="admin-ann-notes" rows="4" required></textarea></div>
+        <div style="display: grid; gap: 8px;">
+          <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser</button>
+          <button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-whats-new" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="whats-new-title">Nouveautés sur Cadenza</h3><button type="button" class="btn-secondary btn-sm" id="btn-close-whats-new-top">Fermer</button></div>
+      <div class="whats-new-hero">
+        <span class="whats-new-badge" id="whats-new-version-badge">Mise à jour</span>
+        <div id="whats-new-subtitle" style="font-size: 14px; font-weight: 500;">Découvrez les dernières améliorations :</div>
+        <div id="whats-new-date" style="font-size: 12px; color: var(--muted); margin-top: 3px;"></div>
+      </div>
+      <ul id="whats-new-list" class="release-notes-list"></ul>
+      <button type="button" id="btn-dismiss-whats-new" class="btn-primary btn-full">J'ai compris, fermer</button>
+    </div>
+  </div>
+
+  <div id="modal-confirm-delete" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="confirm-delete-title">Confirmer</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-confirm-delete">Fermer</button></div>
+      <div id="confirm-delete-context" class="unavail-notice" style="margin-bottom: 12px; font-weight: 600;">—</div>
+      <p id="confirm-delete-message" style="font-size: 14px; color: var(--muted); margin: 0 0 18px;">Voulez-vous continuer ?</p>
+      <div class="row-2">
+        <button type="button" class="btn-secondary btn-full" data-close="modal-confirm-delete">Annuler</button>
+        <button type="button" id="btn-execute-delete" class="btn-danger btn-full">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-confirm-poll" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Valider dans l'agenda</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-confirm-poll">Fermer</button></div>
+      <div id="confirm-poll-summary" class="card-meta" style="margin-bottom: 14px; font-weight: 600; color: var(--fg);">—</div>
+      <form id="form-confirm-poll">
+        <input type="hidden" id="confirm-poll-id" />
+        <div class="row-2">
+          <div class="field"><label for="confirm-poll-start">Début</label><input type="time" id="confirm-poll-start" required /></div>
+          <div class="field"><label for="confirm-poll-end">Fin</label><input type="time" id="confirm-poll-end" required /></div>
+        </div>
+        <div class="field"><label for="confirm-poll-location">Lieu</label><input type="text" id="confirm-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" required /></div>
+        <div class="field"><label for="confirm-poll-program">Programme (optionnel)</label><input type="text" id="confirm-poll-program" placeholder="Ex: Lecture du 2e mouvement" /></div>
+        <button type="submit" class="btn-confirm btn-full">Ajouter à l'agenda centralisé</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-edit-poll" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Modifier ce créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-poll">Fermer</button></div>
+      <form id="form-edit-poll">
+        <input type="hidden" id="edit-poll-id" />
+        <div class="field"><label for="edit-poll-date">Date</label><input type="date" id="edit-poll-date" required /></div>
+        <div id="edit-poll-mode-holder"></div>
+        <div id="edit-poll-archive-warning" class="alert-box hidden"></div>
+        <div class="field"><label for="edit-poll-location">Lieu envisagé (optionnel)</label><input type="text" id="edit-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /></div>
+        <div class="field"><label for="edit-poll-note">Programme / Remarque (optionnel)</label><input type="text" id="edit-poll-note" placeholder="Ex: Lecture du 2e mouvement" /></div>
+        <p style="font-size: 12.5px; color: var(--muted); margin: 0 0 14px;">Si vous modifiez la date ou l'horaire, les votes existants seront réinitialisés.</p>
+        <button type="submit" id="btn-submit-edit-poll" class="btn-primary btn-full">Enregistrer les modifications</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-unavailability" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Déclarer une indisponibilité</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-unavailability">Fermer</button></div>
+      <form id="form-unavailability">
+        <div class="row-2">
+          <div class="field"><label for="unavail-start">Du</label><input type="date" id="unavail-start" required /></div>
+          <div class="field"><label for="unavail-end">Au (inclus)</label><input type="date" id="unavail-end" required /></div>
+        </div>
+        <div class="field"><label for="unavail-reason">Motif (optionnel)</label><input type="text" id="unavail-reason" maxlength="60" placeholder="Ex: Vacances, Examens, Tournée" /></div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer cette période</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-edit-ensemble" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Modifier l'ensemble</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-ensemble">Fermer</button></div>
+      <form id="form-edit-ensemble">
+        <div class="field"><label for="edit-ensemble-name">Nom de l'ensemble</label><input type="text" id="edit-ensemble-name" required /></div>
+        <div class="field">
+          <label for="edit-ensemble-formation">Formation</label>
+          <select id="edit-ensemble-formation">
+            <option>Duo</option><option>Trio</option><option>Quatuor</option>
+            <option>Quintette</option><option>Sextuor / Octuor</option><option>Ensemble de chambre</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer les modifications</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-edit-member" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Modifier le musicien</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-member">Fermer</button></div>
+      <form id="form-edit-member">
+        <input type="hidden" id="edit-member-id" />
+        <div class="field"><label for="edit-member-name">Prénom / Nom</label><input type="text" id="edit-member-name" required /></div>
+        <div class="field"><label for="edit-member-instrument">Instrument</label><input type="text" id="edit-member-instrument" required /></div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-edit-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Modifier la répétition</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-rehearsal">Fermer</button></div>
+      <form id="form-edit-rehearsal">
+        <input type="hidden" id="edit-reh-id" />
+        <div class="field"><label for="edit-reh-date">Date</label><input type="date" id="edit-reh-date" required /></div>
+        <div class="row-2">
+          <div class="field"><label for="edit-reh-start">Début</label><input type="time" id="edit-reh-start" required /></div>
+          <div class="field"><label for="edit-reh-end">Fin</label><input type="time" id="edit-reh-end" required /></div>
+        </div>
+        <div class="field"><label for="edit-reh-location">Lieu</label><input type="text" id="edit-reh-location" required /></div>
+        <div class="field"><label for="edit-reh-program">Programme</label><input type="text" id="edit-reh-program" /></div>
+        <div class="field"><label for="edit-reh-notes">Notes (optionnel)</label><textarea id="edit-reh-notes" rows="2"></textarea></div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer les modifications</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-invite" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Inviter les musiciens</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-invite">Fermer</button></div>
+      <p style="font-size: 13.5px; color: var(--muted); margin: 0 0 12px;">Envoyez ce lien direct aux membres de votre ensemble. Aucun compte requis.</p>
+      <div class="invite-url-box" id="invite-link-display">—</div>
+      <div style="display: grid; gap: 8px;">
+        <button type="button" id="btn-copy-invite" class="btn-primary btn-full">Copier le lien d'invitation</button>
+        <button type="button" id="btn-native-share" class="btn-secondary btn-full">Partager via WhatsApp / SMS / Mail</button>
+      </div>
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--subtle); font-size: 12.5px; color: var(--muted);">
+        Code direct : <strong id="invite-code-display" style="color: var(--fg);">—</strong>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-transfer-device" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Transférer mon profil</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-transfer-device">Fermer</button></div>
+      <p style="font-size: 13.5px; color: var(--muted); margin: 0 0 12px;">Ouvrez ce lien personnel sur votre nouvel appareil pour restaurer instantanément votre profil :</p>
+      <div class="invite-url-box" id="transfer-link-display">—</div>
+      <div style="display: grid; gap: 8px;">
+        <button type="button" id="btn-copy-transfer" class="btn-primary btn-full">Copier mon lien personnel</button>
+        <button type="button" id="btn-share-transfer" class="btn-secondary btn-full">Envoyer vers mon autre appareil</button>
+      </div>
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--subtle); font-size: 12.5px; color: var(--muted);">
+        Ou saisissez le code <strong id="transfer-code-display" style="color: var(--fg);">—</strong> sur l'écran d'accueil.
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des créneaux</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
+      <div id="poll-refine-banner" class="info-banner-box hidden"></div>
+      <form id="form-poll">
+        <div id="poll-slots-container"></div>
+        <div style="margin-bottom: 16px;"><button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter une autre date</button></div>
+        <div id="poll-archive-lock-warning" class="alert-box hidden"></div>
+        <div id="poll-unavail-warning" class="alert-box hidden"></div>
+        <div class="field"><label for="poll-location">Lieu envisagé (optionnel)</label><input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /></div>
+        <div class="field"><label for="poll-note">Programme / Remarque (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement" /></div>
+        <div id="poll-replace-row" class="hidden" style="margin-bottom: 14px;">
+          <label class="toggle-row" for="poll-replace-checkbox" style="margin-top: 0;">
+            <input type="checkbox" id="poll-replace-checkbox" checked />
+            <span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span>
+          </label>
+        </div>
+        <button type="submit" id="btn-submit-poll" class="btn-primary btn-full">Soumettre ce créneau aux membres</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title">Planifier une répétition</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button></div>
+      <form id="form-rehearsal">
+        <div class="field"><label for="reh-date">Date</label><input type="date" id="reh-date" required /></div>
+        <div class="row-2">
+          <div class="field"><label for="reh-start">Début</label><input type="time" id="reh-start" value="14:00" required /></div>
+          <div class="field"><label for="reh-end">Fin</label><input type="time" id="reh-end" value="17:00" required /></div>
+        </div>
+        <div class="field"><label for="reh-location">Lieu</label><input type="text" id="reh-location" placeholder="Ex: Sion, Lausanne..." required /></div>
+        <div class="field"><label for="reh-program">Programme de travail</label><input type="text" id="reh-program" placeholder="Ex: Beethoven Op. 18 n°4 — Allegro" /></div>
+        <div class="field"><label for="reh-notes">Notes (optionnel)</label><textarea id="reh-notes" rows="2"></textarea></div>
+        <button type="submit" class="btn-primary btn-full">Enregistrer dans l'agenda</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Génération de l'icône Apple Touch 180x180 -->
+  <script>
+    try {
+      const c = document.createElement("canvas");
+      c.width = c.height = 180;
+      const ctx = c.getContext("2d"), s = 1.8;
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 180, 180);
+      ctx.fillStyle = "#111827";
+      ctx.beginPath(); ctx.moveTo(12 * s, 64 * s);
+      ctx.bezierCurveTo(12 * s, 31 * s, 88 * s, 31 * s, 88 * s, 64 * s);
+      ctx.bezierCurveTo(84 * s, 39 * s, 16 * s, 39 * s, 12 * s, 64 * s);
+      ctx.fill();
+      ctx.beginPath(); ctx.arc(50 * s, 57 * s, 6.5 * s, 0, Math.PI * 2); ctx.fill();
+      const l = document.createElement("link");
+      l.rel = "apple-touch-icon"; l.href = c.toDataURL("image/png");
+      document.head.appendChild(l);
+    } catch (_) {}
+  </script>
+
+  <!-- Logique Applicative & Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
+    import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
+    import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
+
+    const APP_VERSION = "v15";
+    const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
+    const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
+    const KEYS = {
+      session: "cadenza_session_v1",
+      invite: "cadenza_pending_invite_v2",
+      tuto: "cadenza_install_tuto_seen_v1",
+      ann: "cadenza_seen_announcement_id_v1",
+      evtTs: "cadenza_last_event_ts"
+    };
+
+    const app = initializeApp({
+      apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
+      authDomain: "cadenza-dad79.firebaseapp.com",
+      databaseURL: "https://cadenza-dad79-default-rtdb.firebaseio.com",
+      projectId: "cadenza-dad79",
+      storageBucket: "cadenza-dad79.firebasestorage.app",
+      messagingSenderId: "298490556921",
+      appId: "1:298490556921:web:0f83dc2d107ee4eae8cd28",
+      measurementId: "G-PT9W1RCJJR"
+    });
+    try { getAnalytics(app); } catch (_) {}
+    const db = getDatabase(app);
+
+    let session = JSON.parse(localStorage.getItem(KEYS.session) || "null") || { activeEnsembleId: null, ensembles: {} };
+    let currentEnsembleData = null, unsubscribeEnsemble = null, swRegistration = null, messagingInstance = null;
+    let lastNotifiedTimestamp = Number(localStorage.getItem(KEYS.evtTs) || Date.now());
+    let deferredInstallPrompt = null, availViewMode = "cards", availFilterMode = "all";
+    let pendingScrollToPollId = null, pendingDeleteCallback = null, isAutoArchivingPolls = false;
+    let refiningPollId = null, refiningFixedDate = null;
+    let ensembleTapCount = 0, ensembleTapTimer = null, verifiedAdminPin = null;
+    let latestAnnouncementData = null, displayedAnnouncementId = null, isPreviewingWhatsNew = false;
+    const openNoteEditors = new Set(), expandedMemberLists = new Set();
+
+    const $ = (id) => document.getElementById(id);
+    const saveSession = () => localStorage.setItem(KEYS.session, JSON.stringify(session));
+    const haptic = () => navigator.vibrate && navigator.vibrate(10);
+    const genId = (p) => `${p}-${Array.from({ length: 6 }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("")}`;
+    const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+
+    $("app-version-label").textContent = APP_VERSION;
+
+    function showToast(msg) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.remove("show"), 3400);
+    }
+
+    function handleFirebaseError(err) {
+      console.error("Firebase error:", err);
+      const msg = String(err?.message || err || "");
+      $("firebase-error-text").textContent = (msg.toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED")
+        ? "Accès refusé par Firebase : autorisez .read et .write sur \"ensembles\"."
+        : `Erreur de synchronisation Firebase : ${msg}`;
+      $("firebase-error-banner").classList.remove("hidden");
+      showToast("Erreur de connexion à la base de données.");
+    }
+
+    // Formatage des dates & créneaux
+    const parseIso = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
+    const formatDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
+    const formatCompactDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "";
+    const formatShortDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "";
+    const formatPollTimeLabel = (p) => p.timeMode === "day" ? "Journée entière" : p.timeMode === "period" && p.period ? p.period : p.startTime && p.endTime ? `${p.startTime} – ${p.endTime}` : (p.startTime || p.period || "");
+    const formatVoteLabelFr = (v) => ({ yes: "Oui (Disponible)", maybe: "Peut-être (Incertain)", no: "Non (Indisponible)" }[v] || "");
+
+    function getPollSortKey(p) {
+      if (p.timeMode === "day") return `${p.date}T00:00`;
+      if (p.timeMode === "period") return `${p.date}T${{ "Matin": "09:00", "Après-midi": "14:00", "Soir": "19:00" }[p.period] || "12:00"}`;
+      return `${p.date}T${p.startTime || "00:01"}`;
+    }
+
+    function getSlotFingerprint(s) {
+      const d = String(s.date || "").trim(), m = s.timeMode || "day";
+      if (m === "day") return `${d}|day`;
+      if (m === "period") return `${d}|period|${String(s.period || "").trim()}`;
+      return `${d}|exact|${String(s.startTime || "").trim()}-${String(s.endTime || "").trim()}`;
+    }
+
+    function findArchivedSlotMatch(slot) {
+      const fp = getSlotFingerprint(slot);
+      return Object.values(currentEnsembleData?.archivedPolls || {}).find((a) => a.slotFingerprint === fp || getSlotFingerprint(a) === fp) || null;
+    }
+
+    function extractEnsembleCode(raw) {
+      let c = String(raw || "").trim();
+      if (c.includes("ensemble=")) {
+        try { c = new URL(c).searchParams.get("ensemble") || c; } catch (_) { c = c.split("ensemble=")[1].split("&")[0]; }
+      }
+      return c;
+    }
+
+    const getAppUrl = (params) => `${window.location.origin}${window.location.pathname}?${new URLSearchParams(params)}`;
+    const getInviteUrl = (ensId) => getAppUrl({ ensemble: ensId });
+    const getTransferUrl = (ensId, mbrId) => getAppUrl({ ensemble: ensId, member: mbrId });
+
+    async function copyTextReliable(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try { await navigator.clipboard.writeText(text); return true; } catch (_) {}
+      }
+      try {
+        const t = Object.assign(document.createElement("textarea"), { value: text, style: "position:fixed;opacity:0" });
+        document.body.appendChild(t); t.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(t);
+        return ok;
+      } catch (_) { return false; }
+    }
+
+    async function shareOrCopy(url, title, text, copiedMsg) {
+      haptic();
+      if (navigator.share) {
+        try { await navigator.share({ title, text, url }); return; } catch (e) { if (e?.name === "AbortError") return; }
+      }
+      showToast((await copyTextReliable(url)) ? copiedMsg : "Copiez le lien affiché ci-dessus.");
+    }
+
+    // Composant réutilisable : sélecteur de mode horaire (utilisé dans Création & Édition de créneau)
+    function buildModeSelectorHtml(startVal = "14:00", endVal = "17:00") {
+      return `
+        <div class="field" style="margin-bottom: 10px;">
+          <label>Moment ou horaire</label>
+          <div class="slot-mode-group">
+            <button type="button" class="slot-mode-btn span-full" data-mode="day" data-period="">Journée entière (sans horaire)</button>
+            <button type="button" class="slot-mode-btn" data-mode="period" data-period="Matin">Matin</button>
+            <button type="button" class="slot-mode-btn" data-mode="period" data-period="Après-midi">Après-midi</button>
+            <button type="button" class="slot-mode-btn" data-mode="period" data-period="Soir">Soir</button>
+            <button type="button" class="slot-mode-btn span-full" data-mode="exact" data-period="">Heure précise</button>
+          </div>
+        </div>
+        <div class="row-2 slot-exact-times" style="margin-bottom: 12px;">
+          <div class="field" style="margin-bottom: 0;"><label>Début</label><input type="time" class="slot-start" value="${esc(startVal)}" /></div>
+          <div class="field" style="margin-bottom: 0;"><label>Fin</label><input type="time" class="slot-end" value="${esc(endVal)}" /></div>
+        </div>`;
+    }
+
+    function applyModeState(host, mode, period, onChange) {
+      host.dataset.mode = mode;
+      host.dataset.period = mode === "period" ? period : "";
+      const exactBox = host.querySelector(".slot-exact-times");
+      const sInp = host.querySelector(".slot-start"), eInp = host.querySelector(".slot-end");
+      const isExact = mode === "exact";
+      exactBox.classList.toggle("hidden", !isExact);
+      sInp.required = eInp.required = isExact;
+      host.querySelectorAll(".slot-mode-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.mode === mode && (mode !== "period" || b.dataset.period === period));
+      });
+      if (onChange) onChange();
+    }
+
+    function bindModeSelector(host, onChange) {
+      host.querySelectorAll(".slot-mode-btn").forEach((b) => {
+        b.addEventListener("click", () => {
+          haptic();
+          applyModeState(host, b.dataset.mode, b.dataset.period || "Après-midi", onChange);
+        });
+      });
+      host.querySelector(".slot-start").addEventListener("change", () => onChange && onChange());
+      host.querySelector(".slot-end").addEventListener("change", () => onChange && onChange());
+    }
+
+    $("edit-poll-mode-holder").innerHTML = buildModeSelectorHtml();
+    bindModeSelector($("edit-poll-mode-holder"), checkEditPollArchiveLock);
+
+    // Archivage automatique & tri intelligent des disponibilités
+    function isPollImpossibleAndComplete(poll, members) {
+      if (!poll || !members?.length) return false;
+      const v = poll.votes || {};
+      return members.every((m) => Boolean(v[m.id])) && members.some((m) => v[m.id] === "no");
+    }
+
+    async function archiveFailedPollsIfNeeded() {
+      if (!session.activeEnsembleId || !currentEnsembleData || isAutoArchivingPolls) return;
+      const members = Object.values(currentEnsembleData.members || {});
+      const toArchive = Object.values(currentEnsembleData.polls || {}).filter((p) => isPollImpossibleAndComplete(p, members));
+      if (!toArchive.length) return;
+
+      isAutoArchivingPolls = true;
+      try {
+        const updates = {}, now = Date.now();
+        toArchive.forEach((p) => {
+          updates[`archivedPolls/${p.id}`] = {
+            ...p, archivedAt: now, archiveReason: "complete_with_unavailability",
+            unavailableMembers: members.filter((m) => p.votes?.[m.id] === "no").map((m) => m.name),
+            slotFingerprint: getSlotFingerprint(p), lockedFromRelauch: true
+          };
+          updates[`polls/${p.id}`] = null;
+        });
+        await update(ref(db, `ensembles/${session.activeEnsembleId}`), updates);
+        showToast(toArchive.length === 1
+          ? `Créneau du ${formatCompactDateFr(toArchive[0].date)} archivé (au moins une indisponibilité).`
+          : `${toArchive.length} créneaux avec indisponibilité archivés.`);
+      } catch (e) { console.warn("Auto-archive:", e); }
+      finally { isAutoArchivingPolls = false; }
+    }
+
+    function smartSortPolls(polls, members, myId) {
+      const total = members.length;
+      const metrics = (p) => {
+        const v = p.votes || {};
+        let yes = 0, maybe = 0, no = 0;
+        members.forEach((m) => { if (v[m.id] === "yes") yes++; else if (v[m.id] === "maybe") maybe++; else if (v[m.id] === "no") no++; });
+        const full = total > 0 && yes === total;
+        return { bucket: full ? 1 : no > 0 ? 3 : 2, unvoted: v[myId] ? 1 : 0, score: yes * 2 + maybe - no * 3, yes };
+      };
+      return [...polls].sort((a, b) => {
+        const ma = metrics(a), mb = metrics(b);
+        return (ma.bucket - mb.bucket) || (ma.bucket === 2 ? ma.unvoted - mb.unvoted : 0) || (mb.score - ma.score) || (mb.yes - ma.yes) || getPollSortKey(a).localeCompare(getPollSortKey(b));
+      });
+    }
+
+    function getUnavailabilityConflictsForDate(iso) {
+      if (!iso || !currentEnsembleData?.members) return [];
+      const out = [];
+      Object.values(currentEnsembleData.members).forEach((m) => {
+        Object.values(m.unavailabilities || {}).forEach((u) => {
+          if (u.startDate && u.endDate && iso >= u.startDate && iso <= u.endDate) {
+            out.push({ memberId: m.id, memberName: m.name, instrument: m.instrument, startDate: u.startDate, endDate: u.endDate, reason: u.reason || "" });
+          }
+        });
+      });
+      return out;
+    }
+
+    // Portail Admin & Pop-up Nouveautés
+    function openAdminPinPrompt() {
+      haptic();
+      $("admin-pin-input").value = "";
+      $("admin-pin-error").classList.add("hidden");
+      $("modal-admin-pin").classList.add("open");
+      setTimeout(() => $("admin-pin-input").focus(), 80);
+    }
+
+    function refreshAdminAnnouncementStatusUI() {
+      const box = $("admin-current-announcement"), retest = $("btn-admin-retest-popup"), clear = $("btn-admin-clear-announcement");
+      if (!latestAnnouncementData?.active) {
+        box.textContent = "Aucune annonce publiée.";
+        retest.classList.add("hidden"); clear.classList.add("hidden");
+        return;
+      }
+      const d = latestAnnouncementData.publishedAt ? new Date(latestAnnouncementData.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+      box.innerHTML = `<div style="color:var(--fg);font-weight:600">${esc(latestAnnouncementData.title || "Nouveautés")}${latestAnnouncementData.version ? `<span class="whats-new-badge" style="margin-left:6px;margin-bottom:0">${esc(latestAnnouncementData.version)}</span>` : ""}</div>${d ? `<div style="font-size:12px;margin-top:2px">Publiée le ${esc(d)}</div>` : ""}`;
+      retest.classList.remove("hidden"); clear.classList.remove("hidden");
+    }
+
+    function showWhatsNewModal(ann, isPreview = false) {
+      if (!ann) return;
+      isPreviewingWhatsNew = isPreview;
+      displayedAnnouncementId = ann.id || null;
+      $("whats-new-title").textContent = ann.title || "Nouveautés sur Cadenza";
+      $("whats-new-version-badge").textContent = ann.version ? (isPreview ? `Aperçu • ${ann.version}` : ann.version) : (isPreview ? "Aperçu" : "Mise à jour");
+      $("whats-new-subtitle").textContent = ann.subtitle || "Découvrez les dernières améliorations de l'application :";
+      const dEl = $("whats-new-date");
+      if (ann.publishedAt) {
+        dEl.textContent = new Date(ann.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+        dEl.classList.remove("hidden");
+      } else dEl.classList.add("hidden");
+      const lines = Array.isArray(ann.items) ? ann.items : String(ann.message || "").split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
+      $("whats-new-list").innerHTML = lines.map((l) => `<li><span class="release-notes-check">✓</span><span>${esc(l)}</span></li>`).join("");
+      $("modal-whats-new").classList.add("open");
+    }
+
+    function dismissWhatsNewModal() {
+      haptic();
+      if (!isPreviewingWhatsNew && displayedAnnouncementId) localStorage.setItem(KEYS.ann, displayedAnnouncementId);
+      isPreviewingWhatsNew = false;
+      closeModal("modal-whats-new");
+    }
+
+    function maybeDisplayLatestAnnouncement() {
+      if (!latestAnnouncementData?.active || !latestAnnouncementData?.id || !$("view-install-tuto").classList.contains("hidden")) return;
+      if (localStorage.getItem(KEYS.ann) !== latestAnnouncementData.id) showWhatsNewModal(latestAnnouncementData, false);
+    }
+
+    onValue(ref(db, "app_announcements/latest/public"), (snap) => {
+      latestAnnouncementData = snap.exists() ? snap.val() : null;
+      refreshAdminAnnouncementStatusUI();
+      maybeDisplayLatestAnnouncement();
+    }, () => {});
+
+    $("form-admin-pin").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const entered = $("admin-pin-input").value.trim();
+      const btn = $("btn-submit-admin-pin");
+      btn.disabled = true; $("admin-pin-error").classList.add("hidden");
+      try {
+        await set(ref(db, "admin_sessions/last_check"), { pin: entered, ts: Date.now() });
+        verifiedAdminPin = entered;
+        closeModal("modal-admin-pin");
+        $("admin-firebase-warning").classList.add("hidden");
+        if (!$("admin-ann-version").value) $("admin-ann-version").value = APP_VERSION;
+        refreshAdminAnnouncementStatusUI();
+        $("modal-admin-portal").classList.add("open");
+      } catch (_) {
+        verifiedAdminPin = null;
+        $("admin-pin-error").classList.remove("hidden");
+        $("admin-pin-input").value = ""; $("admin-pin-input").focus();
+      } finally { btn.disabled = false; }
+    });
+
+    const parseAdminNotes = () => $("admin-ann-notes").value.split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
+
+    $("btn-admin-preview").addEventListener("click", () => {
+      haptic();
+      const items = parseAdminNotes();
+      if (!items.length) return showToast("Ajoutez au moins une nouveauté.");
+      showWhatsNewModal({ id: "preview", version: $("admin-ann-version").value.trim() || APP_VERSION, title: $("admin-ann-title").value.trim(), subtitle: $("admin-ann-subtitle").value.trim(), items, publishedAt: Date.now() }, true);
+    });
+
+    $("form-admin-announcement").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      if (!verifiedAdminPin) { closeModal("modal-admin-portal"); return openAdminPinPrompt(); }
+      const items = parseAdminNotes();
+      if (!items.length) return showToast("Veuillez saisir au moins une nouveauté.");
+      const btn = $("btn-admin-publish"), newId = genId("ann");
+      btn.disabled = true;
+      try {
+        await set(ref(db, "app_announcements/latest"), {
+          public: { id: newId, active: true, version: $("admin-ann-version").value.trim() || APP_VERSION, title: $("admin-ann-title").value.trim(), subtitle: $("admin-ann-subtitle").value.trim(), items, publishedAt: Date.now() },
+          auth: { pin: verifiedAdminPin }
+        });
+        localStorage.setItem(KEYS.ann, newId);
+        closeModal("modal-admin-portal");
+        showToast("Mise à jour publiée pour tous les utilisateurs !");
+      } catch (_) { $("admin-firebase-warning").classList.remove("hidden"); showToast("Accès refusé par Firebase."); }
+      finally { btn.disabled = false; }
+    });
+
+    $("btn-admin-retest-popup").addEventListener("click", () => {
+      if (!latestAnnouncementData) return;
+      localStorage.removeItem(KEYS.ann);
+      closeModal("modal-admin-portal");
+      showWhatsNewModal(latestAnnouncementData, false);
+    });
+
+    $("btn-admin-clear-announcement").addEventListener("click", async () => {
+      haptic();
+      if (!verifiedAdminPin) { closeModal("modal-admin-portal"); return openAdminPinPrompt(); }
+      try {
+        await set(ref(db, "app_announcements/latest"), { public: { ...(latestAnnouncementData || {}), active: false }, auth: { pin: verifiedAdminPin } });
+        showToast("L'annonce a été désactivée.");
+      } catch (_) { $("admin-firebase-warning").classList.remove("hidden"); }
+    });
+
+    $("btn-dismiss-whats-new").addEventListener("click", dismissWhatsNewModal);
+    $("btn-close-whats-new-top").addEventListener("click", dismissWhatsNewModal);
+
+    // Modale de confirmation universelle (remplace confirm())
+    function openConfirmationModal({ title, context, message, confirmLabel = "Confirmer", danger = true, onConfirm }) {
+      haptic();
+      $("confirm-delete-title").textContent = title || "Confirmer";
+      const ctxEl = $("confirm-delete-context");
+      ctxEl.textContent = context || "";
+      ctxEl.classList.toggle("hidden", !context);
+      $("confirm-delete-message").textContent = message || "";
+      const btn = $("btn-execute-delete");
+      btn.textContent = confirmLabel;
+      btn.className = `${danger ? "btn-danger" : "btn-primary"} btn-full`;
+      btn.disabled = false;
+      pendingDeleteCallback = onConfirm;
+      $("modal-confirm-delete").classList.add("open");
+    }
+
+    $("btn-execute-delete").addEventListener("click", async () => {
+      if (!pendingDeleteCallback) return;
+      haptic();
+      const btn = $("btn-execute-delete"), fn = pendingDeleteCallback;
+      btn.disabled = true; pendingDeleteCallback = null;
+      try { await fn(); } finally { btn.disabled = false; closeModal("modal-confirm-delete"); }
+    });
+
+    // Actions sur un créneau
+    function openPollActionsMenu(poll) {
+      if (!poll || !session.activeEnsembleId) return;
+      haptic();
+      const members = Object.values(currentEnsembleData?.members || {});
+      const votes = poll.votes || {};
+      const yesCount = members.filter((m) => votes[m.id] === "yes").length;
+      const missing = members.filter((m) => !votes[m.id]);
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      const isBroad = poll.timeMode === "day" || poll.timeMode === "period";
+      const timeLabel = formatPollTimeLabel(poll);
+
+      $("poll-actions-subtitle").textContent = `${formatDateFr(poll.date)}${timeLabel ? ` • ${timeLabel}` : ""}`;
+
+      const actions = [
+        isBroad
+          ? { label: "🕒 Préciser / proposer des horaires", fn: () => openRefineTimeModal(poll) }
+          : { label: "🕒 Proposer un autre horaire ce jour", fn: () => openCounterProposalModal(poll) },
+        { label: `✓ Valider dans l'agenda (${yesCount}/${members.length})`, fn: () => openConfirmPollModal(poll) },
+        ...(missing.length ? [{ label: `🔔 Relancer les absents au vote (${missing.length})`, fn: () => sendPollReminder(poll, missing) }] : []),
+        { label: "✎ Modifier la date, l'horaire ou le lieu", fn: () => openEditPollModal(poll) },
+        ...(votes[myId] ? [{ label: "↩ Retirer mon vote", fn: () => promptClearMyVote(poll) }] : []),
+        { label: "✕ Supprimer ce créneau", cls: "danger", fn: () => promptDeletePoll(poll) }
+      ];
+
+      const listEl = $("poll-actions-list");
+      listEl.innerHTML = actions.map((a, i) => `<button type="button" class="action-sheet-btn ${a.cls || ""}" data-act="${i}">${esc(a.label)}</button>`).join("");
+      listEl.onclick = (e) => {
+        const b = e.target.closest("[data-act]");
+        if (!b) return;
+        closeModal("modal-poll-actions");
+        actions[Number(b.dataset.act)]?.fn();
+      };
+      $("modal-poll-actions").classList.add("open");
+    }
+
+    async function sendPollReminder(poll, missing) {
+      if (!poll || !missing?.length) return showToast("Tous les membres ont déjà répondu.");
+      const names = missing.map((m) => m.name).join(", ");
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`), { lastRemindedAt: Date.now() });
+        await publishEnsembleNotification(
+          `Rappel disponibilités — ${currentEnsembleData.name}`,
+          `${names} : merci d'indiquer votre disponibilité pour le ${formatDateFr(poll.date)} (${formatPollTimeLabel(poll)}).`,
+          { targetMemberIds: missing.map((m) => m.id) }
+        );
+        showToast(`Relance envoyée à ${names}.`);
+      } catch (err) { handleFirebaseError(err); }
+    }
+
+    function promptDeletePoll(poll) {
+      if (!poll) return;
+      const voted = Object.keys(poll.votes || {}).length;
+      const t = formatPollTimeLabel(poll);
+      openConfirmationModal({
+        title: "Supprimer ce créneau ?",
+        context: `${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}${poll.location ? ` (${poll.location})` : ""}`,
+        message: voted ? `${voted} musicien(s) ont déjà répondu. Le créneau et tous les votes seront supprimés.` : "Ce créneau proposé sera retiré pour tout l'ensemble.",
+        confirmLabel: "Supprimer",
+        onConfirm: async () => {
+          try { await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`)); showToast("Créneau supprimé."); }
+          catch (err) { handleFirebaseError(err); }
+        }
+      });
+    }
+
+    function promptClearMyVote(poll) {
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      const myVote = poll?.votes?.[myId];
+      if (!myId || !myVote) return;
+      const t = formatPollTimeLabel(poll);
+      openConfirmationModal({
+        title: "Retirer votre vote ?",
+        context: `${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}`,
+        message: `Votre réponse (« ${formatVoteLabelFr(myVote)} »)${poll.voteNotes?.[myId] ? " et votre note seront effacées" : " sera effacée"}.`,
+        confirmLabel: "Retirer le vote",
+        onConfirm: async () => {
+          try {
+            openNoteEditors.delete(poll.id);
+            await Promise.all([
+              remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}/votes/${myId}`)),
+              remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}/voteNotes/${myId}`))
+            ]);
+            showToast("Votre vote a été retiré.");
+          } catch (err) { handleFirebaseError(err); }
+        }
+      });
+    }
+
+    // Service Worker & Notifications Push
+    async function initServiceWorkerAndPush() {
+      if (!("serviceWorker" in navigator)) return;
+      try {
+        swRegistration = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+        if (await isSupported().catch(() => false)) {
+          messagingInstance = getMessaging(app);
+          onMessage(messagingInstance, (p) => {
+            if (isEnsemblePushActive()) triggerLocalSystemNotification(p.notification?.title || p.data?.title || "Cadenza", p.notification?.body || p.data?.body || "Mise à jour.");
+          });
+        }
+      } catch (e) { console.warn("SW init:", e); }
+      updatePushUI();
+    }
+
+    function isEnsemblePushActive() {
+      if (!("Notification" in window) || Notification.permission !== "granted" || !session.activeEnsembleId) return false;
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      return Boolean(myId && currentEnsembleData?.members?.[myId]?.pushEnabled === true);
+    }
+
+    async function triggerLocalSystemNotification(title, body) {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const opts = { body, tag: "cadenza-update", renotify: true, data: { url: window.location.href } };
+      if (swRegistration?.showNotification) await swRegistration.showNotification(title, opts);
+      else new Notification(title, opts);
+    }
+
+    async function fetchFcmTokenSafe() {
+      if (!messagingInstance || !swRegistration) return null;
+      try { await navigator.serviceWorker.ready; return await getToken(messagingInstance, { vapidKey: FIREBASE_VAPID_KEY, serviceWorkerRegistration: swRegistration }); }
+      catch (_) { return null; }
+    }
+
+    async function togglePushForEnsemble() {
+      haptic();
+      const ensId = session.activeEnsembleId, mbrId = session.ensembles[ensId]?.memberId;
+      const ensName = currentEnsembleData?.name || "cet ensemble";
+
+      if (isEnsemblePushActive()) {
+        if (!ensId || !mbrId) return;
+        try {
+          await update(ref(db, `ensembles/${ensId}/members/${mbrId}`), { pushEnabled: false, fcmToken: null });
+          updatePushUI(); showToast(`Notifications désactivées pour ${ensName}.`);
+        } catch (err) { handleFirebaseError(err); }
+        return;
+      }
+
+      if (!("Notification" in window)) return showToast("Notifications non supportées sur ce navigateur.");
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+      if (isIOS && !isStandalone) return showToast("Sur iPhone/iPad : Partager > Sur l'écran d'accueil d'abord.");
+
+      if ((await Notification.requestPermission()) !== "granted") {
+        updatePushUI(); return showToast("Autorisation refusée dans les réglages du navigateur.");
+      }
+
+      const fcmToken = await fetchFcmTokenSafe();
+      if (ensId && mbrId) {
+        try {
+          await update(ref(db, `ensembles/${ensId}/members/${mbrId}`), { pushEnabled: true, ...(fcmToken ? { fcmToken } : {}) });
+        } catch (err) { return handleFirebaseError(err); }
+      }
+      updatePushUI();
+      showToast(`Notifications activées pour ${ensName}.`);
+      await triggerLocalSystemNotification(`Cadenza — ${ensName}`, "Les alertes de répétition sont activées.");
+    }
+
+    function updatePushUI() {
+      const dot = $("notif-status-dot"), msg = $("push-status-msg"), toggle = $("btn-toggle-push"), test = $("btn-test-push");
+      if (!("Notification" in window)) {
+        dot.classList.add("off"); msg.textContent = "Navigateur non compatible."; toggle.disabled = true; return;
+      }
+      const active = isEnsemblePushActive(), ensName = currentEnsembleData?.name || "cet ensemble";
+      dot.classList.toggle("off", !active);
+      toggle.textContent = active ? "Désactiver pour cet ensemble" : "Activer les notifications";
+      toggle.className = `${active ? "btn-del-subtle" : "btn-primary"} btn-sm`;
+      test.classList.toggle("hidden", !active);
+      msg.textContent = active
+        ? `Statut : Actives pour « ${ensName} ».`
+        : Notification.permission === "denied"
+          ? "Statut : Bloquées dans les réglages de votre navigateur."
+          : `Statut : Désactivées pour « ${ensName} ».`;
+    }
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault(); deferredInstallPrompt = e;
+      $("install-banner").classList.remove("hidden"); $("tuto-direct-install-card").classList.remove("hidden");
+    });
+
+    async function triggerNativeInstall() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null;
+      $("install-banner").classList.add("hidden"); $("tuto-direct-install-card").classList.add("hidden");
+    }
+    $("btn-install-pwa").addEventListener("click", triggerNativeInstall);
+    $("btn-tuto-direct-install").addEventListener("click", triggerNativeInstall);
+
+    // Navigation entre vues
+    function switchTab(tab) {
+      haptic();
+      ["agenda", "avail", "ensemble"].forEach((t) => $(`view-${t}`).classList.toggle("hidden", t !== tab));
+      document.querySelectorAll(".tab-item").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+    }
+
+    document.querySelectorAll(".tab-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tab = btn.dataset.tab;
+        switchTab(tab);
+        if (tab === "ensemble") {
+          ensembleTapCount++;
+          clearTimeout(ensembleTapTimer);
+          if (ensembleTapCount >= 4) { ensembleTapCount = 0; return openAdminPinPrompt(); }
+          ensembleTapTimer = setTimeout(() => { ensembleTapCount = 0; }, 1500);
+        } else { ensembleTapCount = 0; clearTimeout(ensembleTapTimer); }
+      });
+    });
+
+    document.querySelectorAll("[data-avail-view]").forEach((btn) => btn.addEventListener("click", () => {
+      haptic(); availViewMode = btn.dataset.availView;
+      document.querySelectorAll("[data-avail-view]").forEach((b) => b.classList.toggle("active", b.dataset.availView === availViewMode));
+      renderPolls();
+    }));
+
+    document.querySelectorAll("[data-avail-filter]").forEach((btn) => btn.addEventListener("click", () => {
+      haptic(); availFilterMode = btn.dataset.availFilter;
+      document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === availFilterMode));
+      renderPolls();
+    }));
+
+    // Gestion des créneaux proposés
+    function readSlotRow(row) {
+      const mode = row.dataset.mode || "day", period = row.dataset.period || "";
+      return {
+        date: row.querySelector(".slot-date").value,
+        timeMode: mode,
+        period: mode === "period" ? period : "",
+        startTime: mode === "exact" ? row.querySelector(".slot-start").value : "",
+        endTime: mode === "exact" ? row.querySelector(".slot-end").value : ""
+      };
+    }
+
+    function updatePollConflictsWarning() {
+      const warnBox = $("poll-unavail-warning"), lockBox = $("poll-archive-lock-warning"), subBtn = $("btn-submit-poll");
+      const slots = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row")).map(readSlotRow).filter((s) => s.date);
+
+      const lockedLines = slots.map((s) => {
+        const arch = findArchivedSlotMatch(s);
+        if (!arch) return "";
+        const abs = arch.unavailableMembers?.length ? ` (indisponibilité de ${esc(arch.unavailableMembers.join(", "))})` : "";
+        return `• <strong>${esc(formatDateFr(s.date))} (${esc(formatPollTimeLabel(s))})</strong> : sondage déjà effectué et archivé${abs}.`;
+      }).filter(Boolean);
+
+      lockBox.classList.toggle("hidden", !lockedLines.length);
+      lockBox.innerHTML = lockedLines.length ? `<strong>Créneau bloqué (déjà archivé)</strong>${lockedLines.join("<br>")}Impossible de relancer un sondage archivé.` : "";
+      subBtn.disabled = lockedLines.length > 0;
+
+      const conflictLines = [];
+      [...new Set(slots.map((s) => s.date))].forEach((d) => {
+        getUnavailabilityConflictsForDate(d).forEach((c) => {
+          const per = c.startDate === c.endDate ? formatShortDateFr(c.startDate) : `du ${formatShortDateFr(c.startDate)} au ${formatShortDateFr(c.endDate)}`;
+          conflictLines.push(`• <strong>${esc(formatDateFr(d))}</strong> : ${esc(c.memberName)} (${esc(c.instrument)}) absent (${per}${c.reason ? ` — ${esc(c.reason)}` : ""})`);
+        });
+      });
+
+      warnBox.classList.toggle("hidden", !conflictLines.length);
+      warnBox.innerHTML = conflictLines.length ? `<strong>Indisponibilité signalée sur ces dates</strong>${conflictLines.join("<br>")}` : "";
+    }
+
+    function refreshPollSlotsUI() {
+      const rows = $("poll-slots-container").querySelectorAll(".poll-slot-row");
+      rows.forEach((r, i) => {
+        r.querySelector(".slot-label").textContent = `${refiningFixedDate ? "Horaire" : "Créneau"} ${i + 1}`;
+        r.querySelector(".btn-remove-slot").classList.toggle("hidden", rows.length <= 1);
+      });
+      $("btn-submit-poll").textContent = refiningFixedDate
+        ? (rows.length > 1 ? `Soumettre ces ${rows.length} horaires aux membres` : "Soumettre cet horaire aux membres")
+        : (rows.length > 1 ? `Soumettre ces ${rows.length} créneaux aux membres` : "Soumettre ce créneau aux membres");
+      updatePollConflictsWarning();
+    }
+
+    function addPollSlot(defDate = "", defMode = "", defPeriod = "", defStart = "", defEnd = "") {
+      const container = $("poll-slots-container"), rows = container.querySelectorAll(".poll-slot-row"), last = rows[rows.length - 1];
+      const today = new Date().toISOString().split("T")[0];
+      const mode = defMode || (last ? last.dataset.mode : "day");
+      const period = defPeriod || (last ? last.dataset.period : "Après-midi");
+      let start = defStart || (last ? last.querySelector(".slot-start").value : "14:00");
+      let end = defEnd || (last ? last.querySelector(".slot-end").value : "17:00");
+      let date = defDate || refiningFixedDate || today;
+
+      if (!defDate && !refiningFixedDate && last?.querySelector(".slot-date").value) {
+        const d = parseIso(last.querySelector(".slot-date").value); d.setDate(d.getDate() + 1);
+        date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      } else if (!defDate && refiningFixedDate && last && mode === "exact") {
+        const ps = last.querySelector(".slot-start").value;
+        [start, end] = ps < "12:30" ? ["14:00", "17:00"] : ps < "17:30" ? ["18:30", "21:00"] : ["09:30", "12:00"];
+      }
+
+      const row = document.createElement("div");
+      row.className = "poll-slot-row";
+      row.innerHTML = `
+        <div class="poll-slot-head">
+          <span class="slot-label" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Créneau</span>
+          <button type="button" class="btn-secondary btn-xs btn-remove-slot">Retirer</button>
+        </div>
+        <div class="field" style="margin-bottom:10px"><label>Date</label><input type="date" class="slot-date" value="${esc(date)}" required /></div>
+        ${buildModeSelectorHtml(start, end)}
+      `;
+      row.querySelector(".slot-date").addEventListener("change", updatePollConflictsWarning);
+      bindModeSelector(row, updatePollConflictsWarning);
+      row.querySelector(".btn-remove-slot").addEventListener("click", () => { haptic(); row.remove(); refreshPollSlotsUI(); });
+      container.appendChild(row);
+      applyModeState(row, mode, period, refreshPollSlotsUI);
+    }
+
+    function resetPollSlots() {
+      refiningPollId = refiningFixedDate = null;
+      $("modal-poll-title").textContent = "Proposer des créneaux";
+      $("poll-refine-banner").classList.add("hidden");
+      $("poll-replace-row").classList.add("hidden");
+      $("btn-add-poll-slot").textContent = "+ Ajouter une autre date";
+      $("poll-slots-container").innerHTML = "";
+      addPollSlot("", "day");
+    }
+
+    function openRefineTimeModal(poll) {
+      if (!poll) return;
+      haptic(); refiningPollId = poll.id; refiningFixedDate = poll.date;
+      const prev = formatPollTimeLabel(poll);
+      $("modal-poll-title").textContent = "Préciser les horaires";
+      $("poll-refine-banner").classList.remove("hidden");
+      $("poll-refine-banner").innerHTML = `<div style="font-weight:600;color:var(--yes-fg);margin-bottom:2px">Date retenue : ${esc(formatDateFr(poll.date))} (${esc(prev)})</div><div style="color:var(--muted)">Proposez un ou plusieurs créneaux horaires pour cette journée :</div>`;
+      $("poll-replace-row").classList.remove("hidden");
+      $("poll-replace-checkbox").checked = true;
+      $("poll-replace-label").textContent = `Remplacer la proposition « ${prev} » par ces créneaux horaires`;
+      $("btn-add-poll-slot").textContent = "+ Ajouter un autre horaire ce jour";
+      const [s, e] = poll.period === "Matin" ? ["09:30", "12:00"] : poll.period === "Soir" ? ["19:30", "22:00"] : ["14:00", "17:00"];
+      $("poll-slots-container").innerHTML = "";
+      addPollSlot(poll.date, "exact", "", s, e);
+      $("poll-location").value = poll.location || "";
+      $("poll-note").value = poll.note || "";
+      $("modal-poll").classList.add("open");
+    }
+
+    function openCounterProposalModal(poll) {
+      if (!poll) return;
+      haptic(); refiningPollId = null; refiningFixedDate = poll.date;
+      $("modal-poll-title").textContent = "Autre horaire ce jour";
+      $("poll-refine-banner").classList.add("hidden");
+      $("poll-replace-row").classList.add("hidden");
+      $("btn-add-poll-slot").textContent = "+ Ajouter un autre horaire ce jour";
+      $("poll-slots-container").innerHTML = "";
+      const [s, e] = poll.startTime && poll.startTime < "12:30" ? ["14:00", "17:00"] : ["18:30", "21:00"];
+      addPollSlot(poll.date, "exact", "", s, e);
+      $("poll-location").value = poll.location || "";
+      $("poll-note").value = poll.note || "";
+      $("modal-poll").classList.add("open");
+    }
+
+    $("btn-add-poll-slot").addEventListener("click", () => { haptic(); addPollSlot(); });
+
+    // Édition d'un créneau
+    function checkEditPollArchiveLock() {
+      const holder = $("edit-poll-mode-holder"), warn = $("edit-poll-archive-warning"), btn = $("btn-submit-edit-poll");
+      const cand = { date: $("edit-poll-date").value, ...readSlotRow(holder) };
+      const arch = cand.date ? findArchivedSlotMatch(cand) : null;
+      warn.classList.toggle("hidden", !arch);
+      warn.innerHTML = arch ? `<strong>Créneau bloqué (déjà archivé)</strong>Ce créneau (${esc(formatDateFr(cand.date))} • ${esc(formatPollTimeLabel(cand))}) a déjà été archivé.` : "";
+      btn.disabled = Boolean(arch);
+    }
+
+    function openEditPollModal(poll) {
+      if (!poll) return;
+      haptic();
+      const holder = $("edit-poll-mode-holder");
+      $("edit-poll-id").value = poll.id;
+      $("edit-poll-date").value = poll.date || "";
+      holder.querySelector(".slot-start").value = poll.startTime || "14:00";
+      holder.querySelector(".slot-end").value = poll.endTime || "17:00";
+      $("edit-poll-location").value = poll.location || "";
+      $("edit-poll-note").value = poll.note || "";
+      applyModeState(holder, poll.timeMode || "day", poll.period || "Après-midi", checkEditPollArchiveLock);
+      $("modal-edit-poll").classList.add("open");
+    }
+
+    $("edit-poll-date").addEventListener("change", checkEditPollArchiveLock);
+
+    $("form-edit-poll").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const pollId = $("edit-poll-id").value, oldPoll = currentEnsembleData?.polls?.[pollId];
+      if (!pollId || !oldPoll || !session.activeEnsembleId) return;
+      const slot = { date: $("edit-poll-date").value, ...readSlotRow($("edit-poll-mode-holder")) };
+      if (!slot.date || (slot.timeMode === "exact" && (!slot.startTime || !slot.endTime))) return;
+      if (findArchivedSlotMatch(slot)) return showToast("Ce créneau a déjà été archivé.");
+
+      const changed = getSlotFingerprint(oldPoll) !== getSlotFingerprint(slot);
+      const me = session.ensembles[session.activeEnsembleId];
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
+          ...slot, location: $("edit-poll-location").value.trim(), note: $("edit-poll-note").value.trim(), updatedAt: Date.now(),
+          ...(changed ? { votes: me?.memberId ? { [me.memberId]: "yes" } : null, voteNotes: null } : {})
+        });
+        if (changed) {
+          await publishEnsembleNotification(`Créneau modifié — ${currentEnsembleData?.name || "Cadenza"}`, `${me?.name || "Un membre"} a modifié la proposition au ${formatDateFr(slot.date)} (${formatPollTimeLabel(slot)}). Merci de re-voter.`);
+          showToast("Créneau modifié et votes réinitialisés.");
+        } else showToast("Informations mises à jour.");
+        closeModal("modal-edit-poll");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    // Ouverture & fermeture des modales
+    function openModal(id) {
+      haptic();
+      const today = new Date().toISOString().split("T")[0];
+      if (id === "modal-poll") ($("poll-slots-container").children.length ? updatePollConflictsWarning() : resetPollSlots());
+      if (id === "modal-rehearsal" && !$("reh-date").value) $("reh-date").value = today;
+      if (id === "modal-unavailability") {
+        if (!$("unavail-start").value) $("unavail-start").value = today;
+        if (!$("unavail-end").value) $("unavail-end").value = $("unavail-start").value;
+      }
+      if (id === "modal-invite" && session.activeEnsembleId) {
+        $("invite-link-display").textContent = getInviteUrl(session.activeEnsembleId);
+        $("invite-code-display").textContent = session.activeEnsembleId;
+      }
+      if (id === "modal-transfer-device" && session.activeEnsembleId) {
+        $("transfer-link-display").textContent = getTransferUrl(session.activeEnsembleId, session.ensembles[session.activeEnsembleId]?.memberId || "");
+        $("transfer-code-display").textContent = session.activeEnsembleId;
+      }
+      if (id === "modal-edit-ensemble" && currentEnsembleData) {
+        $("edit-ensemble-name").value = currentEnsembleData.name || "";
+        $("edit-ensemble-formation").value = currentEnsembleData.formation || "Quatuor";
+      }
+      $(id).classList.add("open");
+    }
+
+    function closeModal(id) {
+      if (id === "modal-confirm-delete") pendingDeleteCallback = null;
+      if (id === "modal-poll") refiningPollId = refiningFixedDate = null;
+      $(id).classList.remove("open");
+    }
+
+    document.addEventListener("click", (e) => {
+      const closeBtn = e.target.closest("[data-close]");
+      if (closeBtn) return closeModal(closeBtn.dataset.close);
+      if (e.target.classList?.contains("modal-backdrop")) {
+        e.target.id === "modal-whats-new" ? dismissWhatsNewModal() : closeModal(e.target.id);
+      }
+    });
+
+    $("unavail-start").addEventListener("change", () => {
+      if ($("unavail-start").value && (!$("unavail-end").value || $("unavail-end").value < $("unavail-start").value)) {
+        $("unavail-end").value = $("unavail-start").value;
+      }
+    });
+
+    // Tutoriel & Onboarding
+    function showInstallTutorial() {
+      ["app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble", "view-onboarding", "install-banner"].forEach((id) => $(id).classList.add("hidden"));
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      $("tuto-ios-card").classList.toggle("featured", isIOS);
+      $("tuto-android-card").classList.toggle("featured", !isIOS);
+      $("view-install-tuto").classList.remove("hidden");
+    }
+
+    $("btn-finish-tuto").addEventListener("click", async () => {
+      haptic(); localStorage.setItem(KEYS.tuto, "1");
+      $("view-install-tuto").classList.add("hidden");
+      await proceedAfterTutorial(); maybeDisplayLatestAnnouncement();
+    });
+    $("btn-reopen-tuto").addEventListener("click", () => { haptic(); showInstallTutorial(); });
+
+    function renderClaimableMembers(ensId, data) {
+      const box = $("join-existing-members-box"), list = $("join-existing-members-list"), kicker = $("join-new-member-kicker");
+      const members = data?.members ? Object.values(data.members) : [];
+      if (!data || !members.length) { box.classList.add("hidden"); list.innerHTML = ""; kicker.classList.add("hidden"); return; }
+      kicker.classList.remove("hidden"); box.classList.remove("hidden");
+      list.innerHTML = members.map((m) => `<button type="button" class="btn-secondary btn-sm btn-full" style="justify-content:space-between" data-claim="${esc(m.id)}"><span><strong>${esc(m.name)}</strong> • ${esc(m.instrument)}</span><span style="font-size:12px;color:var(--muted)">Reprendre →</span></button>`).join("");
+      list.onclick = async (e) => {
+        const b = e.target.closest("[data-claim]");
+        if (!b) return;
+        haptic();
+        const m = data.members[b.dataset.claim];
+        if (!m) return;
+        session.ensembles[ensId] = { memberId: m.id, name: m.name, instrument: m.instrument, ensembleName: data.name };
+        session.activeEnsembleId = ensId; saveSession();
+        if (m.pushEnabled && Notification.permission === "granted") {
+          const tok = await fetchFcmTokenSafe();
+          if (tok) update(ref(db, `ensembles/${ensId}/members/${m.id}`), { fcmToken: tok }).catch(() => {});
+        }
+        window.history.replaceState({}, "", window.location.pathname);
+        showToast(`Profil de ${m.name} restauré.`); enterEnsemble(ensId);
+      };
+    }
+
+    let codeLookupTimer = null;
+    $("join-code").addEventListener("input", () => {
+      clearTimeout(codeLookupTimer);
+      const code = extractEnsembleCode($("join-code").value);
+      if (code.length < 6) return renderClaimableMembers(null, null);
+      codeLookupTimer = setTimeout(async () => {
+        try {
+          const snap = await get(ref(db, `ensembles/${code}`));
+          if (snap.exists()) {
+            const d = snap.val();
+            $("join-kicker").textContent = `Ensemble trouvé — ${d.formation || "Ensemble"}`;
+            $("join-ensemble-title").textContent = d.name;
+            renderClaimableMembers(code, d);
+          } else renderClaimableMembers(null, null);
+        } catch (_) {}
+      }, 300);
+    });
+
+    async function proceedAfterTutorial() {
+      const params = new URLSearchParams(window.location.search);
+      let pending = null;
+      try { pending = JSON.parse(localStorage.getItem(KEYS.invite) || "null"); } catch (_) {}
+      const ensId = params.get("ensemble") || pending?.ensembleId || null;
+      const mbrId = params.get("member") || pending?.memberId || null;
+
+      if (ensId) {
+        localStorage.removeItem(KEYS.invite);
+        if (mbrId) {
+          try {
+            const snap = await get(ref(db, `ensembles/${ensId}`));
+            const d = snap.exists() ? snap.val() : null;
+            const target = d?.members?.[mbrId];
+            if (target) {
+              session.ensembles[ensId] = { memberId: target.id, name: target.name, instrument: target.instrument, ensembleName: d.name };
+              session.activeEnsembleId = ensId; saveSession();
+              window.history.replaceState({}, "", window.location.pathname);
+              showToast(`Profil de ${target.name} restauré.`);
+              return enterEnsemble(ensId);
+            }
+          } catch (err) { handleFirebaseError(err); }
+        }
+        if (session.ensembles[ensId]) {
+          session.activeEnsembleId = ensId; saveSession();
+          window.history.replaceState({}, "", window.location.pathname);
+          return enterEnsemble(ensId);
+        }
+        $("join-code").value = ensId; $("join-card").classList.add("featured");
+        try {
+          const snap = await get(ref(db, `ensembles/${ensId}`));
+          if (snap.exists()) {
+            const d = snap.val();
+            $("join-kicker").textContent = `Invitation — ${d.formation || "Ensemble"}`;
+            $("join-ensemble-title").textContent = `Rejoindre « ${d.name} »`;
+            ["join-code-field", "create-card", "onboarding-divider"].forEach((id) => $(id).classList.add("hidden"));
+            renderClaimableMembers(ensId, d);
+          } else showToast("Cet ensemble est introuvable.");
+        } catch (err) { handleFirebaseError(err); }
+        return showOnboarding();
+      }
+      session.activeEnsembleId && session.ensembles[session.activeEnsembleId] ? enterEnsemble(session.activeEnsembleId) : showOnboarding();
+    }
+
+    function showOnboarding() {
+      ["view-install-tuto", "app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble"].forEach((id) => $(id).classList.add("hidden"));
+      $("view-onboarding").classList.remove("hidden");
+    }
+
+    $("form-create").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const btn = $("btn-submit-create"); btn.disabled = true;
+      try {
+        const ensembleName = $("create-ensemble-name").value.trim(), formation = $("create-formation").value;
+        const memberName = $("create-member-name").value.trim(), instrument = $("create-member-instrument").value.trim();
+        const ensembleId = genId("ens"), memberId = genId("mbr");
+        const pushEnabled = "Notification" in window && Notification.permission === "granted";
+        const fcmToken = pushEnabled ? await fetchFcmTokenSafe() : null;
+
+        await set(ref(db, `ensembles/${ensembleId}`), {
+          id: ensembleId, name: ensembleName, formation, autoRemindEve: true, createdAt: Date.now(),
+          members: { [memberId]: { id: memberId, name: memberName, instrument, pushEnabled, ...(fcmToken ? { fcmToken } : {}), joinedAt: Date.now() } }
+        });
+        $("firebase-error-banner").classList.add("hidden");
+        session.ensembles[ensembleId] = { memberId, name: memberName, instrument, ensembleName };
+        session.activeEnsembleId = ensembleId; saveSession();
+        enterEnsemble(ensembleId); openModal("modal-invite");
+      } catch (err) { handleFirebaseError(err); }
+      finally { btn.disabled = false; }
+    });
+
+    $("form-join").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const btn = $("btn-submit-join"); btn.disabled = true;
+      try {
+        const code = extractEnsembleCode($("join-code").value), name = $("join-name").value.trim(), instrument = $("join-instrument").value.trim();
+        const snap = await get(ref(db, `ensembles/${code}`));
+        $("firebase-error-banner").classList.add("hidden");
+        if (!snap.exists()) { showToast("Ensemble introuvable."); return; }
+
+        const d = snap.val();
+        const dup = Object.values(d.members || {}).find((m) => m.name?.trim().toLowerCase() === name.toLowerCase());
+        const finalizeJoin = async (memberId, finalName, isRestore) => {
+          const pushEnabled = isRestore ? Boolean(dup.pushEnabled) : ("Notification" in window && Notification.permission === "granted");
+          const fcmToken = (pushEnabled && Notification.permission === "granted") ? await fetchFcmTokenSafe() : null;
+          if (isRestore) {
+            await update(ref(db, `ensembles/${code}/members/${memberId}`), { instrument, ...(fcmToken ? { fcmToken } : {}) });
+          } else {
+            await set(ref(db, `ensembles/${code}/members/${memberId}`), { id: memberId, name: finalName, instrument, pushEnabled, ...(fcmToken ? { fcmToken } : {}), joinedAt: Date.now() });
+          }
+          session.ensembles[code] = { memberId, name: finalName, instrument, ensembleName: d.name };
+          session.activeEnsembleId = code; saveSession();
+          window.history.replaceState({}, "", window.location.pathname);
+          showToast(isRestore ? `Profil de ${finalName} restauré.` : `Bienvenue dans ${d.name}.`);
+          enterEnsemble(code);
+        };
+
+        if (dup) {
+          openConfirmationModal({
+            title: "Profil existant détecté",
+            context: `${dup.name} • ${dup.instrument}`,
+            message: `Un membre nommé « ${dup.name} » existe déjà. Voulez-vous restaurer ce profil et ses votes plutôt que d'en créer un nouveau ?`,
+            confirmLabel: "Restaurer ce profil",
+            danger: false,
+            onConfirm: () => finalizeJoin(dup.id, dup.name, true)
+          });
+        } else {
+          await finalizeJoin(genId("mbr"), name, false);
+        }
+      } catch (err) { handleFirebaseError(err); }
+      finally { btn.disabled = false; }
+    });
+
+    function enterEnsemble(ensembleId) {
+      ["view-install-tuto", "view-onboarding"].forEach((id) => $(id).classList.add("hidden"));
+      ["app-header", "app-nav"].forEach((id) => $(id).classList.remove("hidden"));
+      $("header-ensemble-name").textContent = session.ensembles[ensembleId]?.ensembleName || ensembleId;
+      switchTab("agenda");
+
+      if (unsubscribeEnsemble) unsubscribeEnsemble();
+      unsubscribeEnsemble = onValue(ref(db, `ensembles/${ensembleId}`), (snap) => {
+        $("firebase-error-banner").classList.add("hidden");
+        if (!snap.exists()) {
+          showToast("Cet ensemble n'existe plus.");
+          delete session.ensembles[ensembleId]; session.activeEnsembleId = null; saveSession();
+          return showOnboarding();
+        }
+        currentEnsembleData = snap.val();
+        const mySes = session.ensembles[ensembleId];
+        if (mySes) {
+          mySes.ensembleName = currentEnsembleData.name;
+          const m = currentEnsembleData.members?.[mySes.memberId];
+          if (m) { mySes.name = m.name; mySes.instrument = m.instrument; }
+          saveSession();
+        }
+
+        const myId = mySes?.memberId, evt = currentEnsembleData.lastEvent;
+        const targeted = !Array.isArray(evt?.targetMemberIds) || evt.targetMemberIds.includes(myId);
+        if (currentEnsembleData.members?.[myId]?.pushEnabled && evt && evt.timestamp > lastNotifiedTimestamp && evt.authorId !== myId && targeted) {
+          lastNotifiedTimestamp = evt.timestamp; localStorage.setItem(KEYS.evtTs, String(lastNotifiedTimestamp));
+          triggerLocalSystemNotification(evt.title, evt.body);
+        }
+        archiveFailedPollsIfNeeded();
+        renderAll();
+      }, handleFirebaseError);
+    }
+
+    async function publishEnsembleNotification(title, body, options = {}) {
+      if (!session.activeEnsembleId) return;
+      const authorId = session.ensembles[session.activeEnsembleId]?.memberId, ts = Date.now();
+      lastNotifiedTimestamp = ts; localStorage.setItem(KEYS.evtTs, String(ts));
+      const targetMemberIds = Array.isArray(options.targetMemberIds) ? options.targetMemberIds : null;
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}`), {
+          lastEvent: { title, body, timestamp: ts, authorId, ...(targetMemberIds ? { targetMemberIds } : {}) }
+        });
+        if (PUSH_WORKER_URL) {
+          fetch(PUSH_WORKER_URL, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ensembleId: session.activeEnsembleId, title, body, authorId, ...(targetMemberIds ? { targetMemberIds } : {}), url: getInviteUrl(session.activeEnsembleId) })
+          }).catch(() => {});
+        }
+      } catch (err) { handleFirebaseError(err); }
+    }
+
+    function renderAll() {
+      if (!currentEnsembleData) return;
+      $("header-ensemble-name").textContent = `${currentEnsembleData.name} • ${currentEnsembleData.formation || ""}`;
+      updatePushUI(); renderAgenda(); renderPolls(); renderEnsembleInfo();
+    }
+
+    // Rendu Agenda
+    function renderAgenda() {
+      const container = $("agenda-list"), rehObj = currentEnsembleData.rehearsals || {};
+      const list = Object.values(rehObj).sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
+      if (!list.length) {
+        container.innerHTML = `<div class="empty-state"><p>Aucune répétition planifiée pour le moment.</p><button type="button" class="btn-secondary btn-sm" data-go-avail>Proposer des disponibilités</button></div>`;
+        return;
+      }
+      const today = new Date().toISOString().split("T")[0];
+      const upcoming = list.filter((r) => r.date >= today), past = list.filter((r) => r.date < today).reverse();
+      const cardHtml = (r, isNext, isPast) => `
+        <article class="card ${isNext ? "featured" : ""}" ${isPast ? 'style="opacity:.72"' : ""}>
+          ${isNext ? '<div class="card-kicker emerald">Prochaine répétition</div>' : ""}
+          <h3 class="card-date" ${isPast ? 'style="font-size:16px"' : ""}>${esc(formatDateFr(r.date))}</h3>
+          <div class="card-meta" style="margin-top:4px">${isPast ? `${esc(r.startTime)} – ${esc(r.endTime)} • ${esc(r.location)}` : `<span class="time-pill">${esc(r.startTime)} – ${esc(r.endTime)}</span> <strong>${esc(r.location)}</strong>`}</div>
+          ${r.program ? `<div class="${isPast ? "card-meta" : "card-program"}">${isPast ? "" : "<strong>Programme :</strong> "}${esc(r.program)}</div>` : ""}
+          ${!isPast && r.notes ? `<div class="card-meta" style="margin-top:6px">${esc(r.notes)}</div>` : ""}
+          <div class="card-actions">
+            ${isPast ? "" : `<button type="button" class="btn-secondary btn-sm" data-ics="${esc(r.id)}">Calendrier (.ics)</button>`}
+            <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-edit-reh="${esc(r.id)}">Modifier</button>
+            <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-del-reh="${esc(r.id)}">${isPast ? "Supprimer" : "Annuler"}</button>
+          </div>
+        </article>`;
+
+      container.innerHTML = upcoming.map((r, i) => cardHtml(r, i === 0, false)).join("")
+        + (past.length ? `<div class="divider">Répétitions passées (${past.length})</div>${past.map((r) => cardHtml(r, false, true)).join("")}` : "");
+    }
+
+    $("agenda-list").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      if (btn.hasAttribute("data-go-avail")) return switchTab("avail");
+      const rehObj = currentEnsembleData?.rehearsals || {};
+      if (btn.dataset.ics) return downloadICS(rehObj[btn.dataset.ics]);
+      if (btn.dataset.editReh) {
+        const r = rehObj[btn.dataset.editReh]; if (!r) return;
+        $("edit-reh-id").value = r.id; $("edit-reh-date").value = r.date || "";
+        $("edit-reh-start").value = r.startTime || "14:00"; $("edit-reh-end").value = r.endTime || "17:00";
+        $("edit-reh-location").value = r.location || ""; $("edit-reh-program").value = r.program || ""; $("edit-reh-notes").value = r.notes || "";
+        return openModal("modal-edit-rehearsal");
+      }
+      if (btn.dataset.delReh) {
+        const r = rehObj[btn.dataset.delReh]; if (!r) return;
+        openConfirmationModal({
+          title: "Supprimer cette répétition ?",
+          context: `${formatDateFr(r.date)} • ${r.startTime}–${r.endTime} (${r.location})`,
+          message: "Cette répétition sera retirée de l'agenda de tout l'ensemble.",
+          confirmLabel: "Supprimer la répétition",
+          onConfirm: async () => {
+            try { await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${r.id}`)); showToast("Répétition retirée."); }
+            catch (err) { handleFirebaseError(err); }
+          }
+        });
+      }
+    });
+
+    $("form-edit-rehearsal").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const rehId = $("edit-reh-id").value, date = $("edit-reh-date").value, startTime = $("edit-reh-start").value, endTime = $("edit-reh-end").value;
+      const location = $("edit-reh-location").value.trim(), program = $("edit-reh-program").value.trim(), notes = $("edit-reh-notes").value.trim();
+      if (!rehId || !session.activeEnsembleId) return;
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), { date, startTime, endTime, location, program, notes, updatedAt: Date.now() });
+        await publishEnsembleNotification(`Répétition modifiée — ${currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
+        closeModal("modal-edit-rehearsal"); showToast("Répétition mise à jour.");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    function downloadICS(reh) {
+      if (!reh) return;
+      haptic();
+      const fmt = (d, t) => `${d.replace(/-/g, "")}T${t.replace(":", "")}00`;
+      const desc = [reh.program ? `Programme: ${reh.program}` : "", reh.notes || ""].filter(Boolean).join("\\n");
+      const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cadenza//FR", "BEGIN:VEVENT", `UID:${reh.id}@cadenza.app`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`, `DTSTART:${fmt(reh.date, reh.startTime)}`, `DTEND:${fmt(reh.date, reh.endTime)}`, `SUMMARY:Répétition — ${currentEnsembleData.name}`, `LOCATION:${reh.location || ""}`, `DESCRIPTION:${desc}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" })), download: `cadenza-${reh.date}.ics` });
+      a.click(); URL.revokeObjectURL(a.href); showToast("Fichier calendrier (.ics) téléchargé.");
+    }
+
+    // Rendu Disponibilités (Cartes & Tableau)
+    async function saveVoteNote(pollId, rawVal) {
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!myId) return;
+      const val = String(rawVal || "").trim(), r = ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}/voteNotes/${myId}`);
+      try {
+        if (val) { await set(r, val); openNoteEditors.add(pollId); showToast("Note enregistrée."); }
+        else { await remove(r); openNoteEditors.delete(pollId); showToast("Note retirée."); }
+      } catch (err) { handleFirebaseError(err); }
+    }
+
+    function openConfirmPollModal(poll) {
+      if (!poll) return;
+      $("confirm-poll-id").value = poll.id;
+      const t = formatPollTimeLabel(poll);
+      $("confirm-poll-summary").textContent = `${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}`;
+      const [s, e] = poll.timeMode === "period"
+        ? ({ "Matin": ["09:00", "12:00"], "Soir": ["19:30", "22:00"] }[poll.period] || ["14:00", "17:00"])
+        : poll.timeMode === "day" ? ["14:00", "17:00"] : [poll.startTime || "14:00", poll.endTime || "17:00"];
+      $("confirm-poll-start").value = s; $("confirm-poll-end").value = e;
+      $("confirm-poll-location").value = poll.location || ""; $("confirm-poll-program").value = poll.note || "";
+      openModal("modal-confirm-poll");
+    }
+
+    $("form-confirm-poll").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const pollId = $("confirm-poll-id").value, poll = currentEnsembleData?.polls?.[pollId];
+      if (!poll || !session.activeEnsembleId) return;
+      const startTime = $("confirm-poll-start").value, endTime = $("confirm-poll-end").value;
+      const location = $("confirm-poll-location").value.trim() || "Lieu à confirmer", program = $("confirm-poll-program").value.trim();
+      try {
+        const rehId = genId("reh");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), { id: rehId, date: poll.date, startTime, endTime, location, program, notes: "", createdAt: Date.now() });
+        await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`));
+        await publishEnsembleNotification(`Répétition confirmée — ${currentEnsembleData.name}`, `${formatDateFr(poll.date)} • ${startTime}–${endTime} (${location})`);
+        closeModal("modal-confirm-poll"); showToast("Répétition ajoutée à l'agenda."); switchTab("agenda");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    async function castPollVote(pollId, voteVal, sortedPolls, autoAdvance = false) {
+      haptic();
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!myId) return;
+      if (autoAdvance) {
+        const idx = sortedPolls.findIndex((p) => p.id === pollId);
+        let nextId = null;
+        for (let o = 1; o < sortedPolls.length; o++) {
+          const cand = sortedPolls[(idx + o) % sortedPolls.length];
+          if (!cand.votes?.[myId]) { nextId = cand.id; break; }
+        }
+        pendingScrollToPollId = nextId;
+        if (!nextId) showToast("Toutes les disponibilités sont complétées !");
+      }
+      try { await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}/votes/${myId}`), voteVal); }
+      catch (err) { pendingScrollToPollId = null; handleFirebaseError(err); }
+    }
+
+    let lastRenderedFilteredPolls = [];
+
+    function renderPolls() {
+      const container = $("polls-list"), toolbar = $("avail-toolbar"), navBadge = $("nav-avail-badge");
+      const pollsObj = currentEnsembleData.polls || {}, archList = Object.values(currentEnsembleData.archivedPolls || {});
+      const members = Object.values(currentEnsembleData.members || {}), total = members.length;
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+
+      const activeEl = document.activeElement;
+      const activeNote = activeEl?.classList?.contains("vote-note-input") ? { pollId: activeEl.dataset.noteInput, value: activeEl.value, selStart: activeEl.selectionStart } : null;
+
+      const allPolls = smartSortPolls(Object.values(pollsObj).filter((p) => !isPollImpossibleAndComplete(p, members)), members, myId);
+      const unvotedCount = allPolls.filter((p) => !p.votes?.[myId]).length;
+
+      navBadge.textContent = String(unvotedCount);
+      navBadge.classList.toggle("hidden", !unvotedCount);
+      $("pill-filter-unvoted").textContent = unvotedCount ? `À voter (${unvotedCount})` : "À voter";
+      $("pill-filter-archived").textContent = archList.length ? `Archives (${archList.length})` : "Archives";
+
+      if (!allPolls.length && !archList.length) {
+        toolbar.classList.add("hidden");
+        container.innerHTML = `<div class="empty-state"><p>Aucune date en cours de sondage.</p><button type="button" class="btn-primary btn-sm" data-empty-add-poll>Proposer des dates aux membres</button></div>`;
+        return;
+      }
+      toolbar.classList.remove("hidden");
+
+      const chipHtml = (m, votes, notes) => {
+        const v = votes[m.id], n = notes[m.id] || "";
+        const sym = { yes: "✓", maybe: "?", no: "✕" }[v] || "○";
+        return `<span class="member-chip ${v || ""}">${sym} <span class="chip-name">${esc(m.name)}</span>${n ? ` <span class="chip-note">« ${esc(n)} »</span>` : ""}</span>`;
+      };
+
+      if (availFilterMode === "archived") {
+        if (!archList.length) {
+          container.innerHTML = `<div class="empty-state"><p>Aucun créneau archivé.</p><button type="button" class="btn-secondary btn-sm" data-reset-filter>Retour aux créneaux actifs</button></div>`;
+          return;
+        }
+        const sortedArch = [...archList].sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+        container.innerHTML = `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Créneaux clos avec au moins une indisponibilité.</div>` + sortedArch.map((p) => {
+          const v = p.votes || {}, yes = members.filter((m) => v[m.id] === "yes").length;
+          return `<article class="card archived-card">
+            <div class="poll-head-row"><h3 class="card-date">${esc(formatDateFr(p.date))}</h3><span class="consensus-badge archived">✕ ${yes}/${total}</span></div>
+            <div class="poll-subline"><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}</div>
+            ${p.note ? `<div class="card-meta">${esc(p.note)}</div>` : ""}
+            <div class="member-votes-list">${members.map((m) => chipHtml(m, v, p.voteNotes || {})).join("")}</div>
+            <div class="archive-lock-banner"><span>🔒 Sondage archivé — relance verrouillée.</span></div>
+          </article>`;
+        }).join("");
+        return;
+      }
+
+      if (!allPolls.length) {
+        container.innerHTML = `<div class="empty-state"><p>Aucune date active (${archList.length} archivée(s)).</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button type="button" class="btn-primary btn-sm" data-empty-add-poll>Proposer de nouvelles dates</button><button type="button" class="btn-secondary btn-sm" data-go-arch>Voir les archives (${archList.length})</button></div></div>`;
+        return;
+      }
+
+      const filtered = allPolls.filter((p) => {
+        const v = p.votes || {};
+        if (availFilterMode === "unvoted") return !v[myId];
+        if (availFilterMode === "consensus") return total > 0 && members.filter((m) => v[m.id] === "yes").length === total;
+        return true;
+      });
+      lastRenderedFilteredPolls = filtered;
+
+      if (!filtered.length) {
+        container.innerHTML = `<div class="empty-state"><p>${availFilterMode === "unvoted" ? "Vous avez voté sur toutes les dates proposées." : "Aucun créneau ne réunit encore l'unanimité."}</p><button type="button" class="btn-secondary btn-sm" data-reset-filter>Afficher toutes les dates actives (${allPolls.length})</button></div>`;
+        return;
+      }
+
+      if (availViewMode === "table") return renderPollsTable(container, filtered, members, myId);
+
+      // Mode Cartes
+      container.innerHTML = filtered.map((p) => {
+        const v = p.votes || {}, notes = p.voteNotes || {}, myVote = v[myId] || "", myNote = notes[myId] || "";
+        const yes = members.filter((m) => v[m.id] === "yes").length, missing = members.filter((m) => !v[m.id]);
+        const full = total > 0 && yes === total, majority = !full && total > 0 && yes >= Math.ceil(total * 0.75);
+        const broad = p.timeMode === "day" || p.timeMode === "period";
+        const rank = { yes: 1, maybe: 2, no: 3 };
+        const topBar = members.map((m) => v[m.id] || "pending").sort((a, b) => (rank[a] || 4) - (rank[b] || 4)).map((st) => `<span class="poll-top-seg ${st}"></span>`).join("");
+
+        const conflicts = getUnavailabilityConflictsForDate(p.date).filter((c) => v[c.memberId] !== "yes");
+        const unavailHtml = conflicts.length ? `<div class="unavail-notice">Absence : ${conflicts.map((c) => `<strong>${esc(c.memberName)}</strong>${c.reason ? ` (${esc(c.reason)})` : ""}`).join(", ")}</div>` : "";
+
+        const collapse = total > 6 && !expandedMemberLists.has(p.id);
+        let chips = "";
+        if (collapse) {
+          const plainYes = members.filter((m) => v[m.id] === "yes" && !notes[m.id]);
+          const notable = members.filter((m) => v[m.id] !== "yes" || Boolean(notes[m.id]));
+          if (plainYes.length) chips += `<button type="button" class="member-chip yes summary-toggle" data-toggle-members="${esc(p.id)}">✓ ${plainYes.length} dispo ▾</button>`;
+          chips += notable.map((m) => chipHtml(m, v, notes)).join("");
+        } else {
+          chips = members.map((m) => chipHtml(m, v, notes)).join("") + (total > 6 ? `<button type="button" class="member-chip summary-toggle" data-toggle-members="${esc(p.id)}">Réduire ▴</button>` : "");
+        }
+
+        const showNote = Boolean(myNote) || openNoteEditors.has(p.id) || activeNote?.pollId === p.id;
+        const noteHtml = showNote
+          ? `<div class="vote-note-bar"><input type="text" class="vote-note-input" data-note-input="${esc(p.id)}" maxlength="90" placeholder="Précision (ex: dispo dès 15h)..." value="${esc(myNote)}" /><button type="button" class="btn-secondary btn-xs" data-save-note="${esc(p.id)}">OK</button></div>`
+          : `<div class="note-trigger-row"><button type="button" class="btn-add-note-link" data-open-note="${esc(p.id)}">+ Note</button></div>`;
+
+        const mainBtn = full && broad ? `<button type="button" class="btn-confirm btn-sm" data-refine-poll="${esc(p.id)}">Proposer des horaires</button>`
+          : full ? `<button type="button" class="btn-confirm btn-sm" data-confirm-poll="${esc(p.id)}">Valider dans l'agenda</button>`
+          : missing.length ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${esc(p.id)}">Relancer (${missing.length})</button>`
+          : `<button type="button" class="btn-secondary btn-sm" data-confirm-poll="${esc(p.id)}">Valider</button>`;
+
+        return `<article class="card poll-card ${full ? "consensus-ready" : ""} ${!myVote ? "unvoted-highlight" : ""}" data-poll-card="${esc(p.id)}">
+          <div class="poll-top-bar" aria-hidden="true">${topBar}</div>
+          <div class="poll-head-row"><h3 class="card-date">${esc(formatDateFr(p.date))}</h3><span class="consensus-badge ${full ? "full" : majority ? "partial-good" : ""}">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</span></div>
+          <div class="poll-subline"><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}${p.note ? `<span>• ${esc(p.note)}</span>` : ""}</div>
+          ${unavailHtml}
+          <div class="vote-group">
+            <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${esc(p.id)}" data-val="yes">✓ Oui</button>
+            <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${esc(p.id)}" data-val="maybe">? Peut-être</button>
+            <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${esc(p.id)}" data-val="no">✕ Non</button>
+          </div>
+          ${noteHtml}
+          <div class="member-votes-list">${chips}</div>
+          <div class="poll-footer"><div class="poll-footer-main">${mainBtn}</div><button type="button" class="btn-secondary btn-more-dots" data-poll-menu="${esc(p.id)}" aria-label="Plus d'options">•••</button></div>
+        </article>`;
+      }).join("");
+
+      if (activeNote) {
+        const inp = container.querySelector(`.vote-note-input[data-note-input="${CSS.escape(activeNote.pollId)}"]`);
+        if (inp) { inp.value = activeNote.value; inp.focus(); if (typeof activeNote.selStart === "number") inp.setSelectionRange(activeNote.selStart, activeNote.selStart); }
+      }
+      if (pendingScrollToPollId) {
+        const card = container.querySelector(`[data-poll-card="${CSS.escape(pendingScrollToPollId)}"]`);
+        pendingScrollToPollId = null;
+        if (card) requestAnimationFrame(() => { card.scrollIntoView({ behavior: "smooth", block: "center" }); card.classList.add("just-focused"); setTimeout(() => card.classList.remove("just-focused"), 1200); });
+      }
+    }
+
+    function renderPollsTable(container, filtered, members, myId) {
+      const total = members.length;
+      const ordered = [...members.filter((m) => m.id === myId), ...members.filter((m) => m.id !== myId)];
+      const notesList = [];
+
+      const rows = filtered.map((p) => {
+        const v = p.votes || {}, notes = p.voteNotes || {}, yes = members.filter((m) => v[m.id] === "yes").length;
+        const full = total > 0 && yes === total, broad = p.timeMode === "day" || p.timeMode === "period", t = formatPollTimeLabel(p);
+        members.forEach((m) => notes[m.id] && notesList.push({ date: formatCompactDateFr(p.date), time: t, member: m.name, note: notes[m.id] }));
+        const conflicts = getUnavailabilityConflictsForDate(p.date).filter((c) => v[c.memberId] !== "yes");
+
+        const cells = ordered.map((m) => {
+          const val = v[m.id] || "", sym = { yes: "✓", maybe: "?", no: "✕" }[val] || "○";
+          const dot = notes[m.id] ? `<span class="matrix-note-dot" title="${esc(notes[m.id])}"></span>` : "";
+          const badge = `<span class="matrix-cell-badge ${val}">${sym}${dot}</span>`;
+          return `<td>${m.id === myId ? `<button type="button" class="matrix-cell-btn" data-matrix-vote="${esc(p.id)}" data-cur="${esc(val)}">${badge}</button>` : badge}</td>`;
+        }).join("");
+
+        const altBtn = broad
+          ? `<button type="button" class="${full ? "btn-confirm" : "btn-secondary"} btn-xs" data-refine-poll="${esc(p.id)}">Horaires</button>`
+          : `<button type="button" class="btn-secondary btn-xs" data-counter-poll="${esc(p.id)}">+ Horaire</button>`;
+
+        return `<tr class="${full ? "row-consensus" : ""}">
+          <td>
+            <div style="font-weight:600;text-transform:capitalize">${esc(formatCompactDateFr(p.date))}</div>
+            <div style="font-size:11.5px;color:${p.timeMode === "day" ? "var(--muted)" : "var(--accent-fg)"};font-weight:500">${esc(t)}${p.location ? ` • ${esc(p.location)}` : ""}</div>
+            ${conflicts.length ? `<div style="font-size:11px;color:var(--no-fg);font-weight:600">Absence : ${esc(conflicts.map((c) => c.memberName).join(", "))}</div>` : ""}
+          </td>
+          <td style="font-weight:700;color:${full ? "var(--yes-fg)" : "var(--fg)"};white-space:nowrap">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</td>
+          ${cells}
+          <td style="white-space:nowrap;text-align:right;padding-right:12px">
+            <button type="button" class="btn-secondary btn-xs" data-edit-poll="${esc(p.id)}">Modif.</button> ${altBtn}
+            <button type="button" class="${full && !broad ? "btn-confirm" : "btn-primary"} btn-xs" data-confirm-poll="${esc(p.id)}">Valider</button>
+            <button type="button" class="btn-del-subtle btn-xs" data-del-poll="${esc(p.id)}">Suppr.</button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      container.innerHTML = `
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Touchez votre case dans la colonne <strong>(Vous)</strong> pour alterner ✓ / ? / ✕.</div>
+        <div class="card matrix-card"><div class="matrix-scroll"><table class="avail-matrix">
+          <thead><tr><th>Date &amp; moment</th><th>Score</th>${ordered.map((m) => `<th class="${m.id === myId ? "col-me" : ""}"><div>${esc(m.name)}${m.id === myId ? " (Vous)" : ""}</div><div style="font-weight:400;font-size:10.5px;color:var(--muted)">${esc(m.instrument)}</div></th>`).join("")}<th style="text-align:right;padding-right:12px">Actions</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div></div>
+        ${notesList.length ? `<div class="card" style="padding:12px 14px"><div class="card-kicker" style="margin-bottom:6px">Précisions des musiciens</div>${notesList.map((n) => `<div style="font-size:13px;padding:3px 0"><strong>${esc(n.member)}</strong> (${esc(n.date)}, ${esc(n.time)}) : <em>« ${esc(n.note)} »</em></div>`).join("")}</div>` : ""}`;
+    }
+
+    // Délégation d'événements pour l'onglet Disponibilités
+    $("polls-list").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const pollsObj = currentEnsembleData?.polls || {}, myId = session.ensembles[session.activeEnsembleId]?.memberId;
+
+      if (btn.hasAttribute("data-empty-add-poll")) { resetPollSlots(); return openModal("modal-poll"); }
+      if (btn.hasAttribute("data-reset-filter") || btn.hasAttribute("data-go-arch")) {
+        availFilterMode = btn.hasAttribute("data-go-arch") ? "archived" : "all";
+        document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === availFilterMode));
+        return renderPolls();
+      }
+      if (btn.dataset.vote) {
+        const p = pollsObj[btn.dataset.vote];
+        return p?.votes?.[myId] === btn.dataset.val ? promptClearMyVote(p) : castPollVote(btn.dataset.vote, btn.dataset.val, lastRenderedFilteredPolls, true);
+      }
+      if (btn.dataset.matrixVote) {
+        const next = { yes: "maybe", maybe: "no" }[btn.dataset.cur] || "yes";
+        return castPollVote(btn.dataset.matrixVote, next, lastRenderedFilteredPolls, false);
+      }
+      if (btn.dataset.openNote) {
+        haptic(); const id = btn.dataset.openNote; openNoteEditors.add(id); renderPolls();
+        return requestAnimationFrame(() => $("polls-list").querySelector(`.vote-note-input[data-note-input="${CSS.escape(id)}"]`)?.focus());
+      }
+      if (btn.dataset.saveNote) {
+        haptic(); const id = btn.dataset.saveNote;
+        return saveVoteNote(id, $("polls-list").querySelector(`.vote-note-input[data-note-input="${CSS.escape(id)}"]`)?.value || "");
+      }
+      if (btn.dataset.toggleMembers) {
+        haptic(); const id = btn.dataset.toggleMembers;
+        expandedMemberLists.has(id) ? expandedMemberLists.delete(id) : expandedMemberLists.add(id);
+        return renderPolls();
+      }
+      if (btn.dataset.pollMenu) return openPollActionsMenu(pollsObj[btn.dataset.pollMenu]);
+      if (btn.dataset.refinePoll) return openRefineTimeModal(pollsObj[btn.dataset.refinePoll]);
+      if (btn.dataset.counterPoll) return openCounterProposalModal(pollsObj[btn.dataset.counterPoll]);
+      if (btn.dataset.editPoll) return openEditPollModal(pollsObj[btn.dataset.editPoll]);
+      if (btn.dataset.confirmPoll) return openConfirmPollModal(pollsObj[btn.dataset.confirmPoll]);
+      if (btn.dataset.delPoll) return promptDeletePoll(pollsObj[btn.dataset.delPoll]);
+      if (btn.dataset.remindPoll) {
+        const p = pollsObj[btn.dataset.remindPoll];
+        if (p) sendPollReminder(p, Object.values(currentEnsembleData?.members || {}).filter((m) => !p.votes?.[m.id]));
+      }
+    });
+
+    $("polls-list").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target.classList?.contains("vote-note-input")) {
+        e.preventDefault(); haptic(); e.target.blur(); saveVoteNote(e.target.dataset.noteInput, e.target.value);
+      }
+    });
+
+    // Rendu Onglet Ensemble
+    function renderEnsembleInfo() {
+      const membersObj = currentEnsembleData.members || {}, members = Object.values(membersObj);
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId, today = new Date().toISOString().split("T")[0];
+
+      $("info-formation").textContent = currentEnsembleData.formation || "Ensemble";
+      $("info-name").textContent = currentEnsembleData.name;
+      $("info-code").textContent = session.activeEnsembleId;
+      $("members-count").textContent = members.length;
+      $("toggle-auto-remind-eve").checked = currentEnsembleData.autoRemindEve !== false;
+
+      $("members-list").innerHTML = members.map((m) => {
+        const isMe = m.id === myId, abs = Object.values(m.unavailabilities || {}).filter((u) => u.endDate >= today).length;
+        return `<div class="member-row">
+          <div style="min-width:0"><div><strong>${esc(m.name)}</strong> ${isMe ? "(Vous)" : ""}</div><div style="font-size:12.5px;color:var(--muted)">${esc(m.instrument)} • ${m.pushEnabled ? "Alertes actives" : "Sans alerte"}${abs ? ` • ${abs} absence(s)` : ""}</div></div>
+          <div class="member-row-actions"><button type="button" class="btn-secondary btn-xs" data-edit-member="${esc(m.id)}">Modifier</button><button type="button" class="btn-secondary btn-xs" data-remove-member="${esc(m.id)}">${isMe ? "Quitter" : "Retirer"}</button></div>
+        </div>`;
+      }).join("");
+
+      const myUnavails = Object.values(membersObj[myId]?.unavailabilities || {}).sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
+      $("my-unavailabilities-list").innerHTML = myUnavails.length
+        ? myUnavails.map((u) => `<div class="member-row"><div style="min-width:0"><div style="font-size:13.5px"><strong>${esc(u.startDate === u.endDate ? `Le ${formatShortDateFr(u.startDate)}` : `Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`)}</strong></div>${u.reason ? `<div style="font-size:12.5px;color:var(--muted)">${esc(u.reason)}</div>` : ""}</div><button type="button" class="btn-secondary btn-xs" data-del-unavail="${esc(u.id)}">Supprimer</button></div>`).join("")
+        : `<div style="font-size:13px;color:var(--muted);padding-bottom:4px">Aucune période d'indisponibilité enregistrée.</div>`;
+
+      $("saved-ensembles-list").innerHTML = Object.keys(session.ensembles).map((id) => {
+        const it = session.ensembles[id], cur = id === session.activeEnsembleId;
+        return `<div class="member-row"><div><strong>${esc(it.ensembleName || id)}</strong><div style="font-size:12px;color:var(--muted)">${esc(it.name)} • ${esc(it.instrument)}</div></div>${cur ? `<span style="font-size:12px;font-weight:600;color:var(--yes-fg)">Actif</span>` : `<button type="button" class="btn-secondary btn-sm" data-switch-ens="${esc(id)}">Ouvrir</button>`}</div>`;
+      }).join("");
+    }
+
+    $("view-ensemble").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const membersObj = currentEnsembleData?.members || {}, myId = session.ensembles[session.activeEnsembleId]?.memberId;
+
+      if (btn.dataset.editMember) {
+        const m = membersObj[btn.dataset.editMember]; if (!m) return;
+        $("edit-member-id").value = m.id; $("edit-member-name").value = m.name || ""; $("edit-member-instrument").value = m.instrument || "";
+        return openModal("modal-edit-member");
+      }
+      if (btn.dataset.removeMember) {
+        const tid = btn.dataset.removeMember, m = membersObj[tid]; if (!m) return;
+        const isMe = tid === myId;
+        return openConfirmationModal({
+          title: isMe ? "Quitter cet ensemble ?" : `Retirer ${m.name} ?`,
+          context: `${m.name} • ${m.instrument}`,
+          message: isMe ? `Vous quitterez « ${currentEnsembleData.name} » et vos votes seront retirés.` : `${m.name} sera retiré de l'ensemble ainsi que ses votes.`,
+          confirmLabel: isMe ? "Quitter" : "Retirer",
+          onConfirm: async () => {
+            try {
+              const ensId = session.activeEnsembleId;
+              await remove(ref(db, `ensembles/${ensId}/members/${tid}`));
+              await Promise.all(Object.keys(currentEnsembleData.polls || {}).flatMap((pid) => [
+                remove(ref(db, `ensembles/${ensId}/polls/${pid}/votes/${tid}`)),
+                remove(ref(db, `ensembles/${ensId}/polls/${pid}/voteNotes/${tid}`))
+              ]));
+              if (isMe) {
+                delete session.ensembles[ensId];
+                session.activeEnsembleId = Object.keys(session.ensembles)[0] || null;
+                saveSession(); showToast("Vous avez quitté l'ensemble.");
+                session.activeEnsembleId ? enterEnsemble(session.activeEnsembleId) : (unsubscribeEnsemble?.(), showOnboarding());
+              } else showToast(`${m.name} a été retiré.`);
+            } catch (err) { handleFirebaseError(err); }
+          }
+        });
+      }
+      if (btn.dataset.delUnavail) {
+        const u = membersObj[myId]?.unavailabilities?.[btn.dataset.delUnavail]; if (!u) return;
+        const rTxt = u.startDate === u.endDate ? `Le ${formatShortDateFr(u.startDate)}` : `Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`;
+        return openConfirmationModal({
+          title: "Supprimer cette absence ?", context: `${rTxt}${u.reason ? ` — ${u.reason}` : ""}`,
+          message: "Cette période ne sera plus signalée.", confirmLabel: "Supprimer",
+          onConfirm: async () => {
+            try { await remove(ref(db, `ensembles/${session.activeEnsembleId}/members/${myId}/unavailabilities/${u.id}`)); showToast("Absence supprimée."); }
+            catch (err) { handleFirebaseError(err); }
+          }
+        });
+      }
+      if (btn.dataset.switchEns) {
+        session.activeEnsembleId = btn.dataset.switchEns; saveSession(); enterEnsemble(session.activeEnsembleId);
+      }
+    });
+
+    // Soumission des formulaires secondaires
+    $("form-unavailability").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const startDate = $("unavail-start").value, endDate = $("unavail-end").value, reason = $("unavail-reason").value.trim();
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!startDate || !endDate || !myId) return;
+      if (endDate < startDate) return showToast("La date de fin doit être postérieure ou égale au début.");
+      try {
+        const id = genId("una");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/members/${myId}/unavailabilities/${id}`), { id, startDate, endDate, reason, createdAt: Date.now() });
+        $("form-unavailability").reset(); closeModal("modal-unavailability"); showToast("Indisponibilité enregistrée.");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    $("toggle-auto-remind-eve").addEventListener("change", async (e) => {
+      haptic(); if (!session.activeEnsembleId) return;
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}`), { autoRemindEve: e.target.checked });
+        showToast(e.target.checked ? "Rappel automatique la veille à 19h00 activé." : "Rappel automatique désactivé.");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    $("form-edit-ensemble").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const name = $("edit-ensemble-name").value.trim(), formation = $("edit-ensemble-formation").value;
+      if (!name || !session.activeEnsembleId) return;
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}`), { name, formation });
+        session.ensembles[session.activeEnsembleId].ensembleName = name; saveSession();
+        closeModal("modal-edit-ensemble"); showToast("Ensemble mis à jour.");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    $("form-edit-member").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const id = $("edit-member-id").value, name = $("edit-member-name").value.trim(), instrument = $("edit-member-instrument").value.trim();
+      if (!id || !name || !instrument || !session.activeEnsembleId) return;
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/members/${id}`), { name, instrument });
+        const mySes = session.ensembles[session.activeEnsembleId];
+        if (mySes?.memberId === id) { mySes.name = name; mySes.instrument = instrument; saveSession(); }
+        closeModal("modal-edit-member"); showToast("Profil mis à jour.");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    $("form-poll").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const slots = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row")).map(readSlotRow).filter((s) => s.date && (s.timeMode !== "exact" || (s.startTime && s.endTime)));
+      if (!slots.length) return;
+      const blocked = slots.find(findArchivedSlotMatch);
+      if (blocked) { updatePollConflictsWarning(); return showToast(`Impossible : le ${formatCompactDateFr(blocked.date)} a déjà été archivé.`); }
+
+      const location = $("poll-location").value.trim(), note = $("poll-note").value.trim(), me = session.ensembles[session.activeEnsembleId];
+      const replaceId = refiningPollId && $("poll-replace-checkbox").checked ? refiningPollId : null, wasRefining = Boolean(refiningPollId);
+      try {
+        const updates = {};
+        slots.forEach((s) => {
+          const id = genId("pol");
+          updates[id] = { id, ...s, location, note, createdBy: me.name, votes: { [me.memberId]: "yes" } };
+        });
+        if (replaceId) updates[replaceId] = null;
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/polls`), updates);
+
+        const ens = currentEnsembleData?.name || "Cadenza", s0 = slots[0];
+        await publishEnsembleNotification(
+          wasRefining ? `Horaires proposés — ${ens}` : slots.length === 1 ? `Nouvelle date proposée — ${ens}` : `${slots.length} nouvelles dates proposées — ${ens}`,
+          wasRefining ? `${me.name} propose ${slots.length === 1 ? formatPollTimeLabel(s0) : `${slots.length} créneaux horaires`} pour le ${formatDateFr(s0.date)}.`
+            : slots.length === 1 ? `${me.name} propose le ${formatDateFr(s0.date)} (${formatPollTimeLabel(s0)})`
+            : `${me.name} propose ${slots.length} créneaux de répétition à voter.`
+        );
+        $("form-poll").reset(); resetPollSlots(); closeModal("modal-poll");
+        showToast(`${slots.length} ${wasRefining ? "horaire(s)" : "créneau(x)"} proposé(s) aux membres.`);
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    $("form-rehearsal").addEventListener("submit", async (e) => {
+      e.preventDefault(); haptic();
+      const date = $("reh-date").value, startTime = $("reh-start").value, endTime = $("reh-end").value;
+      const location = $("reh-location").value.trim(), program = $("reh-program").value.trim(), notes = $("reh-notes").value.trim();
+      try {
+        const id = genId("reh");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${id}`), { id, date, startTime, endTime, location, program, notes, createdAt: Date.now() });
+        await publishEnsembleNotification(`Nouvelle répétition — ${currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
+        $("form-rehearsal").reset(); closeModal("modal-rehearsal"); showToast("Répétition ajoutée à l'agenda.");
+      } catch (err) { handleFirebaseError(err); }
+    });
+
+    // Boutons d'action globaux
+    $("btn-open-poll").addEventListener("click", () => { resetPollSlots(); openModal("modal-poll"); });
+    $("btn-open-rehearsal").addEventListener("click", () => openModal("modal-rehearsal"));
+    $("btn-open-unavail").addEventListener("click", () => openModal("modal-unavailability"));
+    $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
+    $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
+    $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
+    $("btn-share-invite").addEventListener("click", () => openModal("modal-invite"));
+    $("btn-notif-top").addEventListener("click", togglePushForEnsemble);
+    $("btn-toggle-push").addEventListener("click", togglePushForEnsemble);
+    $("btn-test-push").addEventListener("click", () => isEnsemblePushActive() ? triggerLocalSystemNotification(`Cadenza — ${currentEnsembleData?.name || "Ensemble"}`, "Alerte système opérationnelle.") : togglePushForEnsemble());
+
+    $("btn-copy-invite").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable(getInviteUrl(session.activeEnsembleId))) ? "Lien d'invitation copié." : "Sélectionnez et copiez le lien."); });
+    $("btn-native-share").addEventListener("click", () => {
+      const ens = currentEnsembleData?.name || "notre ensemble";
+      shareOrCopy(getInviteUrl(session.activeEnsembleId), `Rejoindre ${ens} sur Cadenza`, `Rejoins ${ens} sur Cadenza pour indiquer tes disponibilités :`, "Lien copié.");
+    });
+    $("btn-copy-transfer").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable(getTransferUrl(session.activeEnsembleId, session.ensembles[session.activeEnsembleId]?.memberId || ""))) ? "Lien personnel copié." : "Copiez le lien."); });
+    $("btn-share-transfer").addEventListener("click", () => {
+      const me = session.ensembles[session.activeEnsembleId];
+      shareOrCopy(getTransferUrl(session.activeEnsembleId, me?.memberId || ""), `Mon profil Cadenza`, `Lien personnel pour restaurer mon profil (${me?.name || ""}) sur Cadenza :`, "Lien personnel copié.");
+    });
+
+    $("btn-switch-onboarding").addEventListener("click", () => {
+      $("join-card").classList.remove("featured");
+      ["join-code-field", "create-card", "onboarding-divider"].forEach((id) => $(id).classList.remove("hidden"));
+      $("join-kicker").textContent = "Rejoindre un ensemble";
+      $("join-ensemble-title").textContent = "Accéder à un espace existant";
+      $("join-code").value = ""; renderClaimableMembers(null, null); showOnboarding();
+    });
+
+    // Démarrage de l'application
+    await initServiceWorkerAndPush();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("ensemble")) localStorage.setItem(KEYS.invite, JSON.stringify({ ensembleId: params.get("ensemble"), memberId: params.get("member") || null }));
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || Boolean(window.navigator.standalone);
+    if (!isStandalone && localStorage.getItem(KEYS.tuto) !== "1") showInstallTutorial();
+    else { await proceedAfterTutorial(); maybeDisplayLatestAnnouncement(); }
+  </script>
+</body>
+</html>
