@@ -396,6 +396,11 @@
       background: linear-gradient(to bottom, #f7fee7 0%, #ffffff 38px);
     }
 
+    .card.archived-card {
+      background: #fafafa;
+      border-color: var(--border);
+    }
+
     @keyframes pulseCard {
       0% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.35); border-color: var(--accent-fg); }
       70% { box-shadow: 0 0 0 8px rgba(29, 78, 216, 0); border-color: var(--accent-fg); }
@@ -499,6 +504,20 @@
       font-size: 13px;
     }
 
+    .archive-lock-banner {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      background: var(--subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-top: 10px;
+    }
+
     /* En-tête de consensus + Jauge segmentée */
     .consensus-header {
       display: flex;
@@ -532,6 +551,12 @@
       background: var(--yes-bg);
       color: var(--yes-fg);
       border-color: var(--yes-border);
+    }
+
+    .consensus-badge.archived {
+      background: var(--no-bg);
+      color: var(--no-fg);
+      border-color: var(--no-border);
     }
 
     .to-vote-tag {
@@ -1441,16 +1466,17 @@
         <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer des dates</button>
       </div>
 
-      <!-- Barre d'outils : Double affichage Cartes / Tableau + Filtres -->
+      <!-- Barre d'outils : Double affichage Cartes / Tableau + Filtres intelligents -->
       <div id="avail-toolbar" class="avail-toolbar hidden">
         <div class="segmented-control" role="tablist" aria-label="Mode d'affichage">
           <button type="button" class="seg-btn active" data-avail-view="cards">Cartes</button>
           <button type="button" class="seg-btn" data-avail-view="table">Tableau</button>
         </div>
         <div class="filter-pills" role="group" aria-label="Filtrer les dates">
-          <button type="button" class="filter-pill active" data-avail-filter="all">Toutes</button>
+          <button type="button" class="filter-pill active" data-avail-filter="all">Actives</button>
           <button type="button" class="filter-pill" data-avail-filter="unvoted" id="pill-filter-unvoted">À voter</button>
           <button type="button" class="filter-pill" data-avail-filter="consensus">Unanimité</button>
+          <button type="button" class="filter-pill" data-avail-filter="archived" id="pill-filter-archived">Archives</button>
         </div>
       </div>
 
@@ -1605,7 +1631,7 @@
         <div class="row-2">
           <div class="field">
             <label for="admin-ann-version">Version / Badge</label>
-            <input type="text" id="admin-ann-version" placeholder="Ex: v13" required />
+            <input type="text" id="admin-ann-version" placeholder="Ex: v14" required />
           </div>
           <div class="field">
             <label for="admin-ann-title">Titre de la fenêtre</label>
@@ -1618,7 +1644,7 @@
         </div>
         <div class="field">
           <label for="admin-ann-notes">Liste des nouveautés (une par ligne)</label>
-          <textarea id="admin-ann-notes" rows="4" placeholder="Ex:&#10;Possibilité de préciser les horaires en un clic&#10;Amélioration des rappels de répétition&#10;Corrections de bugs et gains de fluidité" required></textarea>
+          <textarea id="admin-ann-notes" rows="4" placeholder="Ex:&#10;Archivage automatique des dates avec indisponibilité&#10;Tri intelligent des créneaux de disponibilité&#10;Modification directe des cartes dans Agenda et Disponibilités" required></textarea>
         </div>
         <div style="display: grid; gap: 8px;">
           <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser la fenêtre pop-up</button>
@@ -1694,6 +1720,56 @@
           <input type="text" id="confirm-poll-program" placeholder="Ex: Lecture du 2e mouvement" />
         </div>
         <button type="submit" class="btn-confirm btn-full">Ajouter à l'agenda centralisé</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODALE : MODIFIER UNE CARTE DE DISPONIBILITÉ -->
+  <div id="modal-edit-poll" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-poll-title">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title" id="edit-poll-title">Modifier ce créneau</h3>
+        <button type="button" class="btn-secondary btn-sm" data-close="modal-edit-poll">Fermer</button>
+      </div>
+      <form id="form-edit-poll">
+        <input type="hidden" id="edit-poll-id" />
+        <div class="field">
+          <label for="edit-poll-date">Date</label>
+          <input type="date" id="edit-poll-date" required />
+        </div>
+        <div class="field">
+          <label>Moment ou horaire</label>
+          <div class="slot-mode-group" id="edit-poll-mode-group">
+            <button type="button" class="slot-mode-btn span-full" data-edit-mode="day" data-edit-period="">Journée entière (sans horaire)</button>
+            <button type="button" class="slot-mode-btn" data-edit-mode="period" data-edit-period="Matin">Matin</button>
+            <button type="button" class="slot-mode-btn" data-edit-mode="period" data-edit-period="Après-midi">Après-midi</button>
+            <button type="button" class="slot-mode-btn" data-edit-mode="period" data-edit-period="Soir">Soir</button>
+            <button type="button" class="slot-mode-btn span-full" data-edit-mode="exact" data-edit-period="">Heure précise</button>
+          </div>
+        </div>
+        <div class="row-2 hidden" id="edit-poll-exact-times" style="margin-bottom: 14px;">
+          <div class="field" style="margin-bottom: 0;">
+            <label for="edit-poll-start">Début</label>
+            <input type="time" id="edit-poll-start" value="14:00" />
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label for="edit-poll-end">Fin</label>
+            <input type="time" id="edit-poll-end" value="17:00" />
+          </div>
+        </div>
+        <div id="edit-poll-archive-warning" class="alert-box hidden" style="margin-bottom: 14px;"></div>
+        <div class="field">
+          <label for="edit-poll-location">Lieu envisagé (optionnel)</label>
+          <input type="text" id="edit-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" />
+        </div>
+        <div class="field">
+          <label for="edit-poll-note">Programme / Remarque (optionnel)</label>
+          <input type="text" id="edit-poll-note" placeholder="Ex: Lecture du 2e mouvement" />
+        </div>
+        <p id="edit-poll-votes-hint" style="font-size: 12.5px; color: var(--muted); margin: 0 0 14px;">
+          Si vous modifiez la date ou l'horaire, les votes existants seront réinitialisés afin que chacun confirme sa disponibilité.
+        </p>
+        <button type="submit" id="btn-submit-edit-poll" class="btn-primary btn-full">Enregistrer les modifications</button>
       </form>
     </div>
   </div>
@@ -1870,6 +1946,7 @@
         <div style="margin-bottom: 16px;">
           <button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter une autre date</button>
         </div>
+        <div id="poll-archive-lock-warning" class="alert-box hidden" style="margin-bottom: 14px;"></div>
         <div id="poll-unavail-warning" class="alert-box hidden" style="margin-bottom: 14px;"></div>
         <div class="field">
           <label for="poll-location">Lieu envisagé (optionnel)</label>
@@ -1966,7 +2043,7 @@
     import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-    const APP_VERSION = "v13";
+    const APP_VERSION = "v14";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
@@ -2005,9 +2082,10 @@
 
     // État de l'onglet Disponibilités
     let availViewMode = "cards"; // "cards" | "table"
-    let availFilterMode = "all"; // "all" | "unvoted" | "consensus"
+    let availFilterMode = "all"; // "all" | "unvoted" | "consensus" | "archived"
     let pendingScrollToPollId = null;
     let pendingDeleteCallback = null;
+    let isAutoArchivingPolls = false;
 
     // État pour l'affinage d'une journée entière ou d'un moment (Matin / Après-midi / Soir) vers des horaires
     let refiningPollId = null;
@@ -2016,7 +2094,7 @@
     // État pour l'accès admin (4 clics rapides sur l'onglet "Ensemble") et la pop-up Nouveautés
     let ensembleTapCount = 0;
     let ensembleTapTimer = null;
-    let verifiedAdminPin = null; // Conservé uniquement en mémoire vive durant la session admin
+    let verifiedAdminPin = null;
     let latestAnnouncementData = null;
     let displayedAnnouncementId = null;
     let isPreviewingWhatsNew = false;
@@ -2147,6 +2225,135 @@
         return `${poll.date}T${orderMap[poll.period] || "12:00"}`;
       }
       return `${poll.date}T${poll.startTime || "00:01"}`;
+    }
+
+    // Empreinte unique Date + Horaire/Moment pour empêcher de relancer un sondage archivé qui n'a pas fonctionné
+    function getSlotFingerprint(slot) {
+      const date = String(slot.date || "").trim();
+      const mode = slot.timeMode || "day";
+      if (mode === "day") {
+        return `${date}|day`;
+      }
+      if (mode === "period") {
+        return `${date}|period|${String(slot.period || "").trim()}`;
+      }
+      return `${date}|exact|${String(slot.startTime || "").trim()}-${String(slot.endTime || "").trim()}`;
+    }
+
+    function findArchivedSlotMatch(slot) {
+      const archivedObj = currentEnsembleData?.archivedPolls || {};
+      const fp = getSlotFingerprint(slot);
+      return Object.values(archivedObj).find((arch) =>
+        arch.slotFingerprint === fp || getSlotFingerprint(arch) === fp
+      ) || null;
+    }
+
+    // =========================================================================
+    // ARCHIVAGE AUTOMATIQUE DES CRÉNEAUX IMPOSSIBLES & TRI INTELLIGENT
+    // =========================================================================
+
+    function isPollImpossibleAndComplete(poll, membersList) {
+      if (!poll || !membersList || membersList.length === 0) return false;
+      const votes = poll.votes || {};
+      const allVoted = membersList.every((m) => Boolean(votes[m.id]));
+      if (!allVoted) return false;
+      const hasUnavailable = membersList.some((m) => votes[m.id] === "no");
+      return hasUnavailable;
+    }
+
+    async function archiveFailedPollsIfNeeded() {
+      if (!session.activeEnsembleId || !currentEnsembleData || isAutoArchivingPolls) return;
+      const pollsObj = currentEnsembleData.polls || {};
+      const membersList = Object.values(currentEnsembleData.members || {});
+      if (membersList.length === 0) return;
+
+      const toArchive = Object.values(pollsObj).filter((p) => isPollImpossibleAndComplete(p, membersList));
+      if (toArchive.length === 0) return;
+
+      isAutoArchivingPolls = true;
+      try {
+        const updates = {};
+        const now = Date.now();
+        toArchive.forEach((poll) => {
+          const unavailableNames = membersList
+            .filter((m) => poll.votes?.[m.id] === "no")
+            .map((m) => m.name);
+
+          updates[`archivedPolls/${poll.id}`] = {
+            ...poll,
+            archivedAt: now,
+            archiveReason: "complete_with_unavailability",
+            unavailableMembers: unavailableNames,
+            slotFingerprint: getSlotFingerprint(poll),
+            lockedFromRelauch: true
+          };
+          updates[`polls/${poll.id}`] = null;
+        });
+
+        await update(ref(db, `ensembles/${session.activeEnsembleId}`), updates);
+
+        if (toArchive.length === 1) {
+          const p = toArchive[0];
+          showToast(`Créneau du ${formatCompactDateFr(p.date)} (${formatPollTimeLabel(p)}) archivé : tout le monde a voté avec au moins une indisponibilité.`);
+        } else {
+          showToast(`${toArchive.length} créneaux avec indisponibilité ont été automatiquement archivés.`);
+        }
+      } catch (err) {
+        console.warn("Auto-archive polls:", err);
+      } finally {
+        isAutoArchivingPolls = false;
+      }
+    }
+
+    function smartSortPolls(pollsArray, membersList, myMemberId) {
+      const totalMembers = membersList.length;
+
+      function getPollSmartMetrics(poll) {
+        const votes = poll.votes || {};
+        let yesCount = 0;
+        let maybeCount = 0;
+        let noCount = 0;
+
+        membersList.forEach((m) => {
+          const v = votes[m.id];
+          if (v === "yes") yesCount += 1;
+          else if (v === "maybe") maybeCount += 1;
+          else if (v === "no") noCount += 1;
+        });
+
+        const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
+        const myUnvoted = !votes[myMemberId];
+
+        // Priorité de catégorie :
+        // 1 : Unanimité atteinte (prêt à valider ou préciser l'horaire)
+        // 2 : Créneaux viables (aucun refus "no" pour l'instant)
+        // 3 : Créneaux avec au moins un refus "no" (en attente des derniers votes avant archivage)
+        let bucket = 2;
+        if (isFullConsensus) bucket = 1;
+        else if (noCount > 0) bucket = 3;
+
+        // Score pondéré de disponibilité (Oui = 2 pts, Incertain = 1 pt, Non = -3 pts)
+        const availabilityScore = (yesCount * 2) + maybeCount - (noCount * 3);
+
+        return {
+          bucket,
+          myUnvoted: myUnvoted ? 0 : 1,
+          availabilityScore,
+          yesCount,
+          noCount
+        };
+      }
+
+      return [...pollsArray].sort((a, b) => {
+        const ma = getPollSmartMetrics(a);
+        const mb = getPollSmartMetrics(b);
+
+        if (ma.bucket !== mb.bucket) return ma.bucket - mb.bucket;
+        if (ma.bucket === 2 && ma.myUnvoted !== mb.myUnvoted) return ma.myUnvoted - mb.myUnvoted;
+        if (ma.availabilityScore !== mb.availabilityScore) return mb.availabilityScore - ma.availabilityScore;
+        if (ma.yesCount !== mb.yesCount) return mb.yesCount - ma.yesCount;
+        return getPollSortKey(a).localeCompare(getPollSortKey(b));
+      });
     }
 
     function getUnavailabilityConflictsForDate(isoDate) {
@@ -2343,7 +2550,6 @@
       );
     }
 
-    // Vérification du code PIN côté serveur Firebase (le PIN n'est jamais stocké dans le fichier)
     $("form-admin-pin").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
@@ -2441,7 +2647,6 @@
           }
         });
 
-        // Marquer comme déjà vue sur l'appareil de l'administrateur
         localStorage.setItem(SEEN_ANNOUNCEMENT_KEY, newId);
         $("admin-firebase-warning").classList.add("hidden");
         closeModal("modal-admin-portal");
@@ -2793,7 +2998,6 @@
         const tab = btn.dataset.tab;
         switchTab(tab);
 
-        // Détection des 4 clics rapides consécutifs sur l'onglet "Ensemble"
         if (tab === "ensemble") {
           ensembleTapCount += 1;
           clearTimeout(ensembleTapTimer);
@@ -2835,13 +3039,48 @@
       });
     });
 
-    // Vérification des conflits d'indisponibilité lors de la proposition de dates
+    // Vérification des créneaux archivés verrouillés et des conflits d'indisponibilité
     function updatePollConflictsWarning() {
       const warningBox = $("poll-unavail-warning");
-      if (!warningBox) return;
+      const lockBox = $("poll-archive-lock-warning");
+      const submitBtn = $("btn-submit-poll");
+      if (!warningBox || !lockBox) return;
 
-      const dateInputs = Array.from($("poll-slots-container").querySelectorAll(".slot-date"));
-      const checkedDates = [...new Set(dateInputs.map((inp) => inp.value).filter(Boolean))];
+      const slotRows = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row"));
+      const parsedSlots = slotRows.map((row) => {
+        const mode = row.dataset.mode || "day";
+        const period = row.dataset.period || "";
+        return {
+          date: row.querySelector(".slot-date").value,
+          timeMode: mode,
+          period: mode === "period" ? period : "",
+          startTime: mode === "exact" ? row.querySelector(".slot-start").value : "",
+          endTime: mode === "exact" ? row.querySelector(".slot-end").value : ""
+        };
+      }).filter((s) => s.date);
+
+      const lockedLines = [];
+      parsedSlots.forEach((s) => {
+        const archMatch = findArchivedSlotMatch(s);
+        if (archMatch) {
+          const absents = Array.isArray(archMatch.unavailableMembers) && archMatch.unavailableMembers.length > 0
+            ? ` (indisponibilité de ${escapeHtml(archMatch.unavailableMembers.join(", "))})`
+            : "";
+          lockedLines.push(`• <strong>${escapeHtml(formatDateFr(s.date))} (${escapeHtml(formatPollTimeLabel(s))})</strong> : sondage déjà effectué et archivé${absents}.`);
+        }
+      });
+
+      if (lockedLines.length > 0) {
+        lockBox.classList.remove("hidden");
+        lockBox.innerHTML = `<strong>Créneau bloqué (déjà archivé)</strong>${lockedLines.join("<br>")}Impossible de relancer un sondage sur une date/horaire qui n'a pas fonctionné.`;
+        if (submitBtn) submitBtn.disabled = true;
+      } else {
+        lockBox.classList.add("hidden");
+        lockBox.innerHTML = "";
+        if (submitBtn) submitBtn.disabled = false;
+      }
+
+      const checkedDates = [...new Set(parsedSlots.map((s) => s.date))];
       const lines = [];
 
       checkedDates.forEach((d) => {
@@ -2981,11 +3220,14 @@
       `;
 
       row.querySelector(".slot-date").addEventListener("change", updatePollConflictsWarning);
+      row.querySelector(".slot-start").addEventListener("change", updatePollConflictsWarning);
+      row.querySelector(".slot-end").addEventListener("change", updatePollConflictsWarning);
 
       row.querySelectorAll(".slot-mode-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           haptic();
           applySlotModeUI(row, btn.dataset.mode, btn.dataset.period || "Après-midi");
+          updatePollConflictsWarning();
         });
       });
 
@@ -3085,6 +3327,154 @@
       $("poll-note").value = poll.note || "";
       $("modal-poll").classList.add("open");
     }
+
+    // =========================================================================
+    // MODALE D'ÉDITION D'UNE CARTE DE DISPONIBILITÉ
+    // =========================================================================
+
+    function applyEditPollModeUI(mode, period) {
+      const group = $("edit-poll-mode-group");
+      group.dataset.mode = mode;
+      group.dataset.period = mode === "period" ? period : "";
+
+      const exactBox = $("edit-poll-exact-times");
+      const startInput = $("edit-poll-start");
+      const endInput = $("edit-poll-end");
+
+      if (mode === "exact") {
+        exactBox.classList.remove("hidden");
+        startInput.required = true;
+        endInput.required = true;
+      } else {
+        exactBox.classList.add("hidden");
+        startInput.required = false;
+        endInput.required = false;
+      }
+
+      group.querySelectorAll("[data-edit-mode]").forEach((btn) => {
+        const isMatch = btn.dataset.editMode === mode && (mode !== "period" || btn.dataset.editPeriod === period);
+        btn.classList.toggle("active", isMatch);
+      });
+
+      checkEditPollArchiveLock();
+    }
+
+    function checkEditPollArchiveLock() {
+      const warnBox = $("edit-poll-archive-warning");
+      const submitBtn = $("btn-submit-edit-poll");
+      const group = $("edit-poll-mode-group");
+      const mode = group.dataset.mode || "day";
+      const period = group.dataset.period || "";
+      const candidate = {
+        date: $("edit-poll-date").value,
+        timeMode: mode,
+        period: mode === "period" ? period : "",
+        startTime: mode === "exact" ? $("edit-poll-start").value : "",
+        endTime: mode === "exact" ? $("edit-poll-end").value : ""
+      };
+
+      const archMatch = candidate.date ? findArchivedSlotMatch(candidate) : null;
+      if (archMatch) {
+        warnBox.classList.remove("hidden");
+        warnBox.innerHTML = `<strong>Créneau bloqué (déjà archivé)</strong>Ce créneau (${escapeHtml(formatDateFr(candidate.date))} • ${escapeHtml(formatPollTimeLabel(candidate))}) a déjà été sondé et archivé suite à une indisponibilité.`;
+        submitBtn.disabled = true;
+      } else {
+        warnBox.classList.add("hidden");
+        warnBox.innerHTML = "";
+        submitBtn.disabled = false;
+      }
+    }
+
+    function openEditPollModal(poll) {
+      if (!poll) return;
+      haptic();
+      $("edit-poll-id").value = poll.id;
+      $("edit-poll-date").value = poll.date || "";
+      $("edit-poll-start").value = poll.startTime || "14:00";
+      $("edit-poll-end").value = poll.endTime || "17:00";
+      $("edit-poll-location").value = poll.location || "";
+      $("edit-poll-note").value = poll.note || "";
+
+      const mode = poll.timeMode || "day";
+      const period = poll.period || "Après-midi";
+      applyEditPollModeUI(mode, period);
+      $("modal-edit-poll").classList.add("open");
+    }
+
+    document.querySelectorAll("[data-edit-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        haptic();
+        applyEditPollModeUI(btn.dataset.editMode, btn.dataset.editPeriod || "Après-midi");
+      });
+    });
+
+    $("edit-poll-date").addEventListener("change", checkEditPollArchiveLock);
+    $("edit-poll-start").addEventListener("change", checkEditPollArchiveLock);
+    $("edit-poll-end").addEventListener("change", checkEditPollArchiveLock);
+
+    $("form-edit-poll").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      haptic();
+      const pollId = $("edit-poll-id").value;
+      const oldPoll = currentEnsembleData?.polls?.[pollId];
+      if (!pollId || !oldPoll || !session.activeEnsembleId) return;
+
+      const group = $("edit-poll-mode-group");
+      const mode = group.dataset.mode || "day";
+      const period = mode === "period" ? (group.dataset.period || "Après-midi") : "";
+      const date = $("edit-poll-date").value;
+      const startTime = mode === "exact" ? $("edit-poll-start").value : "";
+      const endTime = mode === "exact" ? $("edit-poll-end").value : "";
+      const location = $("edit-poll-location").value.trim();
+      const note = $("edit-poll-note").value.trim();
+
+      if (!date || (mode === "exact" && (!startTime || !endTime))) return;
+
+      const newSlot = { date, timeMode: mode, period, startTime, endTime };
+      if (findArchivedSlotMatch(newSlot)) {
+        showToast("Impossible : ce créneau a déjà été archivé suite à une indisponibilité.");
+        return;
+      }
+
+      const scheduleChanged = getSlotFingerprint(oldPoll) !== getSlotFingerprint(newSlot);
+      const myMember = session.ensembles[session.activeEnsembleId];
+
+      try {
+        const updatePayload = {
+          date,
+          timeMode: mode,
+          period,
+          startTime,
+          endTime,
+          location,
+          note,
+          updatedAt: Date.now()
+        };
+
+        if (scheduleChanged) {
+          updatePayload.votes = myMember?.memberId ? { [myMember.memberId]: "yes" } : null;
+          updatePayload.voteNotes = null;
+        }
+
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), updatePayload);
+
+        if (scheduleChanged) {
+          await publishEnsembleNotification(
+            `Créneau modifié — ${currentEnsembleData?.name || "Cadenza"}`,
+            `${myMember?.name || "Un membre"} a modifié la proposition au ${formatDateFr(date)} (${formatPollTimeLabel(newSlot)}). Merci de re-voter.`
+          );
+          showToast("Créneau modifié et votes réinitialisés.");
+        } else {
+          showToast("Informations du créneau mises à jour.");
+        }
+
+        closeModal("modal-edit-poll");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
+    });
+
+    // =========================================================================
 
     $("btn-add-poll-slot").addEventListener("click", () => {
       haptic();
@@ -3566,6 +3956,7 @@
             triggerLocalSystemNotification(lastEvt.title, lastEvt.body);
           }
 
+          archiveFailedPollsIfNeeded();
           renderAll();
         },
         (err) => handleFirebaseError(err)
@@ -3666,10 +4057,14 @@
         html += `<div class="divider">Répétitions passées (${past.length})</div>`;
         past.reverse().forEach((reh) => {
           html += `
-            <article class="card" style="opacity: 0.65;">
+            <article class="card" style="opacity: 0.72;">
               <h3 class="card-date" style="font-size: 16px;">${escapeHtml(formatDateFr(reh.date))}</h3>
               <div class="card-meta">${escapeHtml(reh.startTime)} – ${escapeHtml(reh.endTime)} • ${escapeHtml(reh.location)}</div>
               ${reh.program ? `<div class="card-meta">${escapeHtml(reh.program)}</div>` : ""}
+              <div class="card-actions">
+                <button type="button" class="btn-secondary btn-xs" data-edit-reh="${escapeHtml(reh.id)}">Modifier</button>
+                <button type="button" class="btn-secondary btn-xs" data-del-reh="${escapeHtml(reh.id)}">Supprimer</button>
+              </div>
             </article>
           `;
         });
@@ -3701,10 +4096,10 @@
           const reh = rehearsalsObj[btn.dataset.delReh];
           if (!reh) return;
           openDeleteConfirmation({
-            title: "Annuler cette répétition ?",
+            title: "Supprimer cette répétition ?",
             context: `${formatDateFr(reh.date)} • ${reh.startTime}–${reh.endTime} (${reh.location})`,
             message: "Cette répétition sera retirée de l'agenda de tout l'ensemble.",
-            confirmLabel: "Annuler la répétition",
+            confirmLabel: "Supprimer la répétition",
             onConfirm: async () => {
               try {
                 await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${reh.id}`));
@@ -3912,13 +4307,79 @@
       }
     }
 
+    function renderArchivedPolls(container, archivedPollsList, membersList) {
+      if (archivedPollsList.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>Aucun créneau archivé pour le moment.</p>
+            <button type="button" class="btn-secondary btn-sm" id="reset-archive-filter">Retour aux créneaux actifs</button>
+          </div>
+        `;
+        $("reset-archive-filter").addEventListener("click", () => {
+          availFilterMode = "all";
+          document.querySelectorAll("[data-avail-filter]").forEach((b) =>
+            b.classList.toggle("active", b.dataset.availFilter === "all")
+          );
+          renderPolls();
+        });
+        return;
+      }
+
+      const sortedArchived = [...archivedPollsList].sort((a, b) =>
+        (b.archivedAt || 0) - (a.archivedAt || 0) || getPollSortKey(b).localeCompare(getPollSortKey(a))
+      );
+
+      const totalMembers = membersList.length;
+
+      container.innerHTML = `
+        <div style="font-size: 12.5px; color: var(--muted); margin-bottom: 10px;">
+          Créneaux où tous les membres ont voté avec au moins une indisponibilité. Ils sont archivés et verrouillés contre toute relance.
+        </div>
+        ${sortedArchived.map((poll) => {
+          const votes = poll.votes || {};
+          const voteNotes = poll.voteNotes || {};
+          const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
+          const timeDisplay = formatPollTimeLabel(poll);
+
+          const chipsHtml = membersList.map((m) => {
+            const v = votes[m.id];
+            const mNote = voteNotes[m.id] || "";
+            const symbol = v === "yes" ? "✓" : v === "maybe" ? "?" : v === "no" ? "✕" : "○";
+            const cls = v === "yes" ? "yes" : v === "maybe" ? "maybe" : v === "no" ? "no" : "";
+            return `<span class="member-chip ${cls}">${symbol} <span class="chip-name">${escapeHtml(m.name)} (${escapeHtml(m.instrument)})</span>${mNote ? ` <span class="chip-note">— « ${escapeHtml(mNote)} »</span>` : ""}</span>`;
+          }).join("");
+
+          return `
+            <article class="card archived-card">
+              <div class="consensus-header">
+                <span class="consensus-badge archived">✕ Archivé (${yesCount}/${totalMembers} dispo)</span>
+                <span style="font-size: 11.5px; color: var(--muted);">Verrouillé</span>
+              </div>
+              <h3 class="card-date">${escapeHtml(formatDateFr(poll.date))}</h3>
+              <div class="card-meta">
+                <span class="time-pill ${poll.timeMode === "day" ? "day-mode" : ""}">${escapeHtml(timeDisplay)}</span>
+                ${poll.location ? `<strong>${escapeHtml(poll.location)}</strong>` : ""}
+              </div>
+              ${poll.note ? `<div class="card-meta">${escapeHtml(poll.note)}</div>` : ""}
+              <div class="member-votes-list">${chipsHtml}</div>
+              <div class="archive-lock-banner">
+                <span>🔒 Sondage clos — impossible de relancer cette date/horaire.</span>
+              </div>
+            </article>
+          `;
+        }).join("")}
+      `;
+    }
+
     function renderPolls() {
       const container = $("polls-list");
       const toolbar = $("avail-toolbar");
       const navBadge = $("nav-avail-badge");
       const filterUnvotedPill = $("pill-filter-unvoted");
+      const filterArchivedPill = $("pill-filter-archived");
 
       const pollsObj = currentEnsembleData.polls || {};
+      const archivedObj = currentEnsembleData.archivedPolls || {};
       const membersObj = currentEnsembleData.members || {};
       const membersList = Object.values(membersObj);
       const totalMembers = membersList.length;
@@ -3934,9 +4395,14 @@
         };
       }
 
-      const allPolls = Object.values(pollsObj).sort((a, b) =>
-        getPollSortKey(a).localeCompare(getPollSortKey(b))
+      // Exclure immédiatement tout créneau déjà complet avec indisponibilité (en cours d'archivage)
+      const activeRawPolls = Object.values(pollsObj).filter(
+        (p) => !isPollImpossibleAndComplete(p, membersList)
       );
+
+      // Tri intelligent par pertinence (Unanimité -> Viables -> Avec refus, puis score et date)
+      const allPolls = smartSortPolls(activeRawPolls, membersList, myMemberId);
+      const archivedPollsList = Object.values(archivedObj);
 
       // Mise à jour du compteur de dates "À voter" dans la barre inférieure et le filtre
       const unvotedCount = allPolls.filter((p) => !(p.votes && p.votes[myMemberId])).length;
@@ -3949,7 +4415,13 @@
         if (filterUnvotedPill) filterUnvotedPill.textContent = "À voter";
       }
 
-      if (allPolls.length === 0) {
+      if (filterArchivedPill) {
+        filterArchivedPill.textContent = archivedPollsList.length > 0
+          ? `Archives (${archivedPollsList.length})`
+          : "Archives";
+      }
+
+      if (allPolls.length === 0 && archivedPollsList.length === 0) {
         toolbar.classList.add("hidden");
         container.innerHTML = `
           <div class="empty-state">
@@ -3966,6 +4438,35 @@
 
       toolbar.classList.remove("hidden");
 
+      if (availFilterMode === "archived") {
+        renderArchivedPolls(container, archivedPollsList, membersList);
+        return;
+      }
+
+      if (allPolls.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>Aucune date active en cours de sondage (${archivedPollsList.length} créneau${archivedPollsList.length > 1 ? "x" : ""} archivé${archivedPollsList.length > 1 ? "s" : ""}).</p>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+              <button type="button" class="btn-primary btn-sm" id="empty-add-poll-with-arch">Proposer de nouvelles dates</button>
+              <button type="button" class="btn-secondary btn-sm" id="empty-view-arch">Voir les archives (${archivedPollsList.length})</button>
+            </div>
+          </div>
+        `;
+        $("empty-add-poll-with-arch").addEventListener("click", () => {
+          resetPollSlots();
+          openModal("modal-poll");
+        });
+        $("empty-view-arch").addEventListener("click", () => {
+          availFilterMode = "archived";
+          document.querySelectorAll("[data-avail-filter]").forEach((b) =>
+            b.classList.toggle("active", b.dataset.availFilter === "archived")
+          );
+          renderPolls();
+        });
+        return;
+      }
+
       // Filtrage des créneaux selon la pastille active
       const filteredPolls = allPolls.filter((poll) => {
         const votes = poll.votes || {};
@@ -3981,7 +4482,7 @@
         container.innerHTML = `
           <div class="empty-state">
             <p>${availFilterMode === "unvoted" ? "Vous avez voté sur toutes les dates proposées." : "Aucun créneau ne réunit encore l'unanimité."}</p>
-            <button type="button" class="btn-secondary btn-sm" id="reset-avail-filter">Afficher toutes les dates (${allPolls.length})</button>
+            <button type="button" class="btn-secondary btn-sm" id="reset-avail-filter">Afficher toutes les dates actives (${allPolls.length})</button>
           </div>
         `;
         $("reset-avail-filter").addEventListener("click", () => {
@@ -4059,9 +4560,10 @@
           `
           : "";
 
-        // Actions de pied de carte adaptées au type de créneau
+        // Actions de pied de carte avec bouton Modifier
         const footerActionsHtml = isFullConsensus && isBroadSlot
           ? `
+            <button type="button" class="btn-secondary btn-sm" data-edit-poll="${escapeHtml(poll.id)}">Modifier</button>
             ${missingMembers.length > 0
               ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${escapeHtml(poll.id)}">Relancer (${missingMembers.length})</button>`
               : ""}
@@ -4069,6 +4571,7 @@
           `
           : `
             <button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-primary"} btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+            <button type="button" class="btn-secondary btn-sm" data-edit-poll="${escapeHtml(poll.id)}">Modifier</button>
             ${isBroadSlot
               ? `<button type="button" class="btn-secondary btn-sm" data-refine-poll="${escapeHtml(poll.id)}">Préciser un horaire</button>`
               : `<button type="button" class="btn-secondary btn-sm" data-counter-poll="${escapeHtml(poll.id)}">Autre horaire ce jour</button>`}
@@ -4131,6 +4634,13 @@
         btn.addEventListener("click", () => {
           const poll = pollsObj[btn.dataset.clearVote];
           if (poll) promptClearMyVote(poll);
+        });
+      });
+
+      container.querySelectorAll("[data-edit-poll]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = pollsObj[btn.dataset.editPoll];
+          if (poll) openEditPollModal(poll);
         });
       });
 
@@ -4248,7 +4758,6 @@
     function renderPollsTable(container, filteredPolls, allPolls, membersList, myMemberId) {
       const totalMembers = membersList.length;
 
-      // Placer l'utilisateur connecté en première colonne de musiciens pour voter facilement
       const orderedMembers = [
         ...membersList.filter((m) => m.id === myMemberId),
         ...membersList.filter((m) => m.id !== myMemberId)
@@ -4331,6 +4840,7 @@
             </td>
             ${cellsHtml}
             <td style="white-space: nowrap; text-align: right; padding-right: 12px;">
+              <button type="button" class="btn-secondary btn-xs" data-matrix-edit="${escapeHtml(poll.id)}" title="Modifier ce créneau">Modif.</button>
               ${secondActionBtn}
               <button type="button" class="${isFullConsensus && !isBroadSlot ? "btn-confirm" : "btn-primary"} btn-xs" data-matrix-confirm="${escapeHtml(poll.id)}">Valider</button>
               <button type="button" class="btn-del-subtle btn-xs" data-matrix-del="${escapeHtml(poll.id)}" title="Supprimer ce créneau">Suppr.</button>
@@ -4382,6 +4892,13 @@
           const cur = btn.dataset.currentVote;
           const next = cur === "yes" ? "maybe" : cur === "maybe" ? "no" : "yes";
           castPollVote(btn.dataset.matrixVote, next, filteredPolls, false);
+        });
+      });
+
+      container.querySelectorAll("[data-matrix-edit]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = currentEnsembleData?.polls?.[btn.dataset.matrixEdit];
+          if (poll) openEditPollModal(poll);
         });
       });
 
@@ -4774,6 +5291,14 @@
       }).filter((s) => s.date && (s.timeMode !== "exact" || Boolean(s.startTime && s.endTime)));
 
       if (slots.length === 0) return;
+
+      // Blocage strict si l'un des créneaux proposés correspond à une date/horaire archivée
+      const blockedSlot = slots.find((s) => Boolean(findArchivedSlotMatch(s)));
+      if (blockedSlot) {
+        updatePollConflictsWarning();
+        showToast(`Impossible : le ${formatCompactDateFr(blockedSlot.date)} (${formatPollTimeLabel(blockedSlot)}) a déjà été archivé.`);
+        return;
+      }
 
       const oldPollToReplace = refiningPollId && $("poll-replace-checkbox").checked ? refiningPollId : null;
       const wasRefining = Boolean(refiningPollId);
