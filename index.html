@@ -444,6 +444,12 @@
       margin-right: 4px;
     }
 
+    .time-pill.day-mode {
+      color: var(--fg);
+      background: var(--subtle);
+      border-color: var(--border);
+    }
+
     .card-program {
       font-size: 14px;
       padding-top: 8px;
@@ -460,6 +466,14 @@
       border-top: 1px solid var(--subtle);
     }
 
+    .consensus-next-step {
+      margin-top: 12px;
+      padding: 11px 12px;
+      border-radius: 8px;
+      background: var(--yes-bg);
+      border: 1px solid var(--yes-border);
+    }
+
     .alert-box {
       border: 1px solid var(--no-border);
       background: var(--no-bg);
@@ -473,6 +487,16 @@
     .alert-box strong {
       display: block;
       margin-bottom: 4px;
+    }
+
+    .info-banner-box {
+      border: 1px solid var(--yes-border);
+      background: var(--yes-bg);
+      color: var(--fg);
+      border-radius: 10px;
+      padding: 11px 13px;
+      margin-bottom: 14px;
+      font-size: 13px;
     }
 
     /* En-tête de consensus + Jauge segmentée */
@@ -815,7 +839,7 @@
 
     .slot-mode-group {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 6px;
       margin-bottom: 10px;
     }
@@ -827,6 +851,10 @@
       background: var(--surface);
       color: var(--fg);
       border-radius: 6px;
+    }
+
+    .slot-mode-btn.span-full {
+      grid-column: 1 / -1;
     }
 
     .slot-mode-btn.active {
@@ -1676,13 +1704,14 @@
     </div>
   </div>
 
-  <!-- MODALE : PROPOSER PLUSIEURS CRÉNEAUX DE DISPONIBILITÉ -->
+  <!-- MODALE : PROPOSER PLUSIEURS CRÉNEAUX DE DISPONIBILITÉ / PRÉCISER UN HORAIRE -->
   <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header">
         <h3 class="modal-title" id="modal-poll-title">Proposer des créneaux</h3>
         <button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button>
       </div>
+      <div id="poll-refine-banner" class="info-banner-box hidden"></div>
       <form id="form-poll">
         <div id="poll-slots-container"></div>
         <div style="margin-bottom: 16px;">
@@ -1696,6 +1725,12 @@
         <div class="field">
           <label for="poll-note">Programme / Remarque (optionnel)</label>
           <input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement" />
+        </div>
+        <div id="poll-replace-row" class="hidden" style="margin-bottom: 14px;">
+          <label class="toggle-row" for="poll-replace-checkbox" style="margin-top: 0;">
+            <input type="checkbox" id="poll-replace-checkbox" checked />
+            <span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span>
+          </label>
         </div>
         <button type="submit" id="btn-submit-poll" class="btn-primary btn-full">Soumettre ce créneau aux membres</button>
       </form>
@@ -1778,7 +1813,7 @@
     import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-    const APP_VERSION = "v10";
+    const APP_VERSION = "v11";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
@@ -1819,6 +1854,10 @@
     let availFilterMode = "all"; // "all" | "unvoted" | "consensus"
     let pendingScrollToPollId = null;
     let pendingDeleteCallback = null;
+
+    // État pour l'affinage d'une journée entière ou d'un moment (Matin / Après-midi / Soir) vers des horaires
+    let refiningPollId = null;
+    let refiningFixedDate = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -1918,6 +1957,9 @@
     }
 
     function formatPollTimeLabel(poll) {
+      if (poll.timeMode === "day") {
+        return "Journée entière";
+      }
       if (poll.timeMode === "period" && poll.period) {
         return poll.period;
       }
@@ -1935,11 +1977,14 @@
     }
 
     function getPollSortKey(poll) {
+      if (poll.timeMode === "day") {
+        return `${poll.date}T00:00`;
+      }
       if (poll.timeMode === "period") {
         const orderMap = { "Matin": "09:00", "Après-midi": "14:00", "Soir": "19:00" };
         return `${poll.date}T${orderMap[poll.period] || "12:00"}`;
       }
-      return `${poll.date}T${poll.startTime || "00:00"}`;
+      return `${poll.date}T${poll.startTime || "00:01"}`;
     }
 
     function getUnavailabilityConflictsForDate(isoDate) {
@@ -2348,7 +2393,7 @@
       }
     }
 
-    // Gestion dynamique des créneaux multiples (Matin / Après-midi / Soir / Heure précise)
+    // Gestion dynamique des créneaux (Journée entière / Matin / Après-midi / Soir / Heure précise)
     function applySlotModeUI(row, mode, period) {
       row.dataset.mode = mode;
       row.dataset.period = mode === "period" ? period : "";
@@ -2368,7 +2413,7 @@
       }
 
       row.querySelectorAll(".slot-mode-btn").forEach((btn) => {
-        const isMatch = btn.dataset.mode === mode && (mode === "exact" || btn.dataset.period === period);
+        const isMatch = btn.dataset.mode === mode && (mode !== "period" || btn.dataset.period === period);
         btn.classList.toggle("active", isMatch);
       });
     }
@@ -2377,15 +2422,23 @@
       const rows = $("poll-slots-container").querySelectorAll(".poll-slot-row");
       rows.forEach((row, index) => {
         const labelEl = row.querySelector(".slot-label");
-        if (labelEl) labelEl.textContent = `Créneau ${index + 1}`;
+        if (labelEl) {
+          labelEl.textContent = refiningFixedDate ? `Horaire ${index + 1}` : `Créneau ${index + 1}`;
+        }
         const removeBtn = row.querySelector(".btn-remove-slot");
         if (removeBtn) removeBtn.classList.toggle("hidden", rows.length <= 1);
       });
       const submitBtn = $("btn-submit-poll");
       if (submitBtn) {
-        submitBtn.textContent = rows.length > 1
-          ? `Soumettre ces ${rows.length} créneaux aux membres`
-          : "Soumettre ce créneau aux membres";
+        if (refiningFixedDate) {
+          submitBtn.textContent = rows.length > 1
+            ? `Soumettre ces ${rows.length} horaires aux membres`
+            : "Soumettre cet horaire aux membres";
+        } else {
+          submitBtn.textContent = rows.length > 1
+            ? `Soumettre ces ${rows.length} créneaux aux membres`
+            : "Soumettre ce créneau aux membres";
+        }
       }
       updatePollConflictsWarning();
     }
@@ -2396,19 +2449,32 @@
       const lastRow = existingRows[existingRows.length - 1];
 
       const today = new Date().toISOString().split("T")[0];
-      const inheritedMode = defaultMode || (lastRow ? lastRow.dataset.mode : "exact");
+      const inheritedMode = defaultMode || (lastRow ? lastRow.dataset.mode : "day");
       const inheritedPeriod = defaultPeriod || (lastRow ? lastRow.dataset.period : "Après-midi");
-      const inheritedStart = defaultStart || (lastRow ? lastRow.querySelector(".slot-start").value : "14:00");
-      const inheritedEnd = defaultEnd || (lastRow ? lastRow.querySelector(".slot-end").value : "17:00");
-      let inheritedDate = defaultDate || today;
+      let inheritedStart = defaultStart || (lastRow ? lastRow.querySelector(".slot-start").value : "14:00");
+      let inheritedEnd = defaultEnd || (lastRow ? lastRow.querySelector(".slot-end").value : "17:00");
+      let inheritedDate = defaultDate || refiningFixedDate || today;
 
-      if (!defaultDate && lastRow && lastRow.querySelector(".slot-date").value) {
+      if (!defaultDate && !refiningFixedDate && lastRow && lastRow.querySelector(".slot-date").value) {
         const [y, m, d] = lastRow.querySelector(".slot-date").value.split("-").map(Number);
         const nextDay = new Date(y, m - 1, d + 1);
         const ny = nextDay.getFullYear();
         const nm = String(nextDay.getMonth() + 1).padStart(2, "0");
         const nd = String(nextDay.getDate()).padStart(2, "0");
         inheritedDate = `${ny}-${nm}-${nd}`;
+      } else if (!defaultDate && refiningFixedDate && lastRow && inheritedMode === "exact") {
+        // Si on ajoute un 2e horaire sur la même journée, décaler automatiquement l'heure proposée
+        const prevStart = lastRow.querySelector(".slot-start").value;
+        if (prevStart < "12:30") {
+          inheritedStart = "14:00";
+          inheritedEnd = "17:00";
+        } else if (prevStart < "17:30") {
+          inheritedStart = "18:30";
+          inheritedEnd = "21:00";
+        } else {
+          inheritedStart = "09:30";
+          inheritedEnd = "12:00";
+        }
       }
 
       const row = document.createElement("div");
@@ -2425,10 +2491,11 @@
         <div class="field" style="margin-bottom: 0;">
           <label>Moment ou horaire</label>
           <div class="slot-mode-group">
+            <button type="button" class="slot-mode-btn span-full" data-mode="day" data-period="">Journée entière (sans horaire)</button>
             <button type="button" class="slot-mode-btn" data-mode="period" data-period="Matin">Matin</button>
             <button type="button" class="slot-mode-btn" data-mode="period" data-period="Après-midi">Après-midi</button>
             <button type="button" class="slot-mode-btn" data-mode="period" data-period="Soir">Soir</button>
-            <button type="button" class="slot-mode-btn" data-mode="exact" data-period="">Heure précise</button>
+            <button type="button" class="slot-mode-btn span-full" data-mode="exact" data-period="">Heure précise</button>
           </div>
         </div>
         <div class="row-2 slot-exact-times" style="margin-top: 8px;">
@@ -2464,30 +2531,86 @@
     }
 
     function resetPollSlots() {
+      refiningPollId = null;
+      refiningFixedDate = null;
       $("modal-poll-title").textContent = "Proposer des créneaux";
+      $("poll-refine-banner").classList.add("hidden");
+      $("poll-refine-banner").innerHTML = "";
+      $("poll-replace-row").classList.add("hidden");
+      $("btn-add-poll-slot").textContent = "+ Ajouter une autre date";
       $("poll-slots-container").innerHTML = "";
-      addPollSlot();
+      addPollSlot("", "day");
     }
 
-    // Contre-proposition horaire en un clic à partir d'un créneau existant
+    // Affiner une journée entière ou un moment (Matin / Après-midi / Soir) vers un ou plusieurs créneaux horaires
+    function openRefineTimeModal(poll) {
+      if (!poll) return;
+      haptic();
+      refiningPollId = poll.id;
+      refiningFixedDate = poll.date;
+
+      const prevLabel = formatPollTimeLabel(poll);
+      $("modal-poll-title").textContent = "Préciser les horaires";
+      $("poll-refine-banner").classList.remove("hidden");
+      $("poll-refine-banner").innerHTML = `
+        <div style="font-weight: 600; color: var(--yes-fg); margin-bottom: 2px;">
+          Date retenue : ${escapeHtml(formatDateFr(poll.date))} (${escapeHtml(prevLabel)})
+        </div>
+        <div style="color: var(--muted);">
+          Choisissez ou proposez un ou plusieurs créneaux horaires pour cette journée :
+        </div>
+      `;
+
+      $("poll-replace-row").classList.remove("hidden");
+      $("poll-replace-checkbox").checked = true;
+      $("poll-replace-label").textContent = `Remplacer la proposition « ${prevLabel} » par ces créneaux horaires`;
+      $("btn-add-poll-slot").textContent = "+ Ajouter un autre horaire ce jour";
+
+      let defStart = "14:00";
+      let defEnd = "17:00";
+      if (poll.timeMode === "period") {
+        if (poll.period === "Matin") {
+          defStart = "09:30";
+          defEnd = "12:00";
+        } else if (poll.period === "Après-midi") {
+          defStart = "14:00";
+          defEnd = "17:00";
+        } else if (poll.period === "Soir") {
+          defStart = "19:30";
+          defEnd = "22:00";
+        }
+      }
+
+      $("poll-slots-container").innerHTML = "";
+      addPollSlot(poll.date, "exact", "", defStart, defEnd);
+      $("poll-location").value = poll.location || "";
+      $("poll-note").value = poll.note || "";
+      $("modal-poll").classList.add("open");
+    }
+
+    // Contre-proposition horaire en un clic à partir d'un créneau horaire existant
     function openCounterProposalModal(poll) {
       if (!poll) return;
       haptic();
-      $("modal-poll-title").textContent = "Contre-proposition horaire";
+      refiningPollId = null;
+      refiningFixedDate = poll.date;
+      $("modal-poll-title").textContent = "Autre horaire ce jour";
+      $("poll-refine-banner").classList.add("hidden");
+      $("poll-replace-row").classList.add("hidden");
+      $("btn-add-poll-slot").textContent = "+ Ajouter un autre horaire ce jour";
       $("poll-slots-container").innerHTML = "";
 
-      let altPeriod = "Après-midi";
-      if (poll.timeMode === "period") {
-        if (poll.period === "Matin") altPeriod = "Après-midi";
-        else if (poll.period === "Après-midi") altPeriod = "Soir";
-        else altPeriod = "Après-midi";
-      } else if (poll.startTime && poll.startTime < "12:30") {
-        altPeriod = "Après-midi";
+      let altStart = "14:00";
+      let altEnd = "17:00";
+      if (poll.startTime && poll.startTime < "12:30") {
+        altStart = "14:00";
+        altEnd = "17:00";
       } else {
-        altPeriod = "Soir";
+        altStart = "18:30";
+        altEnd = "21:00";
       }
 
-      addPollSlot(poll.date, "period", altPeriod, poll.startTime || "14:00", poll.endTime || "17:00");
+      addPollSlot(poll.date, "exact", "", altStart, altEnd);
       $("poll-location").value = poll.location || "";
       $("poll-note").value = poll.note || "";
       $("modal-poll").classList.add("open");
@@ -2532,6 +2655,10 @@
     function closeModal(id) {
       if (id === "modal-confirm-delete") {
         pendingDeleteCallback = null;
+      }
+      if (id === "modal-poll") {
+        refiningPollId = null;
+        refiningFixedDate = null;
       }
       $(id).classList.remove("open");
     }
@@ -3217,6 +3344,9 @@
         const [defStart, defEnd] = defaultHours[poll.period] || ["14:00", "17:00"];
         $("confirm-poll-start").value = defStart;
         $("confirm-poll-end").value = defEnd;
+      } else if (poll.timeMode === "day") {
+        $("confirm-poll-start").value = "14:00";
+        $("confirm-poll-end").value = "17:00";
       } else {
         $("confirm-poll-start").value = poll.startTime || "14:00";
         $("confirm-poll-end").value = poll.endTime || "17:00";
@@ -3400,6 +3530,7 @@
         const missingMembers = membersList.filter((m) => !votes[m.id]);
         const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
         const isMajority = !isFullConsensus && totalMembers > 0 && yesCount >= Math.ceil(totalMembers * 0.75);
+        const isBroadSlot = poll.timeMode === "day" || poll.timeMode === "period";
         const timeDisplay = formatPollTimeLabel(poll);
 
         // Jauge segmentée par musicien (triée : oui -> incertain -> non -> en attente)
@@ -3433,6 +3564,40 @@
           ? `<span class="to-vote-tag">À voter</span>`
           : `<button type="button" class="link-clear-vote" data-clear-vote="${escapeHtml(poll.id)}">Retirer mon vote</button>`;
 
+        // Encart d'étape suivante lorsque l'unanimité est atteinte sur une journée entière ou un moment (Matin / Après-midi / Soir)
+        const consensusNextStepHtml = isFullConsensus && isBroadSlot
+          ? `
+            <div class="consensus-next-step">
+              <div style="font-size: 13px; font-weight: 600; color: var(--yes-fg); margin-bottom: 7px;">
+                ✓ Tout le monde est disponible (${escapeHtml(timeDisplay.toLowerCase())}) — Étape suivante :
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+                <button type="button" class="btn-confirm btn-sm" data-refine-poll="${escapeHtml(poll.id)}">Proposer des horaires</button>
+                <button type="button" class="btn-secondary btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+              </div>
+            </div>
+          `
+          : "";
+
+        // Actions de pied de carte adaptées au type de créneau
+        const footerActionsHtml = isFullConsensus && isBroadSlot
+          ? `
+            ${missingMembers.length > 0
+              ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${escapeHtml(poll.id)}">Relancer (${missingMembers.length})</button>`
+              : ""}
+            <button type="button" class="btn-del-subtle btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
+          `
+          : `
+            <button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-primary"} btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+            ${isBroadSlot
+              ? `<button type="button" class="btn-secondary btn-sm" data-refine-poll="${escapeHtml(poll.id)}">Préciser un horaire</button>`
+              : `<button type="button" class="btn-secondary btn-sm" data-counter-poll="${escapeHtml(poll.id)}">Autre horaire ce jour</button>`}
+            ${missingMembers.length > 0
+              ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${escapeHtml(poll.id)}">Relancer (${missingMembers.length})</button>`
+              : ""}
+            <button type="button" class="btn-del-subtle btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
+          `;
+
         return `
           <article class="card ${isFullConsensus ? "consensus-ready" : ""}" data-poll-card="${escapeHtml(poll.id)}">
             <div class="consensus-header">
@@ -3443,7 +3608,7 @@
 
             <h3 class="card-date">${escapeHtml(formatDateFr(poll.date))}</h3>
             <div class="card-meta">
-              <span class="time-pill">${escapeHtml(timeDisplay)}</span>
+              <span class="time-pill ${poll.timeMode === "day" ? "day-mode" : ""}">${escapeHtml(timeDisplay)}</span>
               ${poll.location ? `<strong>${escapeHtml(poll.location)}</strong>` : ""}
             </div>
             ${poll.note ? `<div class="card-meta">${escapeHtml(poll.note)}</div>` : ""}
@@ -3462,14 +3627,9 @@
 
             <div class="member-votes-list">${chipsHtml}</div>
 
-            <div class="card-actions">
-              <button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-primary"} btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
-              <button type="button" class="btn-secondary btn-sm" data-counter-poll="${escapeHtml(poll.id)}">Autre horaire ce jour</button>
-              ${missingMembers.length > 0
-                ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${escapeHtml(poll.id)}">Relancer (${missingMembers.length})</button>`
-                : ""}
-              <button type="button" class="btn-del-subtle btn-sm" data-del-poll="${escapeHtml(poll.id)}">Supprimer</button>
-            </div>
+            ${consensusNextStepHtml}
+
+            <div class="card-actions">${footerActionsHtml}</div>
           </article>
         `;
       }).join("");
@@ -3491,6 +3651,13 @@
         btn.addEventListener("click", () => {
           const poll = pollsObj[btn.dataset.clearVote];
           if (poll) promptClearMyVote(poll);
+        });
+      });
+
+      container.querySelectorAll("[data-refine-poll]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = pollsObj[btn.dataset.refinePoll];
+          if (poll) openRefineTimeModal(poll);
         });
       });
 
@@ -3624,6 +3791,7 @@
         const voteNotes = poll.voteNotes || {};
         const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
         const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
+        const isBroadSlot = poll.timeMode === "day" || poll.timeMode === "period";
         const timeDisplay = formatPollTimeLabel(poll);
 
         membersList.forEach((m) => {
@@ -3663,13 +3831,17 @@
           `;
         }).join("");
 
+        const secondActionBtn = isBroadSlot
+          ? `<button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-secondary"} btn-xs" data-matrix-refine="${escapeHtml(poll.id)}" title="Préciser un créneau horaire">Horaires</button>`
+          : `<button type="button" class="btn-secondary btn-xs" data-matrix-counter="${escapeHtml(poll.id)}" title="Proposer un autre horaire ce jour">+ Horaire</button>`;
+
         return `
           <tr class="${isFullConsensus ? "row-consensus" : ""}">
             <td>
               <div style="font-weight: 600; text-transform: capitalize; color: var(--fg);">
                 ${escapeHtml(formatCompactDateFr(poll.date))}
               </div>
-              <div style="font-size: 11.5px; color: var(--accent-fg); font-weight: 500;">
+              <div style="font-size: 11.5px; color: ${poll.timeMode === "day" ? "var(--muted)" : "var(--accent-fg)"}; font-weight: 500;">
                 ${escapeHtml(timeDisplay)}${poll.location ? ` • ${escapeHtml(poll.location)}` : ""}
               </div>
               ${conflicts.length > 0 ? `<div style="font-size: 11px; color: var(--no-fg); font-weight: 600;">Absence : ${escapeHtml(conflicts.map((c) => c.memberName).join(", "))}</div>` : ""}
@@ -3679,8 +3851,8 @@
             </td>
             ${cellsHtml}
             <td style="white-space: nowrap; text-align: right; padding-right: 12px;">
-              <button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-primary"} btn-xs" data-matrix-confirm="${escapeHtml(poll.id)}">Valider</button>
-              <button type="button" class="btn-secondary btn-xs" data-matrix-counter="${escapeHtml(poll.id)}" title="Proposer un autre horaire ce jour">+ Horaire</button>
+              ${secondActionBtn}
+              <button type="button" class="${isFullConsensus && !isBroadSlot ? "btn-confirm" : "btn-primary"} btn-xs" data-matrix-confirm="${escapeHtml(poll.id)}">Valider</button>
               <button type="button" class="btn-del-subtle btn-xs" data-matrix-del="${escapeHtml(poll.id)}" title="Supprimer ce créneau">Suppr.</button>
             </td>
           </tr>
@@ -3730,6 +3902,13 @@
           const cur = btn.dataset.currentVote;
           const next = cur === "yes" ? "maybe" : cur === "maybe" ? "no" : "yes";
           castPollVote(btn.dataset.matrixVote, next, filteredPolls, false);
+        });
+      });
+
+      container.querySelectorAll("[data-matrix-refine]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = currentEnsembleData?.polls?.[btn.dataset.matrixRefine];
+          if (poll) openRefineTimeModal(poll);
         });
       });
 
@@ -4091,7 +4270,7 @@
       showToast(copied ? "Lien personnel copié dans le presse-papiers." : "Copiez le lien affiché ci-dessus.");
     });
 
-    // Proposer un ou plusieurs créneaux (Matin / Après-midi / Soir / Heure précise)
+    // Proposer un ou plusieurs créneaux (Journée entière / Matin / Après-midi / Soir / Heure précise)
     $("form-poll").addEventListener("submit", async (e) => {
       e.preventDefault();
       haptic();
@@ -4103,7 +4282,7 @@
       const myMember = session.ensembles[session.activeEnsembleId];
 
       const slots = slotRows.map((row) => {
-        const mode = row.dataset.mode || "exact";
+        const mode = row.dataset.mode || "day";
         const period = row.dataset.period || "";
         return {
           date: row.querySelector(".slot-date").value,
@@ -4112,9 +4291,12 @@
           startTime: mode === "exact" ? row.querySelector(".slot-start").value : "",
           endTime: mode === "exact" ? row.querySelector(".slot-end").value : ""
         };
-      }).filter((s) => s.date && (s.timeMode === "period" ? Boolean(s.period) : Boolean(s.startTime && s.endTime)));
+      }).filter((s) => s.date && (s.timeMode !== "exact" || Boolean(s.startTime && s.endTime)));
 
       if (slots.length === 0) return;
+
+      const oldPollToReplace = refiningPollId && $("poll-replace-checkbox").checked ? refiningPollId : null;
+      const wasRefining = Boolean(refiningPollId);
 
       try {
         const pollsUpdates = {};
@@ -4136,10 +4318,22 @@
           };
         });
 
+        if (oldPollToReplace) {
+          pollsUpdates[oldPollToReplace] = null;
+        }
+
         await update(ref(db, `ensembles/${session.activeEnsembleId}/polls`), pollsUpdates);
 
         const ensName = currentEnsembleData?.name || "Cadenza";
-        if (slots.length === 1) {
+        if (wasRefining) {
+          const s = slots[0];
+          await publishEnsembleNotification(
+            `Horaires proposés — ${ensName}`,
+            slots.length === 1
+              ? `${myMember.name} propose ${formatPollTimeLabel(s)} pour le ${formatDateFr(s.date)}.`
+              : `${myMember.name} propose ${slots.length} créneaux horaires pour le ${formatDateFr(s.date)}.`
+          );
+        } else if (slots.length === 1) {
           const s = slots[0];
           await publishEnsembleNotification(
             `Nouvelle date proposée — ${ensName}`,
@@ -4155,7 +4349,11 @@
         $("form-poll").reset();
         resetPollSlots();
         closeModal("modal-poll");
-        showToast(slots.length > 1 ? `${slots.length} créneaux proposés aux membres.` : "Date proposée aux membres.");
+        showToast(
+          wasRefining
+            ? (slots.length > 1 ? `${slots.length} horaires proposés aux membres.` : "Horaire proposé aux membres.")
+            : (slots.length > 1 ? `${slots.length} créneaux proposés aux membres.` : "Date proposée aux membres.")
+        );
       } catch (err) {
         handleFirebaseError(err);
       }
