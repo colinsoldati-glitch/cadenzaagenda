@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#ffffff" />
-  <meta name="background-color" content="#ffffff" />
+  <meta name="background-color" content="#f8fafc" />
   <meta name="description" content="Cadenza — Disponibilités et agenda centralisé pour ensembles de musique." />
 
   <!-- Configuration App Native iOS / Android -->
@@ -17,16 +17,38 @@
   <link rel="manifest" href="./manifest.json" />
 
   <!-- Favicon SVG : Point d'orgue / Cadence -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ffffff'/%3E%3Cpath d='M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z' fill='%23000000'/%3E%3Ccircle cx='50' cy='57' r='6.5' fill='%23000000'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ffffff'/%3E%3Cpath d='M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z' fill='%23111827'/%3E%3Ccircle cx='50' cy='57' r='6.5' fill='%23111827'/%3E%3C/svg%3E" />
 
   <style>
     :root {
-      --bg: #ffffff;
-      --fg: #000000;
-      --muted: #5a5a5a;
-      --subtle: #f5f5f5;
-      --border: #dcdcdc;
-      --border-strong: #000000;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --fg: #111827;
+      --muted: #64748b;
+      --subtle: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #111827;
+
+      /* Palette sémantique */
+      --yes-fg: #15803d;
+      --yes-bg: #f0fdf4;
+      --yes-border: #86efac;
+      --yes-solid: #16a34a;
+
+      --maybe-fg: #b45309;
+      --maybe-bg: #fffbeb;
+      --maybe-border: #fcd34d;
+      --maybe-solid: #f59e0b;
+
+      --no-fg: #b91c1c;
+      --no-bg: #fef2f2;
+      --no-border: #fca5a5;
+      --no-solid: #ef4444;
+
+      --accent-fg: #1d4ed8;
+      --accent-bg: #eff6ff;
+      --accent-border: #bfdbfe;
+
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --font-serif: "Georgia", "Times New Roman", serif;
@@ -61,14 +83,14 @@
       top: 0;
       z-index: 20;
       background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--border);
       padding: calc(12px + var(--safe-top)) 16px 12px;
     }
 
     .header-inner {
-      max-width: 680px;
+      max-width: 720px;
       margin: 0 auto;
       display: flex;
       align-items: center;
@@ -121,22 +143,22 @@
     main {
       flex: 1;
       width: 100%;
-      max-width: 680px;
+      max-width: 720px;
       margin: 0 auto;
-      padding: 18px 16px calc(92px + var(--safe-bottom));
+      padding: 18px 16px calc(96px + var(--safe-bottom));
     }
 
     button, .btn {
       font-family: var(--font-sans);
       font-size: 14px;
       font-weight: 500;
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 10px 14px;
       cursor: pointer;
       border: 1px solid var(--border-strong);
-      background: var(--bg);
+      background: var(--surface);
       color: var(--fg);
-      transition: background-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
+      transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease, transform 0.08s ease;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -155,26 +177,37 @@
 
     .btn-primary {
       background: var(--fg);
-      color: var(--bg);
+      color: #ffffff;
       border-color: var(--fg);
     }
 
     .btn-primary:hover {
-      background: #1f1f1f;
+      background: #1f2937;
+    }
+
+    .btn-confirm {
+      background: var(--yes-fg);
+      color: #ffffff;
+      border-color: var(--yes-fg);
+    }
+
+    .btn-confirm:hover {
+      background: #166534;
     }
 
     .btn-secondary {
-      background: var(--bg);
+      background: var(--surface);
       color: var(--fg);
       border-color: var(--border);
     }
 
     .btn-secondary:hover {
-      border-color: var(--fg);
+      border-color: var(--muted);
+      background: var(--subtle);
     }
 
     .btn-sm {
-      padding: 6px 10px;
+      padding: 6px 11px;
       font-size: 12.5px;
     }
 
@@ -199,15 +232,15 @@
       position: absolute;
       top: 7px;
       right: 7px;
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: #000000;
+      background: var(--yes-solid);
     }
 
     .notif-dot.off {
       background: transparent;
-      border: 1px solid #888;
+      border: 1.5px solid var(--muted);
     }
 
     .field {
@@ -229,16 +262,17 @@
       font-family: var(--font-sans);
       font-size: 15px;
       color: var(--fg);
-      background: var(--bg);
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 10px 12px;
       outline: none;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
     input:focus, select:focus, textarea:focus {
       border-color: var(--fg);
+      box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.06);
     }
 
     .row-2 {
@@ -252,7 +286,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .section-title {
@@ -262,25 +296,104 @@
       margin: 0;
     }
 
-    .card {
+    /* Barre d'outils Disponibilités (Cartes / Tableau + Filtre rapide) */
+    .avail-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .segmented-control {
+      display: inline-flex;
+      background: var(--subtle);
       border: 1px solid var(--border);
       border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .seg-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding: 5px 11px;
+      font-size: 12.5px;
+      font-weight: 500;
+      border-radius: 6px;
+    }
+
+    .seg-btn.active {
+      background: var(--surface);
+      color: var(--fg);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    .filter-pills {
+      display: inline-flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 999px;
+    }
+
+    .filter-pill.active {
+      background: var(--fg);
+      color: #ffffff;
+      border-color: var(--fg);
+      font-weight: 600;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
       padding: 16px;
       margin-bottom: 14px;
-      background: var(--bg);
+      background: var(--surface);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .card.featured {
       border: 1.5px solid var(--fg);
     }
 
+    .card.consensus-ready {
+      border: 1.5px solid var(--yes-fg);
+      background: linear-gradient(to bottom, #f7fee7 0%, #ffffff 38px);
+    }
+
+    @keyframes pulseCard {
+      0% { box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.35); border-color: var(--accent-fg); }
+      70% { box-shadow: 0 0 0 8px rgba(29, 78, 216, 0); border-color: var(--accent-fg); }
+      100% { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); }
+    }
+
+    .card.just-focused {
+      animation: pulseCard 1.1s ease-out;
+    }
+
     .card-kicker {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.07em;
       color: var(--muted);
       margin-bottom: 4px;
+    }
+
+    .card-kicker.emerald {
+      color: var(--yes-fg);
     }
 
     .card-date {
@@ -296,6 +409,18 @@
       margin-bottom: 8px;
     }
 
+    .time-pill {
+      display: inline-block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--accent-fg);
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      padding: 2px 8px;
+      border-radius: 5px;
+      margin-right: 4px;
+    }
+
     .card-program {
       font-size: 14px;
       padding-top: 8px;
@@ -307,13 +432,16 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 12px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--subtle);
     }
 
     .alert-box {
-      border: 1.5px solid var(--fg);
-      background: var(--subtle);
-      border-radius: 8px;
+      border: 1px solid var(--no-border);
+      background: var(--no-bg);
+      color: var(--no-fg);
+      border-radius: 10px;
       padding: 12px 14px;
       margin-bottom: 16px;
       font-size: 13px;
@@ -324,54 +452,114 @@
       margin-bottom: 4px;
     }
 
+    /* En-tête de consensus + Jauge segmentée */
+    .consensus-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
     .consensus-badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       font-size: 12px;
       font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--fg);
-      margin-bottom: 8px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--subtle);
+      color: var(--fg);
     }
 
     .consensus-badge.full {
-      background: var(--fg);
-      color: var(--bg);
+      background: var(--yes-fg);
+      color: #ffffff;
+      border-color: var(--yes-fg);
     }
 
+    .consensus-badge.partial-good {
+      background: var(--yes-bg);
+      color: var(--yes-fg);
+      border-color: var(--yes-border);
+    }
+
+    .to-vote-tag {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--accent-fg);
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .consensus-bar {
+      display: flex;
+      gap: 4px;
+      height: 6px;
+      margin-bottom: 10px;
+    }
+
+    .consensus-seg {
+      flex: 1;
+      border-radius: 999px;
+      background: var(--border);
+      transition: background-color 0.2s ease;
+    }
+
+    .consensus-seg.yes {
+      background: var(--yes-solid);
+    }
+
+    .consensus-seg.maybe {
+      background: var(--maybe-solid);
+    }
+
+    .consensus-seg.no {
+      background: var(--no-solid);
+      opacity: 0.55;
+    }
+
+    /* Boutons de vote colorés */
     .vote-group {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
+      gap: 7px;
       margin: 12px 0 8px;
     }
 
     .vote-btn {
-      padding: 8px 6px;
+      padding: 9px 6px;
       font-size: 13px;
       border: 1px solid var(--border);
-      background: var(--bg);
+      background: var(--surface);
       color: var(--fg);
+      border-radius: 8px;
     }
 
     .vote-btn.active-yes {
-      background: var(--fg);
-      color: var(--bg);
-      border-color: var(--fg);
+      background: var(--yes-fg);
+      color: #ffffff;
+      border-color: var(--yes-fg);
       font-weight: 600;
     }
 
     .vote-btn.active-maybe {
-      background: var(--subtle);
-      border: 1.5px dashed var(--fg);
+      background: var(--maybe-bg);
+      color: var(--maybe-fg);
+      border: 1.5px solid var(--maybe-solid);
       font-weight: 600;
     }
 
     .vote-btn.active-no {
-      background: var(--subtle);
-      color: var(--muted);
-      text-decoration: line-through;
-      border-color: var(--border);
+      background: var(--no-bg);
+      color: var(--no-fg);
+      border-color: var(--no-border);
+      font-weight: 600;
     }
 
     .vote-note-bar {
@@ -389,7 +577,7 @@
     }
 
     .vote-note-bar input:focus {
-      background: var(--bg);
+      background: var(--surface);
     }
 
     .member-votes-list {
@@ -401,53 +589,181 @@
 
     .member-chip {
       font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 4px 9px;
+      border-radius: 6px;
       border: 1px solid var(--border);
-      background: var(--bg);
+      background: var(--subtle);
+      color: var(--muted);
       line-height: 1.35;
       white-space: normal;
     }
 
     .member-chip.yes {
-      border-color: var(--fg);
+      background: var(--yes-bg);
+      border-color: var(--yes-border);
+      color: var(--yes-fg);
+      font-weight: 500;
+    }
+
+    .member-chip.maybe {
+      background: var(--maybe-bg);
+      border-color: var(--maybe-border);
+      color: var(--maybe-fg);
       font-weight: 500;
     }
 
     .member-chip.no {
-      color: var(--muted);
+      background: var(--no-bg);
+      border-color: var(--no-border);
+      color: var(--no-fg);
     }
 
     .member-chip.no .chip-name {
       text-decoration: line-through;
+      opacity: 0.85;
     }
 
     .chip-note {
-      color: var(--muted);
+      color: var(--fg);
       font-weight: 400;
       font-style: italic;
     }
 
     .unavail-notice {
       font-size: 12.5px;
-      background: var(--subtle);
-      border-left: 2.5px solid var(--fg);
+      background: var(--no-bg);
+      border: 1px solid var(--no-border);
+      border-left: 3px solid var(--no-solid);
       padding: 7px 10px;
-      border-radius: 4px;
+      border-radius: 6px;
       margin: 8px 0;
+      color: var(--no-fg);
+    }
+
+    /* Vue Tableau comparatif */
+    .matrix-card {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .matrix-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .avail-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 460px;
+    }
+
+    .avail-matrix th,
+    .avail-matrix td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .avail-matrix th {
+      background: var(--subtle);
+      font-size: 11.5px;
+      font-weight: 600;
       color: var(--fg);
+      white-space: nowrap;
+    }
+
+    .avail-matrix th.col-me {
+      background: var(--accent-bg);
+      color: var(--accent-fg);
+    }
+
+    .avail-matrix td:first-child,
+    .avail-matrix th:first-child {
+      text-align: left;
+      padding-left: 12px;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      min-width: 148px;
+    }
+
+    .avail-matrix th:first-child {
+      background: var(--subtle);
+      z-index: 3;
+    }
+
+    .avail-matrix tr.row-consensus td:first-child {
+      background: var(--yes-bg);
+    }
+
+    .matrix-cell-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      font-weight: 700;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      background: var(--subtle);
+      color: var(--muted);
+      position: relative;
+    }
+
+    .matrix-cell-badge.yes {
+      background: var(--yes-bg);
+      border-color: var(--yes-border);
+      color: var(--yes-fg);
+    }
+
+    .matrix-cell-badge.maybe {
+      background: var(--maybe-bg);
+      border-color: var(--maybe-border);
+      color: var(--maybe-fg);
+    }
+
+    .matrix-cell-badge.no {
+      background: var(--no-bg);
+      border-color: var(--no-border);
+      color: var(--no-fg);
+    }
+
+    .matrix-cell-btn {
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .matrix-cell-btn .matrix-cell-badge {
+      box-shadow: 0 0 0 1.5px var(--accent-fg);
+    }
+
+    .matrix-note-dot {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-fg);
     }
 
     .poll-slot-row {
       border: 1px solid var(--border);
       background: var(--subtle);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 12px;
       margin-bottom: 10px;
     }
 
     .poll-slot-row input {
-      background: var(--bg);
+      background: var(--surface);
     }
 
     .poll-slot-head {
@@ -468,14 +784,14 @@
       padding: 7px 8px;
       font-size: 12.5px;
       border: 1px solid var(--border);
-      background: var(--bg);
+      background: var(--surface);
       color: var(--fg);
-      border-radius: 5px;
+      border-radius: 6px;
     }
 
     .slot-mode-btn.active {
       background: var(--fg);
-      color: var(--bg);
+      color: #ffffff;
       border-color: var(--fg);
       font-weight: 600;
     }
@@ -499,7 +815,7 @@
       height: 17px;
       margin: 2px 0 0;
       flex-shrink: 0;
-      accent-color: #000000;
+      accent-color: var(--fg);
     }
 
     nav.tab-bar {
@@ -509,8 +825,8 @@
       right: 0;
       z-index: 20;
       background: rgba(255, 255, 255, 0.97);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-top: 1px solid var(--border);
       padding: 6px 8px calc(6px + var(--safe-bottom));
       display: grid;
@@ -526,7 +842,8 @@
       padding: 6px 4px;
       font-size: 11px;
       font-weight: 500;
-      border-radius: 6px;
+      border-radius: 8px;
+      position: relative;
     }
 
     .tab-item.active {
@@ -542,11 +859,28 @@
       stroke-width: 1.75;
     }
 
+    .tab-badge {
+      position: absolute;
+      top: 3px;
+      right: calc(50% - 22px);
+      background: var(--accent-fg);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 700;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
       z-index: 50;
-      background: rgba(0, 0, 0, 0.35);
+      background: rgba(15, 23, 42, 0.4);
       display: none;
       align-items: flex-end;
       justify-content: center;
@@ -557,12 +891,12 @@
     }
 
     .modal-sheet {
-      background: var(--bg);
+      background: var(--surface);
       width: 100%;
       max-width: 680px;
-      border-top-left-radius: 14px;
-      border-top-right-radius: 14px;
-      border-top: 1px solid var(--fg);
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      border-top: 1px solid var(--border);
       padding: 20px 18px calc(24px + var(--safe-bottom));
       max-height: 90dvh;
       overflow-y: auto;
@@ -574,9 +908,10 @@
         padding: 16px;
       }
       .modal-sheet {
-        border-radius: 10px;
-        border: 1px solid var(--fg);
+        border-radius: 12px;
+        border: 1px solid var(--border);
         max-width: 460px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
       }
     }
 
@@ -687,10 +1022,11 @@
       transform: translateX(-50%) translateY(-140%);
       z-index: 100;
       background: var(--fg);
-      color: var(--bg);
+      color: #ffffff;
       padding: 10px 16px;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 13.5px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
       transition: transform 0.22s ease;
       max-width: 92vw;
       text-align: center;
@@ -704,7 +1040,8 @@
       text-align: center;
       padding: 36px 16px;
       border: 1px dashed var(--border);
-      border-radius: 8px;
+      border-radius: 12px;
+      background: var(--surface);
       color: var(--muted);
     }
 
@@ -713,8 +1050,10 @@
     }
 
     .banner-install {
-      border: 1px solid var(--fg);
-      border-radius: 8px;
+      border: 1px solid var(--accent-border);
+      background: var(--accent-bg);
+      color: var(--fg);
+      border-radius: 10px;
       padding: 12px 14px;
       margin-bottom: 16px;
       display: flex;
@@ -754,7 +1093,7 @@
       background: var(--subtle);
       border: 1px solid var(--border);
       padding: 10px;
-      border-radius: 6px;
+      border-radius: 8px;
       word-break: break-all;
       margin-bottom: 12px;
       user-select: all;
@@ -770,8 +1109,8 @@
     <div class="header-inner">
       <div class="brand">
         <svg viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#000000"/>
-          <circle cx="50" cy="57" r="6.5" fill="#000000"/>
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#111827"/>
+          <circle cx="50" cy="57" r="6.5" fill="#111827"/>
         </svg>
         <div class="brand-titles">
           <h1 class="brand-name">Cadenza</h1>
@@ -803,8 +1142,8 @@
     <section id="view-install-tuto" class="onboarding-wrap hidden">
       <div class="onboarding-logo">
         <svg viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#000000"/>
-          <circle cx="50" cy="57" r="6.5" fill="#000000"/>
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#111827"/>
+          <circle cx="50" cy="57" r="6.5" fill="#111827"/>
         </svg>
         <h1>Bienvenue sur Cadenza</h1>
         <p>Installez l'application sur votre écran d'accueil pour l'utiliser en plein écran et recevoir les notifications de répétition.</p>
@@ -867,8 +1206,8 @@
     <section id="view-onboarding" class="onboarding-wrap hidden">
       <div class="onboarding-logo">
         <svg viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#000000"/>
-          <circle cx="50" cy="57" r="6.5" fill="#000000"/>
+          <path d="M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z" fill="#111827"/>
+          <circle cx="50" cy="57" r="6.5" fill="#111827"/>
         </svg>
         <h1>Cadenza</h1>
         <p>Disponibilités et agenda centralisé pour ensembles musicaux.</p>
@@ -967,6 +1306,20 @@
         <h2 class="section-title">Disponibilités</h2>
         <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer des dates</button>
       </div>
+
+      <!-- Barre d'outils : Double affichage Cartes / Tableau + Filtres -->
+      <div id="avail-toolbar" class="avail-toolbar hidden">
+        <div class="segmented-control" role="tablist" aria-label="Mode d'affichage">
+          <button type="button" class="seg-btn active" data-avail-view="cards">Cartes</button>
+          <button type="button" class="seg-btn" data-avail-view="table">Tableau</button>
+        </div>
+        <div class="filter-pills" role="group" aria-label="Filtrer les dates">
+          <button type="button" class="filter-pill active" data-avail-filter="all">Toutes</button>
+          <button type="button" class="filter-pill" data-avail-filter="unvoted" id="pill-filter-unvoted">À voter</button>
+          <button type="button" class="filter-pill" data-avail-filter="consensus">Unanimité</button>
+        </div>
+      </div>
+
       <div id="polls-list"></div>
     </section>
 
@@ -981,7 +1334,7 @@
         <div class="card-kicker" id="info-formation">Formation</div>
         <h3 class="card-date" id="info-name" style="font-family: var(--font-serif); font-size: 22px;">—</h3>
         <div class="card-meta">Code d'invitation : <strong id="info-code">—</strong></div>
-        <div class="card-actions">
+        <div class="card-actions" style="border-top: none; padding-top: 0;">
           <button type="button" id="btn-share-invite" class="btn-primary btn-full">Envoyer le lien d'invitation</button>
         </div>
       </div>
@@ -1050,6 +1403,7 @@
       <span>Agenda</span>
     </button>
     <button type="button" class="tab-item" data-tab="avail">
+      <span id="nav-avail-badge" class="tab-badge hidden">0</span>
       <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       <span>Disponibilités</span>
     </button>
@@ -1066,7 +1420,7 @@
         <h3 class="modal-title">Valider dans l'agenda</h3>
         <button type="button" class="btn-secondary btn-sm" data-close="modal-confirm-poll">Fermer</button>
       </div>
-      <div id="confirm-poll-summary" class="card-meta" style="margin-bottom: 14px; font-weight: 500; color: var(--fg);">—</div>
+      <div id="confirm-poll-summary" class="card-meta" style="margin-bottom: 14px; font-weight: 600; color: var(--fg);">—</div>
       <form id="form-confirm-poll">
         <input type="hidden" id="confirm-poll-id" />
         <div class="row-2">
@@ -1087,7 +1441,7 @@
           <label for="confirm-poll-program">Programme (optionnel)</label>
           <input type="text" id="confirm-poll-program" placeholder="Ex: Lecture du 2e mouvement" />
         </div>
-        <button type="submit" class="btn-primary btn-full">Ajouter à l'agenda centralisé</button>
+        <button type="submit" class="btn-confirm btn-full">Ajouter à l'agenda centralisé</button>
       </form>
     </div>
   </div>
@@ -1255,7 +1609,7 @@
   <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header">
-        <h3 class="modal-title">Proposer des créneaux</h3>
+        <h3 class="modal-title" id="modal-poll-title">Proposer des créneaux</h3>
         <button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button>
       </div>
       <form id="form-poll">
@@ -1327,7 +1681,7 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, 180, 180);
         const s = 1.8;
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#111827';
         ctx.beginPath();
         ctx.moveTo(12 * s, 64 * s);
         ctx.bezierCurveTo(12 * s, 31 * s, 88 * s, 31 * s, 88 * s, 64 * s);
@@ -1386,6 +1740,11 @@
     let messagingInstance = null;
     let lastNotifiedTimestamp = Number(localStorage.getItem("cadenza_last_event_ts") || Date.now());
     let deferredInstallPrompt = null;
+
+    // État de l'onglet Disponibilités
+    let availViewMode = "cards"; // "cards" | "table"
+    let availFilterMode = "all"; // "all" | "unvoted" | "consensus"
+    let pendingScrollToPollId = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -1457,6 +1816,17 @@
         day: "numeric",
         month: "long",
         year: "numeric"
+      });
+    }
+
+    function formatCompactDateFr(isoDate) {
+      if (!isoDate) return "";
+      const [y, m, d] = isoDate.split("-").map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      return dateObj.toLocaleDateString("fr-FR", {
+        weekday: "short",
+        day: "numeric",
+        month: "short"
       });
     }
 
@@ -1679,6 +2049,29 @@
       btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
 
+    // Bascule Cartes / Tableau et Filtres dans Disponibilités
+    document.querySelectorAll("[data-avail-view]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        haptic();
+        availViewMode = btn.dataset.availView;
+        document.querySelectorAll("[data-avail-view]").forEach((b) =>
+          b.classList.toggle("active", b.dataset.availView === availViewMode)
+        );
+        renderPolls();
+      });
+    });
+
+    document.querySelectorAll("[data-avail-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        haptic();
+        availFilterMode = btn.dataset.availFilter;
+        document.querySelectorAll("[data-avail-filter]").forEach((b) =>
+          b.classList.toggle("active", b.dataset.availFilter === availFilterMode)
+        );
+        renderPolls();
+      });
+    });
+
     // Vérification des conflits d'indisponibilité lors de la proposition de dates
     function updatePollConflictsWarning() {
       const warningBox = $("poll-unavail-warning");
@@ -1824,8 +2217,33 @@
     }
 
     function resetPollSlots() {
+      $("modal-poll-title").textContent = "Proposer des créneaux";
       $("poll-slots-container").innerHTML = "";
       addPollSlot();
+    }
+
+    // Contre-proposition horaire en un clic à partir d'un créneau existant
+    function openCounterProposalModal(poll) {
+      if (!poll) return;
+      haptic();
+      $("modal-poll-title").textContent = "Contre-proposition horaire";
+      $("poll-slots-container").innerHTML = "";
+
+      let altPeriod = "Après-midi";
+      if (poll.timeMode === "period") {
+        if (poll.period === "Matin") altPeriod = "Après-midi";
+        else if (poll.period === "Après-midi") altPeriod = "Soir";
+        else altPeriod = "Après-midi";
+      } else if (poll.startTime && poll.startTime < "12:30") {
+        altPeriod = "Après-midi";
+      } else {
+        altPeriod = "Soir";
+      }
+
+      addPollSlot(poll.date, "period", altPeriod, poll.startTime || "14:00", poll.endTime || "17:00");
+      $("poll-location").value = poll.location || "";
+      $("poll-note").value = poll.note || "";
+      $("modal-poll").classList.add("open");
     }
 
     $("btn-add-poll-slot").addEventListener("click", () => {
@@ -2357,9 +2775,9 @@
         const isNext = idx === 0;
         html += `
           <article class="card ${isNext ? "featured" : ""}">
-            ${isNext ? '<div class="card-kicker">Prochaine répétition</div>' : ""}
+            ${isNext ? '<div class="card-kicker emerald">Prochaine répétition</div>' : ""}
             <h3 class="card-date">${escapeHtml(formatDateFr(reh.date))}</h3>
-            <div class="card-meta">${escapeHtml(reh.startTime)} – ${escapeHtml(reh.endTime)} • <strong>${escapeHtml(reh.location)}</strong></div>
+            <div class="card-meta"><span class="time-pill">${escapeHtml(reh.startTime)} – ${escapeHtml(reh.endTime)}</span> <strong>${escapeHtml(reh.location)}</strong></div>
             ${reh.program ? `<div class="card-program"><strong>Programme :</strong> ${escapeHtml(reh.program)}</div>` : ""}
             ${reh.notes ? `<div class="card-meta" style="margin-top:6px;">${escapeHtml(reh.notes)}</div>` : ""}
             <div class="card-actions">
@@ -2574,8 +2992,47 @@
       }
     });
 
+    // Trouver le prochain créneau sans réponse pour l'enchaînement automatique
+    function findNextUnvotedPollId(sortedPolls, justVotedPollId, myMemberId) {
+      const currentIdx = sortedPolls.findIndex((p) => p.id === justVotedPollId);
+      if (currentIdx === -1) return null;
+
+      for (let offset = 1; offset < sortedPolls.length; offset++) {
+        const candidate = sortedPolls[(currentIdx + offset) % sortedPolls.length];
+        if (!candidate.votes || !candidate.votes[myMemberId]) {
+          return candidate.id;
+        }
+      }
+      return null;
+    }
+
+    async function castPollVote(pollId, voteVal, sortedPolls, autoAdvance = false) {
+      haptic();
+      const myMemberId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!myMemberId) return;
+
+      if (autoAdvance) {
+        const nextId = findNextUnvotedPollId(sortedPolls, pollId, myMemberId);
+        pendingScrollToPollId = nextId;
+        if (!nextId) {
+          showToast("Toutes les disponibilités sont complétées !");
+        }
+      }
+
+      try {
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}/votes/${myMemberId}`), voteVal);
+      } catch (err) {
+        pendingScrollToPollId = null;
+        handleFirebaseError(err);
+      }
+    }
+
     function renderPolls() {
       const container = $("polls-list");
+      const toolbar = $("avail-toolbar");
+      const navBadge = $("nav-avail-badge");
+      const filterUnvotedPill = $("pill-filter-unvoted");
+
       const pollsObj = currentEnsembleData.polls || {};
       const membersObj = currentEnsembleData.members || {};
       const membersList = Object.values(membersObj);
@@ -2592,11 +3049,23 @@
         };
       }
 
-      const polls = Object.values(pollsObj).sort((a, b) =>
+      const allPolls = Object.values(pollsObj).sort((a, b) =>
         getPollSortKey(a).localeCompare(getPollSortKey(b))
       );
 
-      if (polls.length === 0) {
+      // Mise à jour du compteur de dates "À voter" dans la barre inférieure et le filtre
+      const unvotedCount = allPolls.filter((p) => !(p.votes && p.votes[myMemberId])).length;
+      if (unvotedCount > 0) {
+        navBadge.textContent = String(unvotedCount);
+        navBadge.classList.remove("hidden");
+        if (filterUnvotedPill) filterUnvotedPill.textContent = `À voter (${unvotedCount})`;
+      } else {
+        navBadge.classList.add("hidden");
+        if (filterUnvotedPill) filterUnvotedPill.textContent = "À voter";
+      }
+
+      if (allPolls.length === 0) {
+        toolbar.classList.add("hidden");
         container.innerHTML = `
           <div class="empty-state">
             <p>Aucune date en cours de sondage.</p>
@@ -2610,7 +3079,44 @@
         return;
       }
 
-      container.innerHTML = polls.map((poll) => {
+      toolbar.classList.remove("hidden");
+
+      // Filtrage des créneaux selon la pastille active
+      const filteredPolls = allPolls.filter((poll) => {
+        const votes = poll.votes || {};
+        if (availFilterMode === "unvoted") return !votes[myMemberId];
+        if (availFilterMode === "consensus") {
+          const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
+          return totalMembers > 0 && yesCount === totalMembers;
+        }
+        return true;
+      });
+
+      if (filteredPolls.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>${availFilterMode === "unvoted" ? "Vous avez voté sur toutes les dates proposées." : "Aucun créneau ne réunit encore l'unanimité."}</p>
+            <button type="button" class="btn-secondary btn-sm" id="reset-avail-filter">Afficher toutes les dates (${allPolls.length})</button>
+          </div>
+        `;
+        $("reset-avail-filter").addEventListener("click", () => {
+          availFilterMode = "all";
+          document.querySelectorAll("[data-avail-filter]").forEach((b) =>
+            b.classList.toggle("active", b.dataset.availFilter === "all")
+          );
+          renderPolls();
+        });
+        return;
+      }
+
+      // MODE TABLEAU COMPARATIF
+      if (availViewMode === "table") {
+        renderPollsTable(container, filteredPolls, allPolls, membersList, myMemberId);
+        return;
+      }
+
+      // MODE CARTES DÉTAILLÉES
+      container.innerHTML = filteredPolls.map((poll) => {
         const votes = poll.votes || {};
         const voteNotes = poll.voteNotes || {};
         const myVote = votes[myMemberId] || "";
@@ -2618,7 +3124,17 @@
         const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
         const missingMembers = membersList.filter((m) => !votes[m.id]);
         const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
+        const isMajority = !isFullConsensus && totalMembers > 0 && yesCount >= Math.ceil(totalMembers * 0.75);
         const timeDisplay = formatPollTimeLabel(poll);
+
+        // Jauge segmentée par musicien (triée : oui -> incertain -> non -> en attente)
+        const orderRank = { yes: 1, maybe: 2, no: 3 };
+        const sortedMemberStates = membersList
+          .map((m) => votes[m.id] || "pending")
+          .sort((a, b) => (orderRank[a] || 4) - (orderRank[b] || 4));
+        const consensusBarHtml = sortedMemberStates
+          .map((st) => `<span class="consensus-seg ${st}"></span>`)
+          .join("");
 
         const conflicts = getUnavailabilityConflictsForDate(poll.date).filter((c) => votes[c.memberId] !== "yes");
         const unavailNoticeHtml = conflicts.length > 0
@@ -2628,28 +3144,36 @@
         const chipsHtml = membersList.map((m) => {
           const v = votes[m.id];
           const mNote = voteNotes[m.id] || "";
-          const symbol = v === "yes" ? "●" : v === "maybe" ? "◐" : v === "no" ? "✕" : "○";
-          const cls = v === "yes" ? "yes" : v === "no" ? "no" : "";
+          const symbol = v === "yes" ? "✓" : v === "maybe" ? "?" : v === "no" ? "✕" : "○";
+          const cls = v === "yes" ? "yes" : v === "maybe" ? "maybe" : v === "no" ? "no" : "";
           return `<span class="member-chip ${cls}">${symbol} <span class="chip-name">${escapeHtml(m.name)} (${escapeHtml(m.instrument)})</span>${mNote ? ` <span class="chip-note">— « ${escapeHtml(mNote)} »</span>` : ""}</span>`;
         }).join("");
 
+        const badgeClass = isFullConsensus ? "full" : isMajority ? "partial-good" : "";
+        const badgeText = isFullConsensus
+          ? `★ Tous disponibles (${yesCount}/${totalMembers})`
+          : `${yesCount} / ${totalMembers} disponible${yesCount > 1 ? "s" : ""}`;
+
         return `
-          <article class="card ${isFullConsensus ? "featured" : ""}">
-            <span class="consensus-badge ${isFullConsensus ? "full" : ""}">
-              ${isFullConsensus ? `Tous disponibles (${yesCount}/${totalMembers})` : `${yesCount} / ${totalMembers} disponible${yesCount > 1 ? "s" : ""}`}
-            </span>
+          <article class="card ${isFullConsensus ? "consensus-ready" : ""}" data-poll-card="${escapeHtml(poll.id)}">
+            <div class="consensus-header">
+              <span class="consensus-badge ${badgeClass}">${badgeText}</span>
+              ${!myVote ? `<span class="to-vote-tag">À voter</span>` : ""}
+            </div>
+            <div class="consensus-bar" aria-hidden="true">${consensusBarHtml}</div>
+
             <h3 class="card-date">${escapeHtml(formatDateFr(poll.date))}</h3>
             <div class="card-meta">
-              ${escapeHtml(timeDisplay)}
-              ${poll.location ? ` • ${escapeHtml(poll.location)}` : ""}
+              <span class="time-pill">${escapeHtml(timeDisplay)}</span>
+              ${poll.location ? `<strong>${escapeHtml(poll.location)}</strong>` : ""}
             </div>
             ${poll.note ? `<div class="card-meta">${escapeHtml(poll.note)}</div>` : ""}
             ${unavailNoticeHtml}
 
             <div class="vote-group" role="group" aria-label="Votre disponibilité">
-              <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes">Disponible</button>
-              <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe">Incertain</button>
-              <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no">Indisponible</button>
+              <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="yes">✓ Disponible</button>
+              <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="maybe">? Incertain</button>
+              <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${escapeHtml(poll.id)}" data-val="no">✕ Indisponible</button>
             </div>
 
             <div class="vote-note-bar">
@@ -2660,7 +3184,8 @@
             <div class="member-votes-list">${chipsHtml}</div>
 
             <div class="card-actions">
-              <button type="button" class="btn-primary btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+              <button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-primary"} btn-sm" data-confirm-poll="${escapeHtml(poll.id)}">Valider dans l'agenda</button>
+              <button type="button" class="btn-secondary btn-sm" data-counter-poll="${escapeHtml(poll.id)}">Autre horaire ce jour</button>
               ${missingMembers.length > 0
                 ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${escapeHtml(poll.id)}">Relancer (${missingMembers.length})</button>`
                 : ""}
@@ -2670,14 +3195,17 @@
         `;
       }).join("");
 
+      // Attacher les événements des cartes
       container.querySelectorAll("[data-vote]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          haptic();
-          try {
-            await set(ref(db, `ensembles/${session.activeEnsembleId}/polls/${btn.dataset.vote}/votes/${myMemberId}`), btn.dataset.val);
-          } catch (err) {
-            handleFirebaseError(err);
-          }
+        btn.addEventListener("click", () => {
+          castPollVote(btn.dataset.vote, btn.dataset.val, filteredPolls, true);
+        });
+      });
+
+      container.querySelectorAll("[data-counter-poll]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = pollsObj[btn.dataset.counterPoll];
+          if (poll) openCounterProposalModal(poll);
         });
       });
 
@@ -2764,6 +3292,170 @@
           } catch (err) {
             handleFirebaseError(err);
           }
+        });
+      });
+
+      // Défilement fluide automatique vers la prochaine carte non votée
+      if (pendingScrollToPollId) {
+        const targetCard = container.querySelector(`[data-poll-card="${CSS.escape(pendingScrollToPollId)}"]`);
+        pendingScrollToPollId = null;
+        if (targetCard) {
+          requestAnimationFrame(() => {
+            targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+            targetCard.classList.add("just-focused");
+            setTimeout(() => targetCard.classList.remove("just-focused"), 1200);
+          });
+        }
+      }
+    }
+
+    // RENDU DU MODE TABLEAU COMPARATIF
+    function renderPollsTable(container, filteredPolls, allPolls, membersList, myMemberId) {
+      const totalMembers = membersList.length;
+
+      // Placer l'utilisateur connecté en première colonne de musiciens pour voter facilement
+      const orderedMembers = [
+        ...membersList.filter((m) => m.id === myMemberId),
+        ...membersList.filter((m) => m.id !== myMemberId)
+      ];
+
+      const headerColsHtml = orderedMembers.map((m) => {
+        const isMe = m.id === myMemberId;
+        return `
+          <th class="${isMe ? "col-me" : ""}">
+            <div>${escapeHtml(m.name)}${isMe ? " (Vous)" : ""}</div>
+            <div style="font-weight: 400; font-size: 10.5px; color: var(--muted);">${escapeHtml(m.instrument)}</div>
+          </th>
+        `;
+      }).join("");
+
+      const notesSummaryList = [];
+
+      const rowsHtml = filteredPolls.map((poll) => {
+        const votes = poll.votes || {};
+        const voteNotes = poll.voteNotes || {};
+        const yesCount = membersList.filter((m) => votes[m.id] === "yes").length;
+        const isFullConsensus = totalMembers > 0 && yesCount === totalMembers;
+        const timeDisplay = formatPollTimeLabel(poll);
+
+        // Collecter les notes et absences pour affichage clair sous le tableau
+        membersList.forEach((m) => {
+          if (voteNotes[m.id]) {
+            notesSummaryList.push({
+              date: formatCompactDateFr(poll.date),
+              time: timeDisplay,
+              member: m.name,
+              note: voteNotes[m.id]
+            });
+          }
+        });
+
+        const conflicts = getUnavailabilityConflictsForDate(poll.date).filter((c) => votes[c.memberId] !== "yes");
+
+        const cellsHtml = orderedMembers.map((m) => {
+          const isMe = m.id === myMemberId;
+          const v = votes[m.id] || "";
+          const hasNote = Boolean(voteNotes[m.id]);
+          const symbol = v === "yes" ? "✓" : v === "maybe" ? "?" : v === "no" ? "✕" : "○";
+          const cls = v === "yes" ? "yes" : v === "maybe" ? "maybe" : v === "no" ? "no" : "";
+          const dotHtml = hasNote ? `<span class="matrix-note-dot" title="${escapeHtml(voteNotes[m.id])}"></span>` : "";
+
+          if (isMe) {
+            return `
+              <td>
+                <button type="button" class="matrix-cell-btn" data-matrix-vote="${escapeHtml(poll.id)}" data-current-vote="${escapeHtml(v)}" title="Toucher pour changer votre vote">
+                  <span class="matrix-cell-badge ${cls}">${symbol}${dotHtml}</span>
+                </button>
+              </td>
+            `;
+          }
+          return `
+            <td>
+              <span class="matrix-cell-badge ${cls}">${symbol}${dotHtml}</span>
+            </td>
+          `;
+        }).join("");
+
+        return `
+          <tr class="${isFullConsensus ? "row-consensus" : ""}">
+            <td>
+              <div style="font-weight: 600; text-transform: capitalize; color: var(--fg);">
+                ${escapeHtml(formatCompactDateFr(poll.date))}
+              </div>
+              <div style="font-size: 11.5px; color: var(--accent-fg); font-weight: 500;">
+                ${escapeHtml(timeDisplay)}${poll.location ? ` • ${escapeHtml(poll.location)}` : ""}
+              </div>
+              ${conflicts.length > 0 ? `<div style="font-size: 11px; color: var(--no-fg); font-weight: 600;">Absence : ${escapeHtml(conflicts.map((c) => c.memberName).join(", "))}</div>` : ""}
+            </td>
+            <td style="font-weight: 700; color: ${isFullConsensus ? "var(--yes-fg)" : "var(--fg)"}; white-space: nowrap;">
+              ${isFullConsensus ? `★ ${yesCount}/${totalMembers}` : `${yesCount}/${totalMembers}`}
+            </td>
+            ${cellsHtml}
+            <td style="white-space: nowrap; text-align: right; padding-right: 12px;">
+              <button type="button" class="${isFullConsensus ? "btn-confirm" : "btn-primary"} btn-xs" data-matrix-confirm="${escapeHtml(poll.id)}">Valider</button>
+              <button type="button" class="btn-secondary btn-xs" data-matrix-counter="${escapeHtml(poll.id)}" title="Proposer un autre horaire ce jour">+ Horaire</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      const notesHtml = notesSummaryList.length > 0
+        ? `
+          <div class="card" style="padding: 12px 14px;">
+            <div class="card-kicker" style="margin-bottom: 6px;">Précisions des musiciens</div>
+            ${notesSummaryList.map((n) => `
+              <div style="font-size: 13px; padding: 3px 0;">
+                <strong>${escapeHtml(n.member)}</strong> (${escapeHtml(n.date)}, ${escapeHtml(n.time)}) : <em>« ${escapeHtml(n.note)} »</em>
+              </div>
+            `).join("")}
+          </div>
+        `
+        : "";
+
+      container.innerHTML = `
+        <div style="font-size: 12px; color: var(--muted); margin-bottom: 8px;">
+          Touchez votre case dans la colonne <strong>(Vous)</strong> pour alterner ✓ / ? / ✕.
+        </div>
+        <div class="card matrix-card">
+          <div class="matrix-scroll">
+            <table class="avail-matrix">
+              <thead>
+                <tr>
+                  <th>Date &amp; moment</th>
+                  <th>Score</th>
+                  ${headerColsHtml}
+                  <th style="text-align: right; padding-right: 12px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ${notesHtml}
+      `;
+
+      // Vote direct en un clic dans le tableau (cycle : yes -> maybe -> no -> yes)
+      container.querySelectorAll("[data-matrix-vote]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const cur = btn.dataset.currentVote;
+          const next = cur === "yes" ? "maybe" : cur === "maybe" ? "no" : "yes";
+          castPollVote(btn.dataset.matrixVote, next, filteredPolls, false);
+        });
+      });
+
+      container.querySelectorAll("[data-matrix-confirm]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = currentEnsembleData?.polls?.[btn.dataset.matrixConfirm];
+          if (poll) openConfirmPollModal(poll);
+        });
+      });
+
+      container.querySelectorAll("[data-matrix-counter]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const poll = currentEnsembleData?.polls?.[btn.dataset.matrixCounter];
+          if (poll) openCounterProposalModal(poll);
         });
       });
     }
@@ -2907,7 +3599,7 @@
               <div style="font-size: 12px; color: var(--muted);">${escapeHtml(item.name)} • ${escapeHtml(item.instrument)}</div>
             </div>
             ${isCurrent
-              ? `<span style="font-size: 12px; font-weight: 600;">Actif</span>`
+              ? `<span style="font-size: 12px; font-weight: 600; color: var(--yes-fg);">Actif</span>`
               : `<button type="button" class="btn-secondary btn-sm" data-switch-ens="${escapeHtml(id)}">Ouvrir</button>`
             }
           </div>
