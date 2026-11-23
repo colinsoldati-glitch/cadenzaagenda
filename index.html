@@ -11,8 +11,6 @@
   <meta name="apple-mobile-web-app-title" content="Cadenza" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>Cadenza</title>
-  <meta name="description" content="Cadenza — Disponibilités et agenda centralisé pour ensembles de musique." />
-  <title>Cadenza</title>
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cadenza" />
   <meta property="og:url" content="https://www.cadenzaapp.ch/" />
@@ -37,6 +35,8 @@
       --maybe-fg: #b45309; --maybe-bg: #fffbeb; --maybe-border: #fcd34d; --maybe-solid: #f59e0b;
       --no-fg: #b91c1c; --no-bg: #fef2f2; --no-border: #fca5a5; --no-solid: #ef4444;
       --accent-fg: #1d4ed8; --accent-bg: #eff6ff; --accent-border: #bfdbfe;
+      --concert-fg: #6d28d9; --concert-bg: #f5f3ff; --concert-border: #ddd6fe;
+      --cours-fg: #0369a1; --cours-bg: #f0f9ff; --cours-border: #bae6fd;
       --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
       --font-serif: "Georgia", "Times New Roman", serif;
       --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
@@ -105,6 +105,44 @@
     .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
     .section-title { font-family: var(--font-serif); font-size: 21px; font-weight: 400; margin: 0; }
 
+    /* Sélecteur de type d'événement */
+    .type-selector-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 14px; }
+    .type-btn {
+      padding: 8px 6px; font-size: 13px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--muted); font-weight: 500;
+    }
+    .type-btn.active[data-etype="rehearsal"] { background: var(--fg); color: #fff; border-color: var(--fg); font-weight: 600; }
+    .type-btn.active[data-etype="cours"] { background: var(--cours-bg); color: var(--cours-fg); border-color: var(--cours-fg); font-weight: 600; }
+    .type-btn.active[data-etype="concert"] { background: var(--concert-bg); color: var(--concert-fg); border-color: var(--concert-fg); font-weight: 600; }
+
+    .concert-fields-box {
+      background: var(--concert-bg); border: 1px solid var(--concert-border); border-radius: 10px;
+      padding: 12px; margin-bottom: 14px;
+    }
+    .concert-fields-box .concert-box-title {
+      font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--concert-fg); margin-bottom: 10px; display: flex; align-items: center; gap: 5px;
+    }
+    .concert-fields-box input { background: var(--surface); }
+
+    /* Badges de type d'événement */
+    .event-type-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 5px;
+      border: 1px solid var(--border); background: var(--subtle); color: var(--fg);
+      vertical-align: middle;
+    }
+    .event-type-badge.cours { background: var(--cours-bg); color: var(--cours-fg); border-color: var(--cours-border); }
+    .event-type-badge.concert { background: var(--concert-bg); color: var(--concert-fg); border-color: var(--concert-border); }
+
+    .concert-details-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; padding: 9px 11px;
+      background: var(--concert-bg); border: 1px solid var(--concert-border); border-radius: 8px;
+      font-size: 13px; color: var(--fg);
+    }
+    .concert-detail-item { display: inline-flex; align-items: center; gap: 4px; }
+    .concert-detail-item strong { color: var(--concert-fg); font-weight: 600; }
+
     /* Outils Disponibilités */
     .avail-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
     .segmented-control { display: inline-flex; background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px; }
@@ -120,6 +158,8 @@
       background: var(--surface); box-shadow: 0 1px 2px rgba(15, 23, 42, .03); transition: border-color .2s, box-shadow .2s;
     }
     .card.featured { border: 1.5px solid var(--fg); }
+    .card.concert-card { border-left: 3.5px solid var(--concert-fg); }
+    .card.cours-card { border-left: 3.5px solid var(--cours-fg); }
     .poll-card { position: relative; overflow: hidden; padding: 14px 15px 12px; }
     .poll-card.consensus-ready { border: 1.5px solid var(--yes-fg); background: linear-gradient(to bottom, #f7fee7 0%, #fff 36px); }
     .poll-card.unvoted-highlight { border-left: 3px solid var(--accent-fg); }
@@ -140,6 +180,8 @@
     .poll-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
     .card-kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
     .card-kicker.emerald { color: var(--yes-fg); }
+    .card-kicker.concert { color: var(--concert-fg); }
+    .card-kicker.cours { color: var(--cours-fg); }
     .card-date { font-family: var(--font-serif); font-size: 17.5px; margin: 0; line-height: 1.25; text-transform: capitalize; }
     .card-meta { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
     .poll-subline { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
@@ -177,7 +219,7 @@
     .vote-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 6px; }
     .vote-btn { padding: 7px 4px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 7px; white-space: nowrap; }
     .vote-btn.active-yes { background: var(--yes-fg); color: #fff; border-color: var(--yes-fg); font-weight: 600; }
-    .vote-btn.active-maybe { background: var(--maybe-bg); color: var(--maybe-fg); border: 1.5px solid var(--maybe-solid); font-weight: 600; }
+    .vote-btn.active-maybe { background: var(--maybe-bg); color: var(--maybe-fg); border-color: var(--maybe-solid); font-weight: 600; }
     .vote-btn.active-no { background: var(--no-bg); color: var(--no-fg); border-color: var(--no-border); font-weight: 600; }
 
     .note-trigger-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
@@ -211,7 +253,7 @@
     .avail-matrix th.col-me { background: var(--accent-bg); color: var(--accent-fg); }
     .avail-matrix td:first-child, .avail-matrix th:first-child {
       text-align: left; padding-left: 12px; position: sticky; left: 0; z-index: 2;
-      background: var(--surface); border-right: 1px solid var(--border); min-width: 148px;
+      background: var(--surface); border-right: 1px solid var(--border); min-width: 158px;
     }
     .avail-matrix th:first-child { background: var(--subtle); z-index: 3; }
     .avail-matrix tr.row-consensus td:first-child { background: var(--yes-bg); }
@@ -299,7 +341,6 @@
     .divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin: 22px 0; }
     .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
-    /* Toast masqué tant qu'il n'est pas actif (évite toute barre noire en haut de l'écran) */
     .toast {
       position: fixed; top: calc(16px + var(--safe-top)); left: 50%;
       transform: translateX(-50%) translateY(-16px); z-index: 100;
@@ -366,7 +407,7 @@
           <circle cx="50" cy="57" r="6.5" fill="#111827"/>
         </svg>
         <h1>Bienvenue sur Cadenza</h1>
-        <p>Installez l'application sur votre écran d'accueil pour l'utiliser en plein écran et recevoir les notifications de répétition.</p>
+        <p>Installez l'application sur votre écran d'accueil pour l'utiliser en plein écran et recevoir les notifications de l'ensemble.</p>
       </div>
 
       <div id="tuto-direct-install-card" class="card featured hidden">
@@ -411,7 +452,7 @@
           <circle cx="50" cy="57" r="6.5" fill="#111827"/>
         </svg>
         <h1>Cadenza</h1>
-        <p>Disponibilités et agenda centralisé pour ensembles musicaux.</p>
+        <p>Disponibilités, répétitions, cours et concerts centralisés pour ensembles musicaux.</p>
       </div>
 
       <div id="join-card" class="card">
@@ -468,7 +509,7 @@
     <section id="view-agenda" class="hidden">
       <div class="section-head">
         <h2 class="section-title">Agenda de l'ensemble</h2>
-        <button type="button" id="btn-open-rehearsal" class="btn-primary btn-sm">+ Répétition</button>
+        <button type="button" id="btn-open-rehearsal" class="btn-primary btn-sm">+ Événement</button>
       </div>
       <div id="agenda-list"></div>
     </section>
@@ -532,7 +573,7 @@
         <div id="push-status-msg" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
         <label class="toggle-row" for="toggle-auto-remind-eve">
           <input type="checkbox" id="toggle-auto-remind-eve" checked />
-          <span>Rappel automatique la veille des répétitions à 19h00</span>
+          <span>Rappel automatique la veille des répétitions, cours et concerts à 19h00</span>
         </label>
       </div>
 
@@ -611,7 +652,7 @@
       </div>
       <form id="form-admin-announcement">
         <div class="row-2">
-          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v15" required /></div>
+          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v17" required /></div>
           <div class="field"><label for="admin-ann-title">Titre</label><input type="text" id="admin-ann-title" value="Nouveautés sur Cadenza" required /></div>
         </div>
         <div class="field"><label for="admin-ann-subtitle">Sous-titre (optionnel)</label><input type="text" id="admin-ann-subtitle" placeholder="Ex: Une nouvelle mise à jour est disponible :" /></div>
@@ -649,16 +690,19 @@
     </div>
   </div>
 
+  <!-- Modale Validation de sondage vers Agenda -->
   <div id="modal-confirm-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title">Valider dans l'agenda</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-confirm-poll">Fermer</button></div>
       <div id="confirm-poll-summary" class="card-meta" style="margin-bottom: 14px; font-weight: 600; color: var(--fg);">—</div>
       <form id="form-confirm-poll">
         <input type="hidden" id="confirm-poll-id" />
+        <div id="confirm-poll-type-holder"></div>
         <div class="row-2">
-          <div class="field"><label for="confirm-poll-start">Début</label><input type="time" id="confirm-poll-start" required /></div>
-          <div class="field"><label for="confirm-poll-end">Fin</label><input type="time" id="confirm-poll-end" required /></div>
+          <div class="field"><label for="confirm-poll-start" id="lbl-confirm-poll-start">Début</label><input type="time" id="confirm-poll-start" required /></div>
+          <div class="field"><label for="confirm-poll-end" id="lbl-confirm-poll-end">Fin</label><input type="time" id="confirm-poll-end" required /></div>
         </div>
+        <div id="confirm-poll-concert-fields"></div>
         <div class="field"><label for="confirm-poll-location">Lieu</label><input type="text" id="confirm-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" required /></div>
         <div class="field"><label for="confirm-poll-program">Programme (optionnel)</label><input type="text" id="confirm-poll-program" placeholder="Ex: Lecture du 2e mouvement" /></div>
         <button type="submit" class="btn-confirm btn-full">Ajouter à l'agenda centralisé</button>
@@ -666,16 +710,18 @@
     </div>
   </div>
 
+  <!-- Modale Édition de créneau proposé -->
   <div id="modal-edit-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title">Modifier ce créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-poll">Fermer</button></div>
       <form id="form-edit-poll">
         <input type="hidden" id="edit-poll-id" />
+        <div id="edit-poll-type-holder"></div>
         <div class="field"><label for="edit-poll-date">Date</label><input type="date" id="edit-poll-date" required /></div>
         <div id="edit-poll-mode-holder"></div>
         <div id="edit-poll-archive-warning" class="alert-box hidden"></div>
         <div class="field"><label for="edit-poll-location">Lieu envisagé (optionnel)</label><input type="text" id="edit-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /></div>
-        <div class="field"><label for="edit-poll-note">Programme / Remarque (optionnel)</label><input type="text" id="edit-poll-note" placeholder="Ex: Lecture du 2e mouvement" /></div>
+        <div class="field"><label for="edit-poll-note">Programme / Détails (optionnel)</label><input type="text" id="edit-poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
         <p style="font-size: 12.5px; color: var(--muted); margin: 0 0 14px;">Si vous modifiez la date ou l'horaire, les votes existants seront réinitialisés.</p>
         <button type="submit" id="btn-submit-edit-poll" class="btn-primary btn-full">Enregistrer les modifications</button>
       </form>
@@ -725,16 +771,19 @@
     </div>
   </div>
 
+  <!-- Modale Édition d'événement Agenda -->
   <div id="modal-edit-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title">Modifier la répétition</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-rehearsal">Fermer</button></div>
+      <div class="modal-header"><h3 class="modal-title" id="modal-edit-reh-title">Modifier l'événement</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-rehearsal">Fermer</button></div>
       <form id="form-edit-rehearsal">
         <input type="hidden" id="edit-reh-id" />
+        <div id="edit-reh-type-holder"></div>
         <div class="field"><label for="edit-reh-date">Date</label><input type="date" id="edit-reh-date" required /></div>
         <div class="row-2">
-          <div class="field"><label for="edit-reh-start">Début</label><input type="time" id="edit-reh-start" required /></div>
-          <div class="field"><label for="edit-reh-end">Fin</label><input type="time" id="edit-reh-end" required /></div>
+          <div class="field"><label for="edit-reh-start" id="lbl-edit-reh-start">Début</label><input type="time" id="edit-reh-start" required /></div>
+          <div class="field"><label for="edit-reh-end" id="lbl-edit-reh-end">Fin</label><input type="time" id="edit-reh-end" required /></div>
         </div>
+        <div id="edit-reh-concert-fields"></div>
         <div class="field"><label for="edit-reh-location">Lieu</label><input type="text" id="edit-reh-location" required /></div>
         <div class="field"><label for="edit-reh-program">Programme</label><input type="text" id="edit-reh-program" /></div>
         <div class="field"><label for="edit-reh-notes">Notes (optionnel)</label><textarea id="edit-reh-notes" rows="2"></textarea></div>
@@ -773,17 +822,19 @@
     </div>
   </div>
 
+  <!-- Modale Proposition de dates -->
   <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des créneaux</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
       <div id="poll-refine-banner" class="info-banner-box hidden"></div>
       <form id="form-poll">
+        <div id="poll-type-holder"></div>
         <div id="poll-slots-container"></div>
         <div style="margin-bottom: 16px;"><button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter une autre date</button></div>
         <div id="poll-archive-lock-warning" class="alert-box hidden"></div>
         <div id="poll-unavail-warning" class="alert-box hidden"></div>
         <div class="field"><label for="poll-location">Lieu envisagé (optionnel)</label><input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /></div>
-        <div class="field"><label for="poll-note">Programme / Remarque (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement" /></div>
+        <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
         <div id="poll-replace-row" class="hidden" style="margin-bottom: 14px;">
           <label class="toggle-row" for="poll-replace-checkbox" style="margin-top: 0;">
             <input type="checkbox" id="poll-replace-checkbox" checked />
@@ -795,18 +846,21 @@
     </div>
   </div>
 
+  <!-- Modale Planification directe dans l'Agenda -->
   <div id="modal-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title">Planifier une répétition</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button></div>
+      <div class="modal-header"><h3 class="modal-title" id="modal-reh-title">Planifier un événement</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button></div>
       <form id="form-rehearsal">
+        <div id="reh-type-holder"></div>
         <div class="field"><label for="reh-date">Date</label><input type="date" id="reh-date" required /></div>
         <div class="row-2">
-          <div class="field"><label for="reh-start">Début</label><input type="time" id="reh-start" value="14:00" required /></div>
-          <div class="field"><label for="reh-end">Fin</label><input type="time" id="reh-end" value="17:00" required /></div>
+          <div class="field"><label for="reh-start" id="lbl-reh-start">Début</label><input type="time" id="reh-start" value="14:00" required /></div>
+          <div class="field"><label for="reh-end" id="lbl-reh-end">Fin</label><input type="time" id="reh-end" value="17:00" required /></div>
         </div>
-        <div class="field"><label for="reh-location">Lieu</label><input type="text" id="reh-location" placeholder="Ex: Sion, Lausanne..." required /></div>
-        <div class="field"><label for="reh-program">Programme de travail</label><input type="text" id="reh-program" placeholder="Ex: Beethoven Op. 18 n°4 — Allegro" /></div>
-        <div class="field"><label for="reh-notes">Notes (optionnel)</label><textarea id="reh-notes" rows="2"></textarea></div>
+        <div id="reh-concert-fields"></div>
+        <div class="field"><label for="reh-location">Lieu</label><input type="text" id="reh-location" placeholder="Ex: Sion, Temple de Lutry, Salle 103..." required /></div>
+        <div class="field"><label for="reh-program">Programme</label><input type="text" id="reh-program" placeholder="Ex: Beethoven Op. 18 n°4 — Allegro" /></div>
+        <div class="field"><label for="reh-notes">Notes complémentaires (optionnel)</label><textarea id="reh-notes" rows="2"></textarea></div>
         <button type="submit" class="btn-primary btn-full">Enregistrer dans l'agenda</button>
       </form>
     </div>
@@ -838,7 +892,7 @@
     import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-    const APP_VERSION = "v16";
+    const APP_VERSION = "v17";
     const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
     const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
     const KEYS = {
@@ -848,6 +902,13 @@
       ann: "cadenza_seen_announcement_id_v1",
       evtTs: "cadenza_last_event_ts"
     };
+
+    const EVENT_TYPES = {
+      rehearsal: { label: "Répétition", badgeCls: "", cardCls: "", nextLabel: "Prochaine répétition" },
+      cours: { label: "Cours", badgeCls: "cours", cardCls: "cours-card", nextLabel: "Prochain cours" },
+      concert: { label: "Concert", badgeCls: "concert", cardCls: "concert-card", nextLabel: "Prochain concert" }
+    };
+    const getEventMeta = (t) => EVENT_TYPES[t] || EVENT_TYPES.rehearsal;
 
     const app = initializeApp({
       apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
@@ -957,7 +1018,105 @@
       showToast((await copyTextReliable(url)) ? copiedMsg : "Copiez le lien affiché ci-dessus.");
     }
 
-    // Composant réutilisable : sélecteur de mode horaire (utilisé dans Création & Édition de créneau)
+    // Composants réutilisables : Sélecteur de type d'événement & champs Concert
+    function buildTypeSelectorHtml(label = "Nature de l'événement") {
+      return `
+        <div class="field" style="margin-bottom: 10px;">
+          <label>${esc(label)}</label>
+          <div class="type-selector-group">
+            <button type="button" class="type-btn active" data-etype="rehearsal">Répétition</button>
+            <button type="button" class="type-btn" data-etype="cours">Cours</button>
+            <button type="button" class="type-btn" data-etype="concert">Concert</button>
+          </div>
+        </div>`;
+    }
+
+    function buildConcertFieldsHtml(prefix) {
+      return `
+        <div id="${prefix}-concert-box" class="concert-fields-box hidden">
+          <div class="concert-box-title">Informations Concert</div>
+          <div class="row-2" style="margin-bottom: 10px;">
+            <div class="field" style="margin-bottom: 0;">
+              <label for="${prefix}-soundcheck">Raccord / Arrivée</label>
+              <input type="time" id="${prefix}-soundcheck" />
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <label for="${prefix}-fee">Cachet / Billetterie</label>
+              <input type="text" id="${prefix}-fee" placeholder="Ex: 250 CHF / Entrée libre" />
+            </div>
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label for="${prefix}-dresscode">Tenue de scène (Dress code)</label>
+            <input type="text" id="${prefix}-dresscode" placeholder="Ex: Tout noir, Costume sombre..." />
+          </div>
+        </div>`;
+    }
+
+    function bindTypeSelector(holder, onChange) {
+      holder.innerHTML = buildTypeSelectorHtml(holder.dataset.label || "Nature de l'événement");
+      holder.dataset.value = "rehearsal";
+      holder.querySelectorAll(".type-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          haptic();
+          setEventTypeValue(holder, btn.dataset.etype, onChange);
+        });
+      });
+    }
+
+    function setEventTypeValue(holder, type, onChange) {
+      const valid = EVENT_TYPES[type] ? type : "rehearsal";
+      holder.dataset.value = valid;
+      holder.querySelectorAll(".type-btn").forEach((b) => b.classList.toggle("active", b.dataset.etype === valid));
+      if (onChange) onChange(valid);
+    }
+
+    function syncConcertFieldsVisibility(prefix, type, startLabelId, endLabelId) {
+      const box = $(`${prefix}-concert-box`);
+      const isConcert = type === "concert";
+      if (box) box.classList.toggle("hidden", !isConcert);
+      if (startLabelId && $(startLabelId)) $(startLabelId).textContent = isConcert ? "Début concert" : "Début";
+      if (endLabelId && $(endLabelId)) $(endLabelId).textContent = isConcert ? "Fin estimée" : "Fin";
+    }
+
+    function readConcertFields(prefix, type) {
+      if (type !== "concert") return { soundcheckTime: "", dressCode: "", concertFee: "" };
+      return {
+        soundcheckTime: $(`${prefix}-soundcheck`)?.value || "",
+        dressCode: $(`${prefix}-dresscode`)?.value.trim() || "",
+        concertFee: $(`${prefix}-fee`)?.value.trim() || ""
+      };
+    }
+
+    function populateConcertFields(prefix, item) {
+      if ($(`${prefix}-soundcheck`)) $(`${prefix}-soundcheck`).value = item?.soundcheckTime || "";
+      if ($(`${prefix}-dresscode`)) $(`${prefix}-dresscode`).value = item?.dressCode || "";
+      if ($(`${prefix}-fee`)) $(`${prefix}-fee`).value = item?.concertFee || "";
+    }
+
+    // Initialisation des sélecteurs de type dans les modales
+    $("reh-concert-fields").innerHTML = buildConcertFieldsHtml("reh");
+    $("edit-reh-concert-fields").innerHTML = buildConcertFieldsHtml("edit-reh");
+    $("confirm-poll-concert-fields").innerHTML = buildConcertFieldsHtml("confirm-poll");
+
+    bindTypeSelector($("reh-type-holder"), (t) => {
+      syncConcertFieldsVisibility("reh", t, "lbl-reh-start", "lbl-reh-end");
+      $("modal-reh-title").textContent = t === "concert" ? "Planifier un concert" : t === "cours" ? "Planifier un cours" : "Planifier une répétition";
+      if (t === "concert" && $("reh-start").value === "14:00") { $("reh-start").value = "20:00"; $("reh-end").value = "22:00"; $("reh-soundcheck").value = "18:30"; }
+    });
+
+    bindTypeSelector($("edit-reh-type-holder"), (t) => {
+      syncConcertFieldsVisibility("edit-reh", t, "lbl-edit-reh-start", "lbl-edit-reh-end");
+      $("modal-edit-reh-title").textContent = t === "concert" ? "Modifier le concert" : t === "cours" ? "Modifier le cours" : "Modifier la répétition";
+    });
+
+    bindTypeSelector($("confirm-poll-type-holder"), (t) => {
+      syncConcertFieldsVisibility("confirm-poll", t, "lbl-confirm-poll-start", "lbl-confirm-poll-end");
+    });
+
+    bindTypeSelector($("poll-type-holder"), () => {});
+    bindTypeSelector($("edit-poll-type-holder"), () => {});
+
+    // Composant réutilisable : sélecteur de mode horaire
     function buildModeSelectorHtml(startVal = "14:00", endVal = "17:00") {
       return `
         <div class="field" style="margin-bottom: 10px;">
@@ -1187,7 +1346,7 @@
     $("btn-dismiss-whats-new").addEventListener("click", dismissWhatsNewModal);
     $("btn-close-whats-new-top").addEventListener("click", dismissWhatsNewModal);
 
-    // Modale de confirmation universelle (remplace confirm())
+    // Modale de confirmation universelle
     function openConfirmationModal({ title, context, message, confirmLabel = "Confirmer", danger = true, onConfirm }) {
       haptic();
       $("confirm-delete-title").textContent = title || "Confirmer";
@@ -1222,8 +1381,9 @@
       const myId = session.ensembles[session.activeEnsembleId]?.memberId;
       const isBroad = poll.timeMode === "day" || poll.timeMode === "period";
       const timeLabel = formatPollTimeLabel(poll);
+      const tMeta = getEventMeta(poll.eventType);
 
-      $("poll-actions-subtitle").textContent = `${formatDateFr(poll.date)}${timeLabel ? ` • ${timeLabel}` : ""}`;
+      $("poll-actions-subtitle").textContent = `${tMeta.label} • ${formatDateFr(poll.date)}${timeLabel ? ` • ${timeLabel}` : ""}`;
 
       const actions = [
         isBroad
@@ -1231,7 +1391,7 @@
           : { label: "🕒 Proposer un autre horaire ce jour", fn: () => openCounterProposalModal(poll) },
         { label: `✓ Valider dans l'agenda (${yesCount}/${members.length})`, fn: () => openConfirmPollModal(poll) },
         ...(missing.length ? [{ label: `🔔 Relancer les absents au vote (${missing.length})`, fn: () => sendPollReminder(poll, missing) }] : []),
-        { label: "✎ Modifier la date, l'horaire ou le lieu", fn: () => openEditPollModal(poll) },
+        { label: "✎ Modifier le type, la date, l'horaire ou le lieu", fn: () => openEditPollModal(poll) },
         ...(votes[myId] ? [{ label: "↩ Retirer mon vote", fn: () => promptClearMyVote(poll) }] : []),
         { label: "✕ Supprimer ce créneau", cls: "danger", fn: () => promptDeletePoll(poll) }
       ];
@@ -1250,10 +1410,11 @@
     async function sendPollReminder(poll, missing) {
       if (!poll || !missing?.length) return showToast("Tous les membres ont déjà répondu.");
       const names = missing.map((m) => m.name).join(", ");
+      const tMeta = getEventMeta(poll.eventType);
       try {
         await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${poll.id}`), { lastRemindedAt: Date.now() });
         await publishEnsembleNotification(
-          `Rappel disponibilités — ${currentEnsembleData.name}`,
+          `Rappel disponibilités (${tMeta.label}) — ${currentEnsembleData.name}`,
           `${names} : merci d'indiquer votre disponibilité pour le ${formatDateFr(poll.date)} (${formatPollTimeLabel(poll)}).`,
           { targetMemberIds: missing.map((m) => m.id) }
         );
@@ -1264,10 +1425,10 @@
     function promptDeletePoll(poll) {
       if (!poll) return;
       const voted = Object.keys(poll.votes || {}).length;
-      const t = formatPollTimeLabel(poll);
+      const t = formatPollTimeLabel(poll), tMeta = getEventMeta(poll.eventType);
       openConfirmationModal({
         title: "Supprimer ce créneau ?",
-        context: `${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}${poll.location ? ` (${poll.location})` : ""}`,
+        context: `${tMeta.label} • ${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}${poll.location ? ` (${poll.location})` : ""}`,
         message: voted ? `${voted} musicien(s) ont déjà répondu. Le créneau et tous les votes seront supprimés.` : "Ce créneau proposé sera retiré pour tout l'ensemble.",
         confirmLabel: "Supprimer",
         onConfirm: async () => {
@@ -1365,7 +1526,7 @@
       }
       updatePushUI();
       showToast(`Notifications activées pour ${ensName}.`);
-      await triggerLocalSystemNotification(`Cadenza — ${ensName}`, "Les alertes de répétition sont activées.");
+      await triggerLocalSystemNotification(`Cadenza — ${ensName}`, "Les alertes de l'ensemble sont activées.");
     }
 
     function updatePushUI() {
@@ -1517,6 +1678,7 @@
 
     function resetPollSlots() {
       refiningPollId = refiningFixedDate = null;
+      setEventTypeValue($("poll-type-holder"), "rehearsal");
       $("modal-poll-title").textContent = "Proposer des créneaux";
       $("poll-refine-banner").classList.add("hidden");
       $("poll-replace-row").classList.add("hidden");
@@ -1528,10 +1690,11 @@
     function openRefineTimeModal(poll) {
       if (!poll) return;
       haptic(); refiningPollId = poll.id; refiningFixedDate = poll.date;
-      const prev = formatPollTimeLabel(poll);
+      setEventTypeValue($("poll-type-holder"), poll.eventType || "rehearsal");
+      const prev = formatPollTimeLabel(poll), tMeta = getEventMeta(poll.eventType);
       $("modal-poll-title").textContent = "Préciser les horaires";
       $("poll-refine-banner").classList.remove("hidden");
-      $("poll-refine-banner").innerHTML = `<div style="font-weight:600;color:var(--yes-fg);margin-bottom:2px">Date retenue : ${esc(formatDateFr(poll.date))} (${esc(prev)})</div><div style="color:var(--muted)">Proposez un ou plusieurs créneaux horaires pour cette journée :</div>`;
+      $("poll-refine-banner").innerHTML = `<div style="font-weight:600;color:var(--yes-fg);margin-bottom:2px">${esc(tMeta.label)} • ${esc(formatDateFr(poll.date))} (${esc(prev)})</div><div style="color:var(--muted)">Proposez un ou plusieurs créneaux horaires pour cette journée :</div>`;
       $("poll-replace-row").classList.remove("hidden");
       $("poll-replace-checkbox").checked = true;
       $("poll-replace-label").textContent = `Remplacer la proposition « ${prev} » par ces créneaux horaires`;
@@ -1547,6 +1710,7 @@
     function openCounterProposalModal(poll) {
       if (!poll) return;
       haptic(); refiningPollId = null; refiningFixedDate = poll.date;
+      setEventTypeValue($("poll-type-holder"), poll.eventType || "rehearsal");
       $("modal-poll-title").textContent = "Autre horaire ce jour";
       $("poll-refine-banner").classList.add("hidden");
       $("poll-replace-row").classList.add("hidden");
@@ -1575,6 +1739,7 @@
       if (!poll) return;
       haptic();
       const holder = $("edit-poll-mode-holder");
+      setEventTypeValue($("edit-poll-type-holder"), poll.eventType || "rehearsal");
       $("edit-poll-id").value = poll.id;
       $("edit-poll-date").value = poll.date || "";
       holder.querySelector(".slot-start").value = poll.startTime || "14:00";
@@ -1592,6 +1757,7 @@
       const pollId = $("edit-poll-id").value, oldPoll = currentEnsembleData?.polls?.[pollId];
       if (!pollId || !oldPoll || !session.activeEnsembleId) return;
       const slot = { date: $("edit-poll-date").value, ...readSlotRow($("edit-poll-mode-holder")) };
+      const eventType = $("edit-poll-type-holder").dataset.value || "rehearsal";
       if (!slot.date || (slot.timeMode === "exact" && (!slot.startTime || !slot.endTime))) return;
       if (findArchivedSlotMatch(slot)) return showToast("Ce créneau a déjà été archivé.");
 
@@ -1599,11 +1765,11 @@
       const me = session.ensembles[session.activeEnsembleId];
       try {
         await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
-          ...slot, location: $("edit-poll-location").value.trim(), note: $("edit-poll-note").value.trim(), updatedAt: Date.now(),
+          ...slot, eventType, location: $("edit-poll-location").value.trim(), note: $("edit-poll-note").value.trim(), updatedAt: Date.now(),
           ...(changed ? { votes: me?.memberId ? { [me.memberId]: "yes" } : null, voteNotes: null } : {})
         });
         if (changed) {
-          await publishEnsembleNotification(`Créneau modifié — ${currentEnsembleData?.name || "Cadenza"}`, `${me?.name || "Un membre"} a modifié la proposition au ${formatDateFr(slot.date)} (${formatPollTimeLabel(slot)}). Merci de re-voter.`);
+          await publishEnsembleNotification(`Créneau modifié (${getEventMeta(eventType).label}) — ${currentEnsembleData?.name || "Cadenza"}`, `${me?.name || "Un membre"} a modifié la proposition au ${formatDateFr(slot.date)} (${formatPollTimeLabel(slot)}). Merci de re-voter.`);
           showToast("Créneau modifié et votes réinitialisés.");
         } else showToast("Informations mises à jour.");
         closeModal("modal-edit-poll");
@@ -1615,7 +1781,12 @@
       haptic();
       const today = new Date().toISOString().split("T")[0];
       if (id === "modal-poll") ($("poll-slots-container").children.length ? updatePollConflictsWarning() : resetPollSlots());
-      if (id === "modal-rehearsal" && !$("reh-date").value) $("reh-date").value = today;
+      if (id === "modal-rehearsal") {
+        setEventTypeValue($("reh-type-holder"), "rehearsal", (t) => syncConcertFieldsVisibility("reh", t, "lbl-reh-start", "lbl-reh-end"));
+        $("modal-reh-title").textContent = "Planifier un événement";
+        populateConcertFields("reh", null);
+        if (!$("reh-date").value) $("reh-date").value = today;
+      }
       if (id === "modal-unavailability") {
         if (!$("unavail-start").value) $("unavail-start").value = today;
         if (!$("unavail-end").value) $("unavail-end").value = $("unavail-start").value;
@@ -1883,21 +2054,38 @@
       updatePushUI(); renderAgenda(); renderPolls(); renderEnsembleInfo();
     }
 
-    // Rendu Agenda
+    // Rendu Agenda (Répétitions, Cours & Concerts)
     function renderAgenda() {
       const container = $("agenda-list"), rehObj = currentEnsembleData.rehearsals || {};
       const list = Object.values(rehObj).sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
       if (!list.length) {
-        container.innerHTML = `<div class="empty-state"><p>Aucune répétition planifiée pour le moment.</p><button type="button" class="btn-secondary btn-sm" data-go-avail>Proposer des disponibilités</button></div>`;
+        container.innerHTML = `<div class="empty-state"><p>Aucun événement planifié pour le moment.</p><button type="button" class="btn-secondary btn-sm" data-go-avail>Proposer des disponibilités</button></div>`;
         return;
       }
       const today = new Date().toISOString().split("T")[0];
       const upcoming = list.filter((r) => r.date >= today), past = list.filter((r) => r.date < today).reverse();
-      const cardHtml = (r, isNext, isPast) => `
-        <article class="card ${isNext ? "featured" : ""}" ${isPast ? 'style="opacity:.72"' : ""}>
-          ${isNext ? '<div class="card-kicker emerald">Prochaine répétition</div>' : ""}
-          <h3 class="card-date" ${isPast ? 'style="font-size:16px"' : ""}>${esc(formatDateFr(r.date))}</h3>
+
+      const cardHtml = (r, isNext, isPast) => {
+        const tMeta = getEventMeta(r.eventType);
+        const isConcert = r.eventType === "concert";
+        const concertInfos = [];
+        if (isConcert && r.soundcheckTime) concertInfos.push(`<span class="concert-detail-item"><strong>Raccord :</strong> ${esc(r.soundcheckTime)}</span>`);
+        if (isConcert && r.dressCode) concertInfos.push(`<span class="concert-detail-item"><strong>Tenue :</strong> ${esc(r.dressCode)}</span>`);
+        if (isConcert && r.concertFee) concertInfos.push(`<span class="concert-detail-item"><strong>Cachet / Tarif :</strong> ${esc(r.concertFee)}</span>`);
+
+        const kickerHtml = isNext
+          ? `<div class="card-kicker ${isConcert ? "concert" : r.eventType === "cours" ? "cours" : "emerald"}">${esc(tMeta.nextLabel)}</div>`
+          : "";
+
+        return `
+        <article class="card ${isNext ? "featured" : ""} ${tMeta.cardCls}" ${isPast ? 'style="opacity:.72"' : ""}>
+          ${kickerHtml}
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <h3 class="card-date" ${isPast ? 'style="font-size:16px"' : ""}>${esc(formatDateFr(r.date))}</h3>
+            <span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span>
+          </div>
           <div class="card-meta" style="margin-top:4px">${isPast ? `${esc(r.startTime)} – ${esc(r.endTime)} • ${esc(r.location)}` : `<span class="time-pill">${esc(r.startTime)} – ${esc(r.endTime)}</span> <strong>${esc(r.location)}</strong>`}</div>
+          ${concertInfos.length ? `<div class="concert-details-grid">${concertInfos.join(" • ")}</div>` : ""}
           ${r.program ? `<div class="${isPast ? "card-meta" : "card-program"}">${isPast ? "" : "<strong>Programme :</strong> "}${esc(r.program)}</div>` : ""}
           ${!isPast && r.notes ? `<div class="card-meta" style="margin-top:6px">${esc(r.notes)}</div>` : ""}
           <div class="card-actions">
@@ -1906,9 +2094,10 @@
             <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-del-reh="${esc(r.id)}">${isPast ? "Supprimer" : "Annuler"}</button>
           </div>
         </article>`;
+      };
 
       container.innerHTML = upcoming.map((r, i) => cardHtml(r, i === 0, false)).join("")
-        + (past.length ? `<div class="divider">Répétitions passées (${past.length})</div>${past.map((r) => cardHtml(r, false, true)).join("")}` : "");
+        + (past.length ? `<div class="divider">Événements passés (${past.length})</div>${past.map((r) => cardHtml(r, false, true)).join("")}` : "");
     }
 
     $("agenda-list").addEventListener("click", (e) => {
@@ -1919,20 +2108,25 @@
       if (btn.dataset.ics) return downloadICS(rehObj[btn.dataset.ics]);
       if (btn.dataset.editReh) {
         const r = rehObj[btn.dataset.editReh]; if (!r) return;
+        const type = r.eventType || "rehearsal";
+        setEventTypeValue($("edit-reh-type-holder"), type, (t) => syncConcertFieldsVisibility("edit-reh", t, "lbl-edit-reh-start", "lbl-edit-reh-end"));
+        $("modal-edit-reh-title").textContent = type === "concert" ? "Modifier le concert" : type === "cours" ? "Modifier le cours" : "Modifier la répétition";
         $("edit-reh-id").value = r.id; $("edit-reh-date").value = r.date || "";
         $("edit-reh-start").value = r.startTime || "14:00"; $("edit-reh-end").value = r.endTime || "17:00";
+        populateConcertFields("edit-reh", r);
         $("edit-reh-location").value = r.location || ""; $("edit-reh-program").value = r.program || ""; $("edit-reh-notes").value = r.notes || "";
         return openModal("modal-edit-rehearsal");
       }
       if (btn.dataset.delReh) {
         const r = rehObj[btn.dataset.delReh]; if (!r) return;
+        const tMeta = getEventMeta(r.eventType);
         openConfirmationModal({
-          title: "Supprimer cette répétition ?",
-          context: `${formatDateFr(r.date)} • ${r.startTime}–${r.endTime} (${r.location})`,
-          message: "Cette répétition sera retirée de l'agenda de tout l'ensemble.",
-          confirmLabel: "Supprimer la répétition",
+          title: `Supprimer ce ${tMeta.label.toLowerCase()} ?`,
+          context: `${tMeta.label} • ${formatDateFr(r.date)} • ${r.startTime}–${r.endTime} (${r.location})`,
+          message: "Cet événement sera retiré de l'agenda de tout l'ensemble.",
+          confirmLabel: "Supprimer",
           onConfirm: async () => {
-            try { await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${r.id}`)); showToast("Répétition retirée."); }
+            try { await remove(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${r.id}`)); showToast(`${tMeta.label} retiré(e) de l'agenda.`); }
             catch (err) { handleFirebaseError(err); }
           }
         });
@@ -1942,21 +2136,32 @@
     $("form-edit-rehearsal").addEventListener("submit", async (e) => {
       e.preventDefault(); haptic();
       const rehId = $("edit-reh-id").value, date = $("edit-reh-date").value, startTime = $("edit-reh-start").value, endTime = $("edit-reh-end").value;
+      const eventType = $("edit-reh-type-holder").dataset.value || "rehearsal";
+      const concertData = readConcertFields("edit-reh", eventType);
       const location = $("edit-reh-location").value.trim(), program = $("edit-reh-program").value.trim(), notes = $("edit-reh-notes").value.trim();
       if (!rehId || !session.activeEnsembleId) return;
       try {
-        await update(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), { date, startTime, endTime, location, program, notes, updatedAt: Date.now() });
-        await publishEnsembleNotification(`Répétition modifiée — ${currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
-        closeModal("modal-edit-rehearsal"); showToast("Répétition mise à jour.");
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+          eventType, date, startTime, endTime, ...concertData, location, program, notes, updatedAt: Date.now()
+        });
+        await publishEnsembleNotification(`${getEventMeta(eventType).label} modifié(e) — ${currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
+        closeModal("modal-edit-rehearsal"); showToast("Agenda mis à jour.");
       } catch (err) { handleFirebaseError(err); }
     });
 
     function downloadICS(reh) {
       if (!reh) return;
       haptic();
+      const tMeta = getEventMeta(reh.eventType);
       const fmt = (d, t) => `${d.replace(/-/g, "")}T${t.replace(":", "")}00`;
-      const desc = [reh.program ? `Programme: ${reh.program}` : "", reh.notes || ""].filter(Boolean).join("\\n");
-      const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cadenza//FR", "BEGIN:VEVENT", `UID:${reh.id}@cadenza.app`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`, `DTSTART:${fmt(reh.date, reh.startTime)}`, `DTEND:${fmt(reh.date, reh.endTime)}`, `SUMMARY:Répétition — ${currentEnsembleData.name}`, `LOCATION:${reh.location || ""}`, `DESCRIPTION:${desc}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+      const desc = [
+        reh.soundcheckTime ? `Raccord sur place : ${reh.soundcheckTime}` : "",
+        reh.dressCode ? `Tenue de scène : ${reh.dressCode}` : "",
+        reh.concertFee ? `Cachet / Billetterie : ${reh.concertFee}` : "",
+        reh.program ? `Programme : ${reh.program}` : "",
+        reh.notes || ""
+      ].filter(Boolean).join("\\n");
+      const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cadenza//FR", "BEGIN:VEVENT", `UID:${reh.id}@cadenza.app`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`, `DTSTART:${fmt(reh.date, reh.startTime)}`, `DTEND:${fmt(reh.date, reh.endTime)}`, `SUMMARY:${tMeta.label} — ${currentEnsembleData.name}`, `LOCATION:${reh.location || ""}`, `DESCRIPTION:${desc}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
       const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" })), download: `cadenza-${reh.date}.ics` });
       a.click(); URL.revokeObjectURL(a.href); showToast("Fichier calendrier (.ics) téléchargé.");
     }
@@ -1974,13 +2179,17 @@
 
     function openConfirmPollModal(poll) {
       if (!poll) return;
+      const type = poll.eventType || "rehearsal";
       $("confirm-poll-id").value = poll.id;
-      const t = formatPollTimeLabel(poll);
-      $("confirm-poll-summary").textContent = `${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}`;
+      setEventTypeValue($("confirm-poll-type-holder"), type, (t) => syncConcertFieldsVisibility("confirm-poll", t, "lbl-confirm-poll-start", "lbl-confirm-poll-end"));
+      populateConcertFields("confirm-poll", null);
+      const t = formatPollTimeLabel(poll), tMeta = getEventMeta(type);
+      $("confirm-poll-summary").textContent = `${tMeta.label} • ${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}`;
       const [s, e] = poll.timeMode === "period"
         ? ({ "Matin": ["09:00", "12:00"], "Soir": ["19:30", "22:00"] }[poll.period] || ["14:00", "17:00"])
-        : poll.timeMode === "day" ? ["14:00", "17:00"] : [poll.startTime || "14:00", poll.endTime || "17:00"];
+        : poll.timeMode === "day" ? (type === "concert" ? ["20:00", "22:00"] : ["14:00", "17:00"]) : [poll.startTime || "14:00", poll.endTime || "17:00"];
       $("confirm-poll-start").value = s; $("confirm-poll-end").value = e;
+      if (type === "concert") $("confirm-poll-soundcheck").value = "18:30";
       $("confirm-poll-location").value = poll.location || ""; $("confirm-poll-program").value = poll.note || "";
       openModal("modal-confirm-poll");
     }
@@ -1989,14 +2198,19 @@
       e.preventDefault(); haptic();
       const pollId = $("confirm-poll-id").value, poll = currentEnsembleData?.polls?.[pollId];
       if (!poll || !session.activeEnsembleId) return;
+      const eventType = $("confirm-poll-type-holder").dataset.value || "rehearsal";
+      const concertData = readConcertFields("confirm-poll", eventType);
       const startTime = $("confirm-poll-start").value, endTime = $("confirm-poll-end").value;
       const location = $("confirm-poll-location").value.trim() || "Lieu à confirmer", program = $("confirm-poll-program").value.trim();
+      const tMeta = getEventMeta(eventType);
       try {
         const rehId = genId("reh");
-        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), { id: rehId, date: poll.date, startTime, endTime, location, program, notes: "", createdAt: Date.now() });
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${rehId}`), {
+          id: rehId, eventType, date: poll.date, startTime, endTime, ...concertData, location, program, notes: "", createdAt: Date.now()
+        });
         await remove(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`));
-        await publishEnsembleNotification(`Répétition confirmée — ${currentEnsembleData.name}`, `${formatDateFr(poll.date)} • ${startTime}–${endTime} (${location})`);
-        closeModal("modal-confirm-poll"); showToast("Répétition ajoutée à l'agenda."); switchTab("agenda");
+        await publishEnsembleNotification(`${tMeta.label} confirmé(e) — ${currentEnsembleData.name}`, `${formatDateFr(poll.date)} • ${startTime}–${endTime} (${location})`);
+        closeModal("modal-confirm-poll"); showToast(`${tMeta.label} ajouté(e) à l'agenda.`); switchTab("agenda");
       } catch (err) { handleFirebaseError(err); }
     });
 
@@ -2057,10 +2271,10 @@
         }
         const sortedArch = [...archList].sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
         container.innerHTML = `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Créneaux clos avec au moins une indisponibilité.</div>` + sortedArch.map((p) => {
-          const v = p.votes || {}, yes = members.filter((m) => v[m.id] === "yes").length;
+          const v = p.votes || {}, yes = members.filter((m) => v[m.id] === "yes").length, tMeta = getEventMeta(p.eventType);
           return `<article class="card archived-card">
             <div class="poll-head-row"><h3 class="card-date">${esc(formatDateFr(p.date))}</h3><span class="consensus-badge archived">✕ ${yes}/${total}</span></div>
-            <div class="poll-subline"><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}</div>
+            <div class="poll-subline"><span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}</div>
             ${p.note ? `<div class="card-meta">${esc(p.note)}</div>` : ""}
             <div class="member-votes-list">${members.map((m) => chipHtml(m, v, p.voteNotes || {})).join("")}</div>
             <div class="archive-lock-banner"><span>🔒 Sondage archivé — relance verrouillée.</span></div>
@@ -2095,6 +2309,7 @@
         const yes = members.filter((m) => v[m.id] === "yes").length, missing = members.filter((m) => !v[m.id]);
         const full = total > 0 && yes === total, majority = !full && total > 0 && yes >= Math.ceil(total * 0.75);
         const broad = p.timeMode === "day" || p.timeMode === "period";
+        const tMeta = getEventMeta(p.eventType);
         const rank = { yes: 1, maybe: 2, no: 3 };
         const topBar = members.map((m) => v[m.id] || "pending").sort((a, b) => (rank[a] || 4) - (rank[b] || 4)).map((st) => `<span class="poll-top-seg ${st}"></span>`).join("");
 
@@ -2125,7 +2340,7 @@
         return `<article class="card poll-card ${full ? "consensus-ready" : ""} ${!myVote ? "unvoted-highlight" : ""}" data-poll-card="${esc(p.id)}">
           <div class="poll-top-bar" aria-hidden="true">${topBar}</div>
           <div class="poll-head-row"><h3 class="card-date">${esc(formatDateFr(p.date))}</h3><span class="consensus-badge ${full ? "full" : majority ? "partial-good" : ""}">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</span></div>
-          <div class="poll-subline"><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}${p.note ? `<span>• ${esc(p.note)}</span>` : ""}</div>
+          <div class="poll-subline"><span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}${p.note ? `<span>• ${esc(p.note)}</span>` : ""}</div>
           ${unavailHtml}
           <div class="vote-group">
             <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${esc(p.id)}" data-val="yes">✓ Oui</button>
@@ -2157,6 +2372,7 @@
       const rows = filtered.map((p) => {
         const v = p.votes || {}, notes = p.voteNotes || {}, yes = members.filter((m) => v[m.id] === "yes").length;
         const full = total > 0 && yes === total, broad = p.timeMode === "day" || p.timeMode === "period", t = formatPollTimeLabel(p);
+        const tMeta = getEventMeta(p.eventType);
         members.forEach((m) => notes[m.id] && notesList.push({ date: formatCompactDateFr(p.date), time: t, member: m.name, note: notes[m.id] }));
         const conflicts = getUnavailabilityConflictsForDate(p.date).filter((c) => v[c.memberId] !== "yes");
 
@@ -2173,7 +2389,10 @@
 
         return `<tr class="${full ? "row-consensus" : ""}">
           <td>
-            <div style="font-weight:600;text-transform:capitalize">${esc(formatCompactDateFr(p.date))}</div>
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+              <span style="font-weight:600;text-transform:capitalize">${esc(formatCompactDateFr(p.date))}</span>
+              <span class="event-type-badge ${tMeta.badgeCls}" style="font-size:10px;padding:1px 5px">${esc(tMeta.label)}</span>
+            </div>
             <div style="font-size:11.5px;color:${p.timeMode === "day" ? "var(--muted)" : "var(--accent-fg)"};font-weight:500">${esc(t)}${p.location ? ` • ${esc(p.location)}` : ""}</div>
             ${conflicts.length ? `<div style="font-size:11px;color:var(--no-fg);font-weight:600">Absence : ${esc(conflicts.map((c) => c.memberName).join(", "))}</div>` : ""}
           </td>
@@ -2190,7 +2409,7 @@
       container.innerHTML = `
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Touchez votre case dans la colonne <strong>(Vous)</strong> pour alterner ✓ / ? / ✕.</div>
         <div class="card matrix-card"><div class="matrix-scroll"><table class="avail-matrix">
-          <thead><tr><th>Date &amp; moment</th><th>Score</th>${ordered.map((m) => `<th class="${m.id === myId ? "col-me" : ""}"><div>${esc(m.name)}${m.id === myId ? " (Vous)" : ""}</div><div style="font-weight:400;font-size:10.5px;color:var(--muted)">${esc(m.instrument)}</div></th>`).join("")}<th style="text-align:right;padding-right:12px">Actions</th></tr></thead>
+          <thead><tr><th>Date &amp; type</th><th>Score</th>${ordered.map((m) => `<th class="${m.id === myId ? "col-me" : ""}"><div>${esc(m.name)}${m.id === myId ? " (Vous)" : ""}</div><div style="font-weight:400;font-size:10.5px;color:var(--muted)">${esc(m.instrument)}</div></th>`).join("")}<th style="text-align:right;padding-right:12px">Actions</th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div></div>
         ${notesList.length ? `<div class="card" style="padding:12px 14px"><div class="card-kicker" style="margin-bottom:6px">Précisions des musiciens</div>${notesList.map((n) => `<div style="font-size:13px;padding:3px 0"><strong>${esc(n.member)}</strong> (${esc(n.date)}, ${esc(n.time)}) : <em>« ${esc(n.note)} »</em></div>`).join("")}</div>` : ""}`;
@@ -2382,23 +2601,25 @@
       const blocked = slots.find(findArchivedSlotMatch);
       if (blocked) { updatePollConflictsWarning(); return showToast(`Impossible : le ${formatCompactDateFr(blocked.date)} a déjà été archivé.`); }
 
+      const eventType = $("poll-type-holder").dataset.value || "rehearsal";
       const location = $("poll-location").value.trim(), note = $("poll-note").value.trim(), me = session.ensembles[session.activeEnsembleId];
       const replaceId = refiningPollId && $("poll-replace-checkbox").checked ? refiningPollId : null, wasRefining = Boolean(refiningPollId);
+      const tMeta = getEventMeta(eventType);
       try {
         const updates = {};
         slots.forEach((s) => {
           const id = genId("pol");
-          updates[id] = { id, ...s, location, note, createdBy: me.name, votes: { [me.memberId]: "yes" } };
+          updates[id] = { id, eventType, ...s, location, note, createdBy: me.name, votes: { [me.memberId]: "yes" } };
         });
         if (replaceId) updates[replaceId] = null;
         await update(ref(db, `ensembles/${session.activeEnsembleId}/polls`), updates);
 
         const ens = currentEnsembleData?.name || "Cadenza", s0 = slots[0];
         await publishEnsembleNotification(
-          wasRefining ? `Horaires proposés — ${ens}` : slots.length === 1 ? `Nouvelle date proposée — ${ens}` : `${slots.length} nouvelles dates proposées — ${ens}`,
+          wasRefining ? `Horaires proposés (${tMeta.label}) — ${ens}` : slots.length === 1 ? `Nouvelle date proposée (${tMeta.label}) — ${ens}` : `${slots.length} dates proposées (${tMeta.label}) — ${ens}`,
           wasRefining ? `${me.name} propose ${slots.length === 1 ? formatPollTimeLabel(s0) : `${slots.length} créneaux horaires`} pour le ${formatDateFr(s0.date)}.`
             : slots.length === 1 ? `${me.name} propose le ${formatDateFr(s0.date)} (${formatPollTimeLabel(s0)})`
-            : `${me.name} propose ${slots.length} créneaux de répétition à voter.`
+            : `${me.name} propose ${slots.length} créneaux à voter.`
         );
         $("form-poll").reset(); resetPollSlots(); closeModal("modal-poll");
         showToast(`${slots.length} ${wasRefining ? "horaire(s)" : "créneau(x)"} proposé(s) aux membres.`);
@@ -2407,13 +2628,18 @@
 
     $("form-rehearsal").addEventListener("submit", async (e) => {
       e.preventDefault(); haptic();
+      const eventType = $("reh-type-holder").dataset.value || "rehearsal";
+      const concertData = readConcertFields("reh", eventType);
       const date = $("reh-date").value, startTime = $("reh-start").value, endTime = $("reh-end").value;
       const location = $("reh-location").value.trim(), program = $("reh-program").value.trim(), notes = $("reh-notes").value.trim();
+      const tMeta = getEventMeta(eventType);
       try {
         const id = genId("reh");
-        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${id}`), { id, date, startTime, endTime, location, program, notes, createdAt: Date.now() });
-        await publishEnsembleNotification(`Nouvelle répétition — ${currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
-        $("form-rehearsal").reset(); closeModal("modal-rehearsal"); showToast("Répétition ajoutée à l'agenda.");
+        await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${id}`), {
+          id, eventType, date, startTime, endTime, ...concertData, location, program, notes, createdAt: Date.now()
+        });
+        await publishEnsembleNotification(`Nouveau ${tMeta.label.toLowerCase()} — ${currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
+        $("form-rehearsal").reset(); closeModal("modal-rehearsal"); showToast(`${tMeta.label} ajouté(e) à l'agenda.`);
       } catch (err) { handleFirebaseError(err); }
     });
 
