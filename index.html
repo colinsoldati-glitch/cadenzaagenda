@@ -757,7 +757,7 @@
       </div>
       <form id="form-admin-announcement">
         <div class="row-2">
-          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v18" required /></div>
+          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v19" required /></div>
           <div class="field"><label for="admin-ann-title">Titre</label><input type="text" id="admin-ann-title" value="Nouveautés sur Cadenza" required /></div>
         </div>
         <div class="field"><label for="admin-ann-subtitle">Sous-titre (optionnel)</label><input type="text" id="admin-ann-subtitle" placeholder="Ex: Une nouvelle mise à jour est disponible :" /></div>
@@ -819,7 +819,7 @@
   <div id="modal-edit-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title">Modifier ce créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-edit-poll">Fermer</button></div>
-      <form id="form-edit-poll">
+      <form id="form-edit-poll" novalidate>
         <input type="hidden" id="edit-poll-id" />
         <div id="edit-poll-type-holder"></div>
         <div class="field"><label for="edit-poll-date">Date</label><input type="date" id="edit-poll-date" required /></div>
@@ -932,7 +932,7 @@
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des dates</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
       <div id="poll-refine-banner" class="info-banner-box hidden"></div>
-      <form id="form-poll">
+      <form id="form-poll" novalidate>
         <div id="poll-type-holder"></div>
 
         <!-- Mode Multi-Dates Tap-Tap-Tap (Calendrier) -->
@@ -1025,7 +1025,7 @@
     import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-    const APP_VERSION = "v19";
+    const APP_VERSION = "v20";
     const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
     const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
     const KEYS = {
@@ -1279,6 +1279,11 @@
       const isExact = mode === "exact";
       exactBox.classList.toggle("hidden", !isExact);
       sInp.required = eInp.required = isExact;
+      sInp.disabled = eInp.disabled = !isExact;
+      if (isExact) {
+        if (!sInp.value) sInp.value = "14:00";
+        if (!eInp.value) eInp.value = "17:00";
+      }
       host.querySelectorAll(".slot-mode-btn").forEach((b) => {
         b.classList.toggle("active", b.dataset.mode === mode && (mode !== "period" || b.dataset.period === period));
       });
@@ -2114,18 +2119,36 @@
 
     $("form-edit-poll").addEventListener("submit", async (e) => {
       e.preventDefault(); haptic();
-      const pollId = $("edit-poll-id").value, oldPoll = currentEnsembleData?.polls?.[pollId];
-      if (!pollId || !oldPoll || !session.activeEnsembleId) return;
-      const slot = { date: $("edit-poll-date").value, ...readSlotRow($("edit-poll-mode-holder")) };
-      const eventType = $("edit-poll-type-holder").dataset.value || "rehearsal";
-      if (!slot.date || (slot.timeMode === "exact" && (!slot.startTime || !slot.endTime))) return;
+      const pollId = $("edit-poll-id").value;
+      const oldPoll = currentEnsembleData?.polls?.[pollId];
+      if (!session.activeEnsembleId) return showToast("Aucun ensemble actif.");
+      if (!pollId || !oldPoll) {
+        closeModal("modal-edit-poll");
+        return showToast("Ce créneau n'est plus actif (peut-être déjà archivé ou validé).");
+      }
+
+      const dateVal = $("edit-poll-date").value;
+      if (!dateVal) return showToast("Veuillez sélectionner une date.");
+
+      const slot = { date: dateVal, ...readSlotRow($("edit-poll-mode-holder")) };
+      if (slot.timeMode === "exact" && (!slot.startTime || !slot.endTime)) {
+        return showToast("Veuillez renseigner l'heure de début et de fin.");
+      }
       if (findArchivedSlotMatch(slot)) return showToast("Ce créneau a déjà été archivé.");
 
+      const eventType = $("edit-poll-type-holder").dataset.value || "rehearsal";
       const changed = getSlotFingerprint(oldPoll) !== getSlotFingerprint(slot);
       const me = session.ensembles[session.activeEnsembleId];
+      const submitBtn = $("btn-submit-edit-poll");
+      submitBtn.disabled = true;
+
       try {
         await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
-          ...slot, eventType, location: $("edit-poll-location").value.trim(), note: $("edit-poll-note").value.trim(), updatedAt: Date.now(),
+          ...slot,
+          eventType,
+          location: $("edit-poll-location").value.trim(),
+          note: $("edit-poll-note").value.trim(),
+          updatedAt: Date.now(),
           ...(changed ? { votes: me?.memberId ? { [me.memberId]: "yes" } : null, voteNotes: null } : {})
         });
         if (changed) {
@@ -2133,7 +2156,11 @@
           showToast("Créneau modifié et votes réinitialisés.");
         } else showToast("Informations mises à jour.");
         closeModal("modal-edit-poll");
-      } catch (err) { handleFirebaseError(err); }
+      } catch (err) {
+        handleFirebaseError(err);
+      } finally {
+        submitBtn.disabled = false;
+      }
     });
 
     function getKnownLocations() {
