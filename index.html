@@ -11,19 +11,6 @@
   <meta name="apple-mobile-web-app-title" content="Cadenza" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>Cadenza</title>
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Cadenza" />
-  <meta property="og:url" content="https://www.cadenzaapp.ch/" />
-  <meta property="og:title" content="Cadenza — Agenda d'ensemble" />
-  <meta property="og:description" content="Disponibilités et agenda centralisé pour ensembles de musique." />
-  <meta property="og:image" content="https://www.cadenzaapp.ch/og-image.png" />
-  <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Cadenza — Agenda d'ensemble" />
-  <meta name="twitter:description" content="Disponibilités et agenda centralisé pour ensembles de musique." />
-  <meta name="twitter:image" content="https://www.cadenzaapp.ch/og-image.png" />
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23ffffff'/%3E%3Cpath d='M12 64 C12 31, 88 31, 88 64 C84 39, 16 39, 12 64 Z' fill='%23111827'/%3E%3Ccircle cx='50' cy='57' r='6.5' fill='%23111827'/%3E%3C/svg%3E" />
 
@@ -196,6 +183,121 @@
     .poll-footer-main { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
     .btn-more-dots { width: 32px; height: 30px; padding: 0; border-color: var(--border); color: var(--muted); font-weight: 700; letter-spacing: 1px; flex-shrink: 0; }
     .btn-more-dots:hover { color: var(--fg); background: var(--subtle); }
+
+    /* Vote Express */
+    .express-vote-banner {
+      border: 1.5px solid var(--accent-fg); background: linear-gradient(135deg, #eff6ff 0%, #ffffff 65%);
+      border-radius: 12px; padding: 13px 14px; margin-bottom: 14px;
+      box-shadow: 0 2px 6px rgba(29, 78, 216, .08);
+    }
+    .express-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .express-badge {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--accent-fg); background: #fff; border: 1px solid var(--accent-border);
+      padding: 2px 8px; border-radius: 999px;
+    }
+    .express-date-title { font-family: var(--font-serif); font-size: 17px; margin: 2px 0 6px; text-transform: capitalize; }
+    .express-vote-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
+    .express-vote-btns button { padding: 10px 6px; font-size: 13.5px; font-weight: 600; }
+
+    /* Suggestions rapides de lieu */
+    .location-suggestions-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .loc-chip {
+      font-size: 11.5px; padding: 3px 8px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--subtle); color: var(--fg); font-weight: 500;
+    }
+    .loc-chip:hover { border-color: var(--fg); background: var(--surface); }
+    .btn-suggest-loc {
+      border: 1px dashed var(--border); background: transparent; color: var(--muted);
+      font-size: 11.5px; padding: 2px 7px; border-radius: 5px; font-weight: 500;
+    }
+    .btn-suggest-loc:hover { color: var(--fg); border-color: var(--fg); background: var(--subtle); }
+    .loc-inline-bar {
+      display: flex; gap: 6px; align-items: center; margin-bottom: 8px;
+      padding: 6px 8px; background: var(--subtle); border: 1px solid var(--border); border-radius: 8px;
+    }
+    .loc-inline-bar input { font-size: 12.5px; padding: 5px 8px; background: var(--surface); }
+
+    /* Vue Liste Express (Ultra-compacte) */
+    .express-list-card { padding: 0; overflow: hidden; }
+    .express-list-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
+    }
+    .express-list-row:last-child { border-bottom: none; }
+    .express-list-row.consensus { background: #f7fee7; }
+    .express-list-row.unvoted { border-left: 3px solid var(--accent-fg); }
+    .express-row-info { min-width: 0; flex: 1; }
+    .express-row-date { font-weight: 600; font-size: 14px; text-transform: capitalize; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .express-row-meta { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .express-row-btns { display: inline-flex; gap: 4px; flex-shrink: 0; }
+    .mini-vbtn {
+      width: 34px; height: 34px; padding: 0; border-radius: 8px; font-size: 14px; font-weight: 700;
+      border: 1px solid var(--border); background: var(--subtle); color: var(--muted);
+    }
+    .mini-vbtn.active-yes { background: var(--yes-fg); color: #fff; border-color: var(--yes-fg); }
+    .mini-vbtn.active-maybe { background: var(--maybe-bg); color: var(--maybe-fg); border-color: var(--maybe-solid); }
+    .mini-vbtn.active-no { background: var(--no-bg); color: var(--no-fg); border-color: var(--no-border); }
+
+    /* Regroupement multi-horaires sur une même journée */
+    .day-slots-tabs {
+      display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px;
+      padding: 6px; background: var(--subtle); border: 1px solid var(--border); border-radius: 9px;
+    }
+    .day-slot-tab {
+      flex: 1 1 auto; min-width: 105px; padding: 6px 9px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+      font-size: 12px; font-weight: 500; justify-content: space-between; gap: 6px;
+    }
+    .day-slot-tab.active {
+      border-color: var(--fg); background: var(--fg); color: #fff; font-weight: 600;
+      box-shadow: 0 1px 3px rgba(17, 24, 39, .15);
+    }
+    .day-slot-tab.consensus { border-color: var(--yes-fg); }
+    .day-slot-tab.active.consensus { background: var(--yes-fg); border-color: var(--yes-fg); color: #fff; }
+    .slot-tab-vote-dot {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%; font-size: 10px; font-weight: 700;
+      background: var(--subtle); color: var(--muted); flex-shrink: 0;
+    }
+    .slot-tab-vote-dot.yes { background: var(--yes-bg); color: var(--yes-fg); }
+    .slot-tab-vote-dot.maybe { background: var(--maybe-bg); color: var(--maybe-fg); }
+    .slot-tab-vote-dot.no { background: var(--no-bg); color: var(--no-fg); }
+    .day-slot-tab.active .slot-tab-vote-dot { background: rgba(255, 255, 255, .22); color: #fff; }
+
+    /* Calendrier Multi-Sélection Tap-Tap-Tap */
+    .multi-cal-box {
+      border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+      background: var(--surface); margin-bottom: 12px;
+    }
+    .multi-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .multi-cal-month { font-family: var(--font-serif); font-size: 16px; text-transform: capitalize; font-weight: 400; }
+    .multi-cal-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center;
+      font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 5px;
+    }
+    .multi-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-day-btn {
+      aspect-ratio: 1 / 1; padding: 0; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--fg); font-size: 13.5px; font-weight: 500;
+      flex-direction: column; gap: 1px; position: relative;
+    }
+    .cal-day-btn.other-month { opacity: .35; }
+    .cal-day-btn.today { border-color: var(--accent-fg); font-weight: 700; }
+    .cal-day-btn.has-absence { background: var(--no-bg); border-color: var(--no-border); color: var(--no-fg); }
+    .cal-day-btn.selected {
+      background: var(--fg) !important; color: #fff !important; border-color: var(--fg) !important; font-weight: 700;
+      box-shadow: 0 2px 5px rgba(17, 24, 39, .2);
+    }
+    .cal-day-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--no-solid); }
+    .cal-day-btn.selected .cal-day-dot { background: #fca5a5; }
+    .selected-dates-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .selected-date-pill {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+      background: var(--accent-bg); color: var(--accent-fg); border: 1px solid var(--accent-border);
+      padding: 3px 8px; border-radius: 999px; text-transform: capitalize;
+    }
+    .selected-date-pill button { border: none; background: transparent; color: inherit; padding: 0 2px; font-size: 13px; font-weight: 700; }
 
     /* Alertes & Badges */
     .alert-box, .info-banner-box { border-radius: 10px; padding: 11px 14px; margin-bottom: 14px; font-size: 13px; }
@@ -525,6 +627,7 @@
       <div id="avail-toolbar" class="avail-toolbar hidden">
         <div class="segmented-control" role="tablist">
           <button type="button" class="seg-btn active" data-avail-view="cards">Cartes</button>
+          <button type="button" class="seg-btn" data-avail-view="express">Express</button>
           <button type="button" class="seg-btn" data-avail-view="table">Tableau</button>
         </div>
         <div class="filter-pills" role="group">
@@ -824,18 +927,46 @@
     </div>
   </div>
 
-  <!-- Modale Proposition de dates -->
+  <!-- Modale Proposition de dates (Multi-Sélection Calendrier + Mode Précision) -->
   <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des créneaux</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
+      <div class="modal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des dates</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
       <div id="poll-refine-banner" class="info-banner-box hidden"></div>
       <form id="form-poll">
         <div id="poll-type-holder"></div>
-        <div id="poll-slots-container"></div>
-        <div style="margin-bottom: 16px;"><button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter une autre date</button></div>
+
+        <!-- Mode Multi-Dates Tap-Tap-Tap (Calendrier) -->
+        <div id="poll-calendar-wrapper">
+          <div class="multi-cal-box">
+            <div class="multi-cal-header">
+              <button type="button" id="btn-cal-prev" class="btn-secondary btn-xs" aria-label="Mois précédent">←</button>
+              <span id="cal-month-label" class="multi-cal-month">—</span>
+              <button type="button" id="btn-cal-next" class="btn-secondary btn-xs" aria-label="Mois suivant">→</button>
+            </div>
+            <div class="multi-cal-weekdays"><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span></div>
+            <div id="multi-cal-grid" class="multi-cal-grid"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:11.5px;color:var(--muted);">
+              <span>Touchez plusieurs jours pour les sélectionner</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;color:var(--no-fg);"><span class="cal-day-dot"></span> Absence signalée</span>
+            </div>
+            <div id="cal-selected-pills" class="selected-dates-pills"></div>
+          </div>
+          <div id="poll-global-mode-holder" class="poll-slot-row"></div>
+        </div>
+
+        <!-- Mode Multi-Horaires (pour préciser une journée) -->
+        <div id="poll-slots-wrapper" class="hidden">
+          <div id="poll-slots-container"></div>
+          <div style="margin-bottom: 16px;"><button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter un autre horaire ce jour</button></div>
+        </div>
+
         <div id="poll-archive-lock-warning" class="alert-box hidden"></div>
         <div id="poll-unavail-warning" class="alert-box hidden"></div>
-        <div class="field"><label for="poll-location">Lieu envisagé (optionnel)</label><input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /></div>
+        <div class="field">
+          <label for="poll-location">Lieu envisagé / suggéré (optionnel)</label>
+          <input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" />
+          <div id="poll-location-suggestions" class="location-suggestions-row hidden"></div>
+        </div>
         <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
         <div id="poll-replace-row" class="hidden" style="margin-bottom: 14px;">
           <label class="toggle-row" for="poll-replace-checkbox" style="margin-top: 0;">
@@ -843,7 +974,7 @@
             <span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span>
           </label>
         </div>
-        <button type="submit" id="btn-submit-poll" class="btn-primary btn-full">Soumettre ce créneau aux membres</button>
+        <button type="submit" id="btn-submit-poll" class="btn-primary btn-full">Soumettre les dates aux membres</button>
       </form>
     </div>
   </div>
@@ -931,9 +1062,12 @@
     let deferredInstallPrompt = null, availViewMode = "cards", availFilterMode = "all";
     let pendingScrollToPollId = null, pendingDeleteCallback = null, isAutoArchivingPolls = false;
     let refiningPollId = null, refiningFixedDate = null;
+    let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+    const selectedCalDates = new Set();
     let ensembleTapCount = 0, ensembleTapTimer = null, verifiedAdminPin = null;
     let latestAnnouncementData = null, displayedAnnouncementId = null, isPreviewingWhatsNew = false;
-    const openNoteEditors = new Set(), expandedMemberLists = new Set();
+    const openNoteEditors = new Set(), openLocationEditors = new Set(), expandedMemberLists = new Set();
+    const activeSlotByDate = new Map();
 
     const $ = (id) => document.getElementById(id);
     const saveSession = () => localStorage.setItem(KEYS.session, JSON.stringify(session));
@@ -1165,6 +1299,81 @@
     $("edit-poll-mode-holder").innerHTML = buildModeSelectorHtml();
     bindModeSelector($("edit-poll-mode-holder"), checkEditPollArchiveLock);
 
+    $("poll-global-mode-holder").innerHTML = buildModeSelectorHtml("14:00", "17:00");
+    bindModeSelector($("poll-global-mode-holder"), updatePollConflictsWarning);
+    applyModeState($("poll-global-mode-holder"), "day", "Après-midi");
+
+    // Calendrier Multi-Sélection Tap-Tap-Tap
+    const toIsoDate = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+    function renderMultiCalendar() {
+      const grid = $("multi-cal-grid"), label = $("cal-month-label"), pills = $("cal-selected-pills");
+      if (!grid) return;
+      const firstDay = new Date(calYear, calMonth, 1);
+      label.textContent = firstDay.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
+      const startOffset = (firstDay.getDay() + 6) % 7;
+      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+      const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
+      const todayIso = new Date().toISOString().split("T")[0];
+
+      const cells = [];
+      for (let i = startOffset - 1; i >= 0; i--) {
+        const d = prevMonthDays - i;
+        const pm = calMonth === 0 ? 11 : calMonth - 1, py = calMonth === 0 ? calYear - 1 : calYear;
+        cells.push({ iso: toIsoDate(py, pm, d), day: d, other: true });
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        cells.push({ iso: toIsoDate(calYear, calMonth, d), day: d, other: false });
+      }
+      while (cells.length % 7 !== 0) {
+        const d = cells.length - (startOffset + daysInMonth) + 1;
+        const nm = calMonth === 11 ? 0 : calMonth + 1, ny = calMonth === 11 ? calYear + 1 : calYear;
+        cells.push({ iso: toIsoDate(ny, nm, d), day: d, other: true });
+      }
+
+      grid.innerHTML = cells.map((c) => {
+        const isSel = selectedCalDates.has(c.iso);
+        const hasAbs = getUnavailabilityConflictsForDate(c.iso).length > 0;
+        const cls = ["cal-day-btn", c.other ? "other-month" : "", c.iso === todayIso ? "today" : "", hasAbs ? "has-absence" : "", isSel ? "selected" : ""].filter(Boolean).join(" ");
+        return `<button type="button" class="${cls}" data-cal-iso="${c.iso}"><span>${c.day}</span>${hasAbs ? '<span class="cal-day-dot"></span>' : ""}</button>`;
+      }).join("");
+
+      const sorted = [...selectedCalDates].sort();
+      pills.innerHTML = sorted.length
+        ? sorted.map((iso) => `<span class="selected-date-pill">${esc(formatCompactDateFr(iso))}<button type="button" data-unselect-iso="${iso}" aria-label="Retirer">×</button></span>`).join("")
+        : `<span style="font-size:12px;color:var(--muted)">Aucune date sélectionnée</span>`;
+      updatePollConflictsWarning();
+    }
+
+    $("multi-cal-grid").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-cal-iso]");
+      if (!btn) return;
+      haptic();
+      const iso = btn.dataset.calIso;
+      selectedCalDates.has(iso) ? selectedCalDates.delete(iso) : selectedCalDates.add(iso);
+      renderMultiCalendar();
+    });
+
+    $("cal-selected-pills").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-unselect-iso]");
+      if (!btn) return;
+      haptic();
+      selectedCalDates.delete(btn.dataset.unselectIso);
+      renderMultiCalendar();
+    });
+
+    $("btn-cal-prev").addEventListener("click", () => {
+      haptic();
+      if (calMonth === 0) { calMonth = 11; calYear--; } else calMonth--;
+      renderMultiCalendar();
+    });
+    $("btn-cal-next").addEventListener("click", () => {
+      haptic();
+      if (calMonth === 11) { calMonth = 0; calYear++; } else calMonth++;
+      renderMultiCalendar();
+    });
+
     // Archivage automatique, récupération & tri intelligent des disponibilités
     function isPollImpossibleAndComplete(poll, members) {
       if (!poll || !members?.length) return false;
@@ -1197,7 +1406,6 @@
       finally { isAutoArchivingPolls = false; }
     }
 
-    // Récupération d'un créneau archivé pour le remettre en sondage actif
     async function restoreArchivedPoll(archivedPoll) {
       if (!archivedPoll || !session.activeEnsembleId) return;
       const ensId = session.activeEnsembleId;
@@ -1206,12 +1414,7 @@
       const oldVotes = archivedPoll.votes || {};
       const oldNotes = archivedPoll.voteNotes || {};
 
-      // On conserve les votes "yes" et "maybe" et on réinitialise les votes "no" pour permettre aux membres devenus disponibles de revoter
-      const keptVotes = {};
-      const keptNotes = {};
-      const resetMemberIds = [];
-      const resetMemberNames = [];
-
+      const keptVotes = {}, keptNotes = {}, resetMemberIds = [], resetMemberNames = [];
       members.forEach((m) => {
         const v = oldVotes[m.id];
         if (v === "yes" || v === "maybe") {
@@ -1262,19 +1465,13 @@
         document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === "all"));
         pendingScrollToPollId = restoredPoll.id;
         showToast("Créneau récupéré et remis en sondage actif.");
-      } catch (err) {
-        handleFirebaseError(err);
-      }
+      } catch (err) { handleFirebaseError(err); }
     }
 
     function promptRestoreArchivedPoll(archivedPoll) {
       if (!archivedPoll) return;
-      const t = formatPollTimeLabel(archivedPoll);
-      const tMeta = getEventMeta(archivedPoll.eventType);
-      const unavailNames = archivedPoll.unavailableMembers?.length
-        ? archivedPoll.unavailableMembers.join(", ")
-        : "les membres indisponibles";
-
+      const t = formatPollTimeLabel(archivedPoll), tMeta = getEventMeta(archivedPoll.eventType);
+      const unavailNames = archivedPoll.unavailableMembers?.length ? archivedPoll.unavailableMembers.join(", ") : "les membres indisponibles";
       openConfirmationModal({
         title: "Récupérer ce créneau ?",
         context: `${tMeta.label} • ${formatDateFr(archivedPoll.date)}${t ? ` • ${t}` : ""}`,
@@ -1287,8 +1484,7 @@
 
     function promptDeleteArchivedPoll(archivedPoll) {
       if (!archivedPoll) return;
-      const t = formatPollTimeLabel(archivedPoll);
-      const tMeta = getEventMeta(archivedPoll.eventType);
+      const t = formatPollTimeLabel(archivedPoll), tMeta = getEventMeta(archivedPoll.eventType);
       openConfirmationModal({
         title: "Supprimer définitivement ?",
         context: `${tMeta.label} • ${formatDateFr(archivedPoll.date)}${t ? ` • ${t}` : ""}`,
@@ -1703,8 +1899,9 @@
     // Gestion des créneaux proposés
     function readSlotRow(row) {
       const mode = row.dataset.mode || "day", period = row.dataset.period || "";
+      const dateInp = row.querySelector(".slot-date");
       return {
-        date: row.querySelector(".slot-date").value,
+        date: dateInp ? dateInp.value : "",
         timeMode: mode,
         period: mode === "period" ? period : "",
         startTime: mode === "exact" ? row.querySelector(".slot-start").value : "",
@@ -1712,9 +1909,27 @@
       };
     }
 
+    function getPendingProposalSlots() {
+      if (refiningFixedDate) {
+        return Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row"))
+          .map(readSlotRow)
+          .filter((s) => s.date && (s.timeMode !== "exact" || (s.startTime && s.endTime)));
+      }
+      const globalTiming = readSlotRow($("poll-global-mode-holder"));
+      return [...selectedCalDates].sort().map((date) => ({ ...globalTiming, date }));
+    }
+
     function updatePollConflictsWarning() {
       const warnBox = $("poll-unavail-warning"), lockBox = $("poll-archive-lock-warning"), subBtn = $("btn-submit-poll");
-      const slots = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row")).map(readSlotRow).filter((s) => s.date);
+      const slots = getPendingProposalSlots();
+
+      if (!refiningFixedDate) {
+        subBtn.textContent = slots.length > 1
+          ? `Soumettre ces ${slots.length} dates aux membres`
+          : slots.length === 1
+            ? `Soumettre le ${formatCompactDateFr(slots[0].date)} aux membres`
+            : "Sélectionnez au moins une date";
+      }
 
       const lockedMatches = [];
       const lockedLines = slots.map((s) => {
@@ -1734,7 +1949,7 @@
       } else {
         lockBox.innerHTML = "";
       }
-      subBtn.disabled = lockedLines.length > 0;
+      subBtn.disabled = slots.length === 0 || lockedLines.length > 0;
 
       const conflictLines = [];
       [...new Set(slots.map((s) => s.date))].forEach((d) => {
@@ -1813,12 +2028,19 @@
     function resetPollSlots() {
       refiningPollId = refiningFixedDate = null;
       setEventTypeValue($("poll-type-holder"), "rehearsal");
-      $("modal-poll-title").textContent = "Proposer des créneaux";
+      $("modal-poll-title").textContent = "Proposer des dates";
       $("poll-refine-banner").classList.add("hidden");
       $("poll-replace-row").classList.add("hidden");
-      $("btn-add-poll-slot").textContent = "+ Ajouter une autre date";
+      $("poll-calendar-wrapper").classList.remove("hidden");
+      $("poll-slots-wrapper").classList.add("hidden");
       $("poll-slots-container").innerHTML = "";
-      addPollSlot("", "day");
+
+      const now = new Date();
+      calYear = now.getFullYear();
+      calMonth = now.getMonth();
+      selectedCalDates.clear();
+      applyModeState($("poll-global-mode-holder"), "day", "Après-midi");
+      renderMultiCalendar();
     }
 
     function openRefineTimeModal(poll) {
@@ -1827,6 +2049,8 @@
       setEventTypeValue($("poll-type-holder"), poll.eventType || "rehearsal");
       const prev = formatPollTimeLabel(poll), tMeta = getEventMeta(poll.eventType);
       $("modal-poll-title").textContent = "Préciser les horaires";
+      $("poll-calendar-wrapper").classList.add("hidden");
+      $("poll-slots-wrapper").classList.remove("hidden");
       $("poll-refine-banner").classList.remove("hidden");
       $("poll-refine-banner").innerHTML = `<div style="font-weight:600;color:var(--yes-fg);margin-bottom:2px">${esc(tMeta.label)} • ${esc(formatDateFr(poll.date))} (${esc(prev)})</div><div style="color:var(--muted)">Proposez un ou plusieurs créneaux horaires pour cette journée :</div>`;
       $("poll-replace-row").classList.remove("hidden");
@@ -1846,6 +2070,8 @@
       haptic(); refiningPollId = null; refiningFixedDate = poll.date;
       setEventTypeValue($("poll-type-holder"), poll.eventType || "rehearsal");
       $("modal-poll-title").textContent = "Autre horaire ce jour";
+      $("poll-calendar-wrapper").classList.add("hidden");
+      $("poll-slots-wrapper").classList.remove("hidden");
       $("poll-refine-banner").classList.add("hidden");
       $("poll-replace-row").classList.add("hidden");
       $("btn-add-poll-slot").textContent = "+ Ajouter un autre horaire ce jour";
@@ -1893,7 +2119,7 @@
       const slot = { date: $("edit-poll-date").value, ...readSlotRow($("edit-poll-mode-holder")) };
       const eventType = $("edit-poll-type-holder").dataset.value || "rehearsal";
       if (!slot.date || (slot.timeMode === "exact" && (!slot.startTime || !slot.endTime))) return;
-      if (findArchivedSlotMatch(slot)) return showToast("Ce créneau est dans les archives. Récupérez-le depuis l'onglet Archives.");
+      if (findArchivedSlotMatch(slot)) return showToast("Ce créneau a déjà été archivé.");
 
       const changed = getSlotFingerprint(oldPoll) !== getSlotFingerprint(slot);
       const me = session.ensembles[session.activeEnsembleId];
@@ -1910,11 +2136,42 @@
       } catch (err) { handleFirebaseError(err); }
     });
 
+    function getKnownLocations() {
+      if (!currentEnsembleData) return [];
+      const counts = new Map();
+      const addLoc = (raw) => {
+        const s = String(raw || "").trim();
+        if (s) counts.set(s, (counts.get(s) || 0) + 1);
+      };
+      Object.values(currentEnsembleData.rehearsals || {}).forEach((r) => addLoc(r.location));
+      Object.values(currentEnsembleData.polls || {}).forEach((p) => addLoc(p.location));
+      Object.values(currentEnsembleData.archivedPolls || {}).forEach((a) => addLoc(a.location));
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([loc]) => loc).slice(0, 6);
+    }
+
+    function renderLocationSuggestions(containerId, inputId) {
+      const box = $(containerId), inp = $(inputId);
+      if (!box || !inp) return;
+      const locs = getKnownLocations();
+      if (!locs.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+      box.classList.remove("hidden");
+      box.innerHTML = locs.map((l) => `<button type="button" class="loc-chip" data-pick-loc="${esc(l)}">📍 ${esc(l)}</button>`).join("");
+      box.onclick = (e) => {
+        const b = e.target.closest("[data-pick-loc]");
+        if (!b) return;
+        haptic();
+        inp.value = b.dataset.pickLoc;
+      };
+    }
+
     // Ouverture & fermeture des modales
     function openModal(id) {
       haptic();
       const today = new Date().toISOString().split("T")[0];
-      if (id === "modal-poll") ($("poll-slots-container").children.length ? updatePollConflictsWarning() : resetPollSlots());
+      if (id === "modal-poll") {
+        if (!refiningFixedDate && !selectedCalDates.size) resetPollSlots();
+        renderLocationSuggestions("poll-location-suggestions", "poll-location");
+      }
       if (id === "modal-rehearsal") {
         setEventTypeValue($("reh-type-holder"), "rehearsal", (t) => syncConcertFieldsVisibility("reh", t, "lbl-reh-start", "lbl-reh-end"));
         $("modal-reh-title").textContent = "Planifier un événement";
@@ -2300,7 +2557,22 @@
       a.click(); URL.revokeObjectURL(a.href); showToast("Fichier calendrier (.ics) téléchargé.");
     }
 
-    // Rendu Disponibilités (Cartes & Tableau)
+    // Rendu Disponibilités (Cartes, Express & Tableau)
+    async function savePollLocationSuggestion(pollId, rawVal) {
+      if (!session.activeEnsembleId || !pollId) return;
+      const val = String(rawVal || "").trim();
+      const me = session.ensembles[session.activeEnsembleId];
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/polls/${pollId}`), {
+          location: val,
+          locationSuggestedBy: val ? (me?.name || "") : null,
+          updatedAt: Date.now()
+        });
+        openLocationEditors.delete(pollId);
+        showToast(val ? `Lieu suggéré : ${val}` : "Lieu retiré.");
+      } catch (err) { handleFirebaseError(err); }
+    }
+
     async function saveVoteNote(pollId, rawVal) {
       const myId = session.ensembles[session.activeEnsembleId]?.memberId;
       if (!myId) return;
@@ -2352,6 +2624,7 @@
       haptic();
       const myId = session.ensembles[session.activeEnsembleId]?.memberId;
       if (!myId) return;
+      if (voteVal === "maybe") openNoteEditors.add(pollId);
       if (autoAdvance) {
         const idx = sortedPolls.findIndex((p) => p.id === pollId);
         let nextId = null;
@@ -2366,7 +2639,19 @@
       catch (err) { pendingScrollToPollId = null; handleFirebaseError(err); }
     }
 
-    let lastRenderedFilteredPolls = [];
+    async function voteAllUnvotedYes(unvotedPolls) {
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      if (!myId || !unvotedPolls.length) return;
+      haptic();
+      const updates = {};
+      unvotedPolls.forEach((p) => { updates[`${p.id}/votes/${myId}`] = "yes"; });
+      try {
+        await update(ref(db, `ensembles/${session.activeEnsembleId}/polls`), updates);
+        showToast(`${unvotedPolls.length} date(s) acceptée(s) d'un clic !`);
+      } catch (err) { handleFirebaseError(err); }
+    }
+
+    let lastRenderedFilteredPolls = [], lastRenderedUnvotedPolls = [];
 
     function renderPolls() {
       const container = $("polls-list"), toolbar = $("avail-toolbar"), navBadge = $("nav-avail-badge");
@@ -2378,7 +2663,9 @@
       const activeNote = activeEl?.classList?.contains("vote-note-input") ? { pollId: activeEl.dataset.noteInput, value: activeEl.value, selStart: activeEl.selectionStart } : null;
 
       const allPolls = smartSortPolls(Object.values(pollsObj).filter((p) => !isPollImpossibleAndComplete(p, members)), members, myId);
-      const unvotedCount = allPolls.filter((p) => !p.votes?.[myId]).length;
+      const unvotedPolls = allPolls.filter((p) => !p.votes?.[myId]);
+      const unvotedCount = unvotedPolls.length;
+      lastRenderedUnvotedPolls = unvotedPolls;
 
       navBadge.textContent = String(unvotedCount);
       navBadge.classList.toggle("hidden", !unvotedCount);
@@ -2428,6 +2715,30 @@
         return;
       }
 
+      // Bandeau Vote Express dès qu'il y a au moins 2 dates non votées
+      let expressBannerHtml = "";
+      if (unvotedCount >= 2) {
+        const nextP = unvotedPolls[0], tMeta = getEventMeta(nextP.eventType);
+        expressBannerHtml = `
+          <div class="express-vote-banner">
+            <div class="express-top-row">
+              <span class="express-badge">⚡ Vote Express • ${unvotedCount} à voter</span>
+              <button type="button" class="btn-confirm btn-xs" data-vote-all-yes>✓ Tout Oui (${unvotedCount})</button>
+            </div>
+            <div class="express-date-title">${esc(formatDateFr(nextP.date))}</div>
+            <div class="poll-subline" style="margin-bottom:4px">
+              <span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span>
+              <span class="time-pill ${nextP.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(nextP))}</span>
+              ${nextP.location ? `<strong>${esc(nextP.location)}</strong>` : ""}
+            </div>
+            <div class="express-vote-btns">
+              <button type="button" class="vote-btn active-yes" data-express-vote="${esc(nextP.id)}" data-val="yes">✓ Oui</button>
+              <button type="button" class="vote-btn active-maybe" data-express-vote="${esc(nextP.id)}" data-val="maybe">? Peut-être</button>
+              <button type="button" class="vote-btn active-no" data-express-vote="${esc(nextP.id)}" data-val="no">✕ Non</button>
+            </div>
+          </div>`;
+      }
+
       const filtered = allPolls.filter((p) => {
         const v = p.votes || {};
         if (availFilterMode === "unvoted") return !v[myId];
@@ -2437,14 +2748,39 @@
       lastRenderedFilteredPolls = filtered;
 
       if (!filtered.length) {
-        container.innerHTML = `<div class="empty-state"><p>${availFilterMode === "unvoted" ? "Vous avez voté sur toutes les dates proposées." : "Aucun créneau ne réunit encore l'unanimité."}</p><button type="button" class="btn-secondary btn-sm" data-reset-filter>Afficher toutes les dates actives (${allPolls.length})</button></div>`;
+        container.innerHTML = expressBannerHtml + `<div class="empty-state"><p>${availFilterMode === "unvoted" ? "Vous avez voté sur toutes les dates proposées." : "Aucun créneau ne réunit encore l'unanimité."}</p><button type="button" class="btn-secondary btn-sm" data-reset-filter>Afficher toutes les dates actives (${allPolls.length})</button></div>`;
         return;
       }
 
-      if (availViewMode === "table") return renderPollsTable(container, filtered, members, myId);
+      if (availViewMode === "express") return renderPollsExpressList(container, expressBannerHtml, filtered, members, myId);
+      if (availViewMode === "table") return renderPollsTable(container, expressBannerHtml, filtered, members, myId);
 
-      // Mode Cartes
-      container.innerHTML = filtered.map((p) => {
+      // Regroupement par date des créneaux proposés le même jour
+      const dayGroups = [], groupsByDate = new Map();
+      filtered.forEach((p) => {
+        if (!groupsByDate.has(p.date)) {
+          const grp = { date: p.date, slots: [] };
+          groupsByDate.set(p.date, grp);
+          dayGroups.push(grp);
+        }
+        groupsByDate.get(p.date).slots.push(p);
+      });
+
+      // Mode Cartes (1 carte par journée, avec sélecteur d'horaire si plusieurs créneaux le même jour)
+      container.innerHTML = expressBannerHtml + dayGroups.map((grp) => {
+        const sortedSlots = [...grp.slots].sort((a, b) => getPollSortKey(a).localeCompare(getPollSortKey(b)));
+        const isMultiSlot = sortedSlots.length > 1;
+
+        let selectedId = activeSlotByDate.get(grp.date);
+        if (!selectedId || !sortedSlots.some((s) => s.id === selectedId)) {
+          const defaultSlot = sortedSlots.find((s) => !s.votes?.[myId])
+            || sortedSlots.find((s) => total > 0 && members.filter((m) => s.votes?.[m.id] === "yes").length === total)
+            || sortedSlots[0];
+          selectedId = defaultSlot.id;
+          activeSlotByDate.set(grp.date, selectedId);
+        }
+        const p = sortedSlots.find((s) => s.id === selectedId) || sortedSlots[0];
+
         const v = p.votes || {}, notes = p.voteNotes || {}, myVote = v[myId] || "", myNote = notes[myId] || "";
         const yes = members.filter((m) => v[m.id] === "yes").length, missing = members.filter((m) => !v[m.id]);
         const full = total > 0 && yes === total, majority = !full && total > 0 && yes >= Math.ceil(total * 0.75);
@@ -2452,6 +2788,28 @@
         const tMeta = getEventMeta(p.eventType);
         const rank = { yes: 1, maybe: 2, no: 3 };
         const topBar = members.map((m) => v[m.id] || "pending").sort((a, b) => (rank[a] || 4) - (rank[b] || 4)).map((st) => `<span class="poll-top-seg ${st}"></span>`).join("");
+
+        const anyUnvotedInGroup = sortedSlots.some((s) => !s.votes?.[myId]);
+        const anyFullInGroup = sortedSlots.some((s) => total > 0 && members.filter((m) => s.votes?.[m.id] === "yes").length === total);
+
+        const daySlotsTabsHtml = isMultiSlot ? `
+          <div class="day-slots-tabs" role="tablist" aria-label="Créneaux horaires proposés ce jour">
+            ${sortedSlots.map((s) => {
+              const sv = s.votes || {};
+              const syes = members.filter((m) => sv[m.id] === "yes").length;
+              const sfull = total > 0 && syes === total;
+              const smy = sv[myId] || "";
+              const sym = { yes: "✓", maybe: "?", no: "✕" }[smy] || "○";
+              const isAct = s.id === p.id;
+              return `<button type="button" class="day-slot-tab ${isAct ? "active" : ""} ${sfull ? "consensus" : ""}" data-select-day-slot="${esc(grp.date)}" data-slot-id="${esc(s.id)}">
+                <span>${esc(formatPollTimeLabel(s))}</span>
+                <span style="display:inline-flex;align-items:center;gap:4px">
+                  <span style="font-size:11px;opacity:.85">${sfull ? "★" : `${syes}/${total}`}</span>
+                  <span class="slot-tab-vote-dot ${smy}">${sym}</span>
+                </span>
+              </button>`;
+            }).join("")}
+          </div>` : "";
 
         const conflicts = getUnavailabilityConflictsForDate(p.date).filter((c) => v[c.memberId] !== "yes");
         const unavailHtml = conflicts.length ? `<div class="unavail-notice">Absence : ${conflicts.map((c) => `<strong>${esc(c.memberName)}</strong>${c.reason ? ` (${esc(c.reason)})` : ""}`).join(", ")}</div>` : "";
@@ -2469,18 +2827,38 @@
 
         const showNote = Boolean(myNote) || openNoteEditors.has(p.id) || activeNote?.pollId === p.id;
         const noteHtml = showNote
-          ? `<div class="vote-note-bar"><input type="text" class="vote-note-input" data-note-input="${esc(p.id)}" maxlength="90" placeholder="Précision (ex: dispo dès 15h)..." value="${esc(myNote)}" /><button type="button" class="btn-secondary btn-xs" data-save-note="${esc(p.id)}">OK</button></div>`
+          ? `<div class="vote-note-bar"><input type="text" class="vote-note-input" data-note-input="${esc(p.id)}" maxlength="90" placeholder="Votre précision libre (ex: dispo dès 15h)..." value="${esc(myNote)}" /><button type="button" class="btn-secondary btn-xs" data-save-note="${esc(p.id)}">OK</button></div>`
           : `<div class="note-trigger-row"><button type="button" class="btn-add-note-link" data-open-note="${esc(p.id)}">+ Note</button></div>`;
 
-        const mainBtn = full && broad ? `<button type="button" class="btn-confirm btn-sm" data-refine-poll="${esc(p.id)}">Proposer des horaires</button>`
-          : full ? `<button type="button" class="btn-confirm btn-sm" data-confirm-poll="${esc(p.id)}">Valider dans l'agenda</button>`
+        const showLocBar = openLocationEditors.has(p.id);
+        const locHtml = showLocBar
+          ? `<div class="loc-inline-bar"><input type="text" class="loc-inline-input" data-loc-input="${esc(p.id)}" maxlength="70" placeholder="Suggérer un lieu (ex: Sion, Salle 103)..." value="${esc(p.location || "")}" /><button type="button" class="btn-secondary btn-xs" data-save-loc="${esc(p.id)}">OK</button><button type="button" class="btn-secondary btn-xs" data-cancel-loc="${esc(p.id)}">✕</button></div>`
+          : "";
+
+        const locBadgeHtml = p.location
+          ? `<button type="button" class="btn-suggest-loc" data-open-loc="${esc(p.id)}" title="Modifier ou suggérer un autre lieu">📍 ${esc(p.location)}${p.locationSuggestedBy ? ` (${esc(p.locationSuggestedBy)})` : ""}</button>`
+          : `<button type="button" class="btn-suggest-loc" data-open-loc="${esc(p.id)}">+ Suggérer un lieu</button>`;
+
+        const mainBtn = full && broad
+          ? `<button type="button" class="btn-confirm btn-sm" data-confirm-poll="${esc(p.id)}">Valider (choisir l'heure)</button><button type="button" class="btn-secondary btn-sm" data-refine-poll="${esc(p.id)}">Sonder l'heure</button>`
+          : full ? `<button type="button" class="btn-confirm btn-sm" data-confirm-poll="${esc(p.id)}">Valider ce créneau</button>`
           : missing.length ? `<button type="button" class="btn-secondary btn-sm" data-remind-poll="${esc(p.id)}">Relancer (${missing.length})</button>`
           : `<button type="button" class="btn-secondary btn-sm" data-confirm-poll="${esc(p.id)}">Valider</button>`;
 
-        return `<article class="card poll-card ${full ? "consensus-ready" : ""} ${!myVote ? "unvoted-highlight" : ""}" data-poll-card="${esc(p.id)}">
+        return `<article class="card poll-card ${anyFullInGroup ? "consensus-ready" : ""} ${anyUnvotedInGroup ? "unvoted-highlight" : ""}" data-poll-card="${esc(p.id)}" data-day-card="${esc(grp.date)}">
           <div class="poll-top-bar" aria-hidden="true">${topBar}</div>
-          <div class="poll-head-row"><h3 class="card-date">${esc(formatDateFr(p.date))}</h3><span class="consensus-badge ${full ? "full" : majority ? "partial-good" : ""}">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</span></div>
-          <div class="poll-subline"><span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}${p.note ? `<span>• ${esc(p.note)}</span>` : ""}</div>
+          <div class="poll-head-row">
+            <h3 class="card-date">${esc(formatDateFr(p.date))}</h3>
+            <span class="consensus-badge ${full ? "full" : majority ? "partial-good" : ""}">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</span>
+          </div>
+          ${daySlotsTabsHtml}
+          <div class="poll-subline">
+            <span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span>
+            ${!isMultiSlot ? `<span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>` : ""}
+            ${locBadgeHtml}
+            ${p.note ? `<span>• ${esc(p.note)}</span>` : ""}
+          </div>
+          ${locHtml}
           ${unavailHtml}
           <div class="vote-group">
             <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${esc(p.id)}" data-val="yes">✓ Oui</button>
@@ -2498,13 +2876,48 @@
         if (inp) { inp.value = activeNote.value; inp.focus(); if (typeof activeNote.selStart === "number") inp.setSelectionRange(activeNote.selStart, activeNote.selStart); }
       }
       if (pendingScrollToPollId) {
-        const card = container.querySelector(`[data-poll-card="${CSS.escape(pendingScrollToPollId)}"]`);
+        const targetPoll = filtered.find((x) => x.id === pendingScrollToPollId);
+        const card = container.querySelector(`[data-poll-card="${CSS.escape(pendingScrollToPollId)}"]`)
+          || (targetPoll ? container.querySelector(`[data-day-card="${CSS.escape(targetPoll.date)}"]`) : null);
         pendingScrollToPollId = null;
         if (card) requestAnimationFrame(() => { card.scrollIntoView({ behavior: "smooth", block: "center" }); card.classList.add("just-focused"); setTimeout(() => card.classList.remove("just-focused"), 1200); });
       }
     }
 
-    function renderPollsTable(container, filtered, members, myId) {
+    // Vue Liste Express (Ultra-compacte)
+    function renderPollsExpressList(container, expressBannerHtml, filtered, members, myId) {
+      const total = members.length;
+      const rows = filtered.map((p) => {
+        const v = p.votes || {}, myVote = v[myId] || "";
+        const yes = members.filter((m) => v[m.id] === "yes").length;
+        const full = total > 0 && yes === total;
+        const tMeta = getEventMeta(p.eventType);
+        return `
+          <div class="express-list-row ${full ? "consensus" : ""} ${!myVote ? "unvoted" : ""}">
+            <div class="express-row-info">
+              <div class="express-row-date">
+                <span>${esc(formatCompactDateFr(p.date))}</span>
+                <span class="event-type-badge ${tMeta.badgeCls}" style="font-size:10px;padding:1px 5px">${esc(tMeta.label)}</span>
+                <span class="consensus-badge ${full ? "full" : ""}" style="font-size:10.5px;padding:1px 6px">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</span>
+              </div>
+              <div class="express-row-meta">
+                <span>${esc(formatPollTimeLabel(p))}</span>
+                ${p.location ? `<span>• ${esc(p.location)}</span>` : ""}
+              </div>
+            </div>
+            <div class="express-row-btns">
+              <button type="button" class="mini-vbtn ${myVote === "yes" ? "active-yes" : ""}" data-express-vote="${esc(p.id)}" data-val="yes" aria-label="Oui">✓</button>
+              <button type="button" class="mini-vbtn ${myVote === "maybe" ? "active-maybe" : ""}" data-express-vote="${esc(p.id)}" data-val="maybe" aria-label="Peut-être">?</button>
+              <button type="button" class="mini-vbtn ${myVote === "no" ? "active-no" : ""}" data-express-vote="${esc(p.id)}" data-val="no" aria-label="Non">✕</button>
+              <button type="button" class="btn-secondary btn-more-dots" style="height:34px" data-poll-menu="${esc(p.id)}" aria-label="Options">•••</button>
+            </div>
+          </div>`;
+      }).join("");
+
+      container.innerHTML = expressBannerHtml + `<div class="card express-list-card">${rows}</div>`;
+    }
+
+    function renderPollsTable(container, expressBannerHtml, filtered, members, myId) {
       const total = members.length;
       const ordered = [...members.filter((m) => m.id === myId), ...members.filter((m) => m.id !== myId)];
       const notesList = [];
@@ -2546,7 +2959,7 @@
         </tr>`;
       }).join("");
 
-      container.innerHTML = `
+      container.innerHTML = expressBannerHtml + `
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Touchez votre case dans la colonne <strong>(Vous)</strong> pour alterner ✓ / ? / ✕.</div>
         <div class="card matrix-card"><div class="matrix-scroll"><table class="avail-matrix">
           <thead><tr><th>Date &amp; type</th><th>Score</th>${ordered.map((m) => `<th class="${m.id === myId ? "col-me" : ""}"><div>${esc(m.name)}${m.id === myId ? " (Vous)" : ""}</div><div style="font-weight:400;font-size:10.5px;color:var(--muted)">${esc(m.instrument)}</div></th>`).join("")}<th style="text-align:right;padding-right:12px">Actions</th></tr></thead>
@@ -2563,6 +2976,12 @@
       const myId = session.ensembles[session.activeEnsembleId]?.memberId;
 
       if (btn.hasAttribute("data-empty-add-poll")) { resetPollSlots(); return openModal("modal-poll"); }
+      if (btn.hasAttribute("data-vote-all-yes")) return voteAllUnvotedYes(lastRenderedUnvotedPolls);
+      if (btn.dataset.selectDaySlot) {
+        haptic();
+        activeSlotByDate.set(btn.dataset.selectDaySlot, btn.dataset.slotId);
+        return renderPolls();
+      }
       if (btn.hasAttribute("data-reset-filter") || btn.hasAttribute("data-go-arch")) {
         availFilterMode = btn.hasAttribute("data-go-arch") ? "archived" : "all";
         document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === availFilterMode));
@@ -2570,6 +2989,23 @@
       }
       if (btn.dataset.restoreArch) return promptRestoreArchivedPoll(archObj[btn.dataset.restoreArch]);
       if (btn.dataset.delArch) return promptDeleteArchivedPoll(archObj[btn.dataset.delArch]);
+      if (btn.dataset.expressVote) {
+        const p = pollsObj[btn.dataset.expressVote];
+        return p?.votes?.[myId] === btn.dataset.val
+          ? promptClearMyVote(p)
+          : castPollVote(btn.dataset.expressVote, btn.dataset.val, lastRenderedFilteredPolls, false);
+      }
+      if (btn.dataset.openLoc) {
+        haptic(); const id = btn.dataset.openLoc; openLocationEditors.add(id); renderPolls();
+        return requestAnimationFrame(() => $("polls-list").querySelector(`.loc-inline-input[data-loc-input="${CSS.escape(id)}"]`)?.focus());
+      }
+      if (btn.dataset.cancelLoc) {
+        haptic(); openLocationEditors.delete(btn.dataset.cancelLoc); return renderPolls();
+      }
+      if (btn.dataset.saveLoc) {
+        haptic(); const id = btn.dataset.saveLoc;
+        return savePollLocationSuggestion(id, $("polls-list").querySelector(`.loc-inline-input[data-loc-input="${CSS.escape(id)}"]`)?.value || "");
+      }
       if (btn.dataset.vote) {
         const p = pollsObj[btn.dataset.vote];
         return p?.votes?.[myId] === btn.dataset.val ? promptClearMyVote(p) : castPollVote(btn.dataset.vote, btn.dataset.val, lastRenderedFilteredPolls, true);
@@ -2606,6 +3042,9 @@
     $("polls-list").addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.target.classList?.contains("vote-note-input")) {
         e.preventDefault(); haptic(); e.target.blur(); saveVoteNote(e.target.dataset.noteInput, e.target.value);
+      }
+      if (e.key === "Enter" && e.target.classList?.contains("loc-inline-input")) {
+        e.preventDefault(); haptic(); e.target.blur(); savePollLocationSuggestion(e.target.dataset.locInput, e.target.value);
       }
     });
 
@@ -2739,8 +3178,8 @@
 
     $("form-poll").addEventListener("submit", async (e) => {
       e.preventDefault(); haptic();
-      const slots = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row")).map(readSlotRow).filter((s) => s.date && (s.timeMode !== "exact" || (s.startTime && s.endTime)));
-      if (!slots.length) return;
+      const slots = getPendingProposalSlots();
+      if (!slots.length) return showToast("Veuillez sélectionner au moins une date.");
       const blocked = slots.find(findArchivedSlotMatch);
       if (blocked) { updatePollConflictsWarning(); return showToast(`Le ${formatCompactDateFr(blocked.date)} est dans les archives : récupérez-le pour le rouvrir.`); }
 
