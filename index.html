@@ -1906,7 +1906,7 @@
       const mode = row.dataset.mode || "day", period = row.dataset.period || "";
       const dateInp = row.querySelector(".slot-date");
       return {
-        date: dateInp ? dateInp.value : "",
+        ...(dateInp ? { date: dateInp.value } : {}),
         timeMode: mode,
         period: mode === "period" ? period : "",
         startTime: mode === "exact" ? row.querySelector(".slot-start").value : "",
@@ -2093,7 +2093,7 @@
     // Édition d'un créneau
     function checkEditPollArchiveLock() {
       const holder = $("edit-poll-mode-holder"), warn = $("edit-poll-archive-warning"), btn = $("btn-submit-edit-poll");
-      const cand = { date: $("edit-poll-date").value, ...readSlotRow(holder) };
+      const cand = { ...readSlotRow(holder), date: $("edit-poll-date").value };
       const arch = cand.date ? findArchivedSlotMatch(cand) : null;
       warn.classList.toggle("hidden", !arch);
       warn.innerHTML = arch ? `<strong>Créneau archivé détecté</strong>Ce créneau (${esc(formatDateFr(cand.date))} • ${esc(formatPollTimeLabel(cand))}) est dans les archives. Vous pouvez le récupérer depuis l'onglet <em>Archives</em>.` : "";
@@ -2130,7 +2130,7 @@
       const dateVal = $("edit-poll-date").value;
       if (!dateVal) return showToast("Veuillez sélectionner une date.");
 
-      const slot = { date: dateVal, ...readSlotRow($("edit-poll-mode-holder")) };
+      const slot = { ...readSlotRow($("edit-poll-mode-holder")), date: dateVal };
       if (slot.timeMode === "exact" && (!slot.startTime || !slot.endTime)) {
         return showToast("Veuillez renseigner l'heure de début et de fin.");
       }
