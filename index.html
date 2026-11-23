@@ -203,9 +203,11 @@
     .alert-box strong { display: block; margin-bottom: 4px; }
     .info-banner-box { border: 1px solid var(--yes-border); background: var(--yes-bg); color: var(--fg); }
     .archive-lock-banner {
-      display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; color: var(--muted);
-      background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; margin-top: 10px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+      font-size: 12px; font-weight: 500; color: var(--muted);
+      background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-top: 10px;
     }
+    .archive-actions-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .consensus-badge {
       display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700;
       padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--subtle); color: var(--fg);
@@ -652,7 +654,7 @@
       </div>
       <form id="form-admin-announcement">
         <div class="row-2">
-          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v17" required /></div>
+          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v18" required /></div>
           <div class="field"><label for="admin-ann-title">Titre</label><input type="text" id="admin-ann-title" value="Nouveautés sur Cadenza" required /></div>
         </div>
         <div class="field"><label for="admin-ann-subtitle">Sous-titre (optionnel)</label><input type="text" id="admin-ann-subtitle" placeholder="Ex: Une nouvelle mise à jour est disponible :" /></div>
@@ -892,7 +894,7 @@
     import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-    const APP_VERSION = "v17";
+    const APP_VERSION = "v18";
     const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
     const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
     const KEYS = {
@@ -1163,7 +1165,7 @@
     $("edit-poll-mode-holder").innerHTML = buildModeSelectorHtml();
     bindModeSelector($("edit-poll-mode-holder"), checkEditPollArchiveLock);
 
-    // Archivage automatique & tri intelligent des disponibilités
+    // Archivage automatique, récupération & tri intelligent des disponibilités
     function isPollImpossibleAndComplete(poll, members) {
       if (!poll || !members?.length) return false;
       const v = poll.votes || {};
@@ -1193,6 +1195,113 @@
           : `${toArchive.length} créneaux avec indisponibilité archivés.`);
       } catch (e) { console.warn("Auto-archive:", e); }
       finally { isAutoArchivingPolls = false; }
+    }
+
+    // Récupération d'un créneau archivé pour le remettre en sondage actif
+    async function restoreArchivedPoll(archivedPoll) {
+      if (!archivedPoll || !session.activeEnsembleId) return;
+      const ensId = session.activeEnsembleId;
+      const members = Object.values(currentEnsembleData?.members || {});
+      const me = session.ensembles[ensId];
+      const oldVotes = archivedPoll.votes || {};
+      const oldNotes = archivedPoll.voteNotes || {};
+
+      // On conserve les votes "yes" et "maybe" et on réinitialise les votes "no" pour permettre aux membres devenus disponibles de revoter
+      const keptVotes = {};
+      const keptNotes = {};
+      const resetMemberIds = [];
+      const resetMemberNames = [];
+
+      members.forEach((m) => {
+        const v = oldVotes[m.id];
+        if (v === "yes" || v === "maybe") {
+          keptVotes[m.id] = v;
+          if (oldNotes[m.id]) keptNotes[m.id] = oldNotes[m.id];
+        } else if (v === "no") {
+          resetMemberIds.push(m.id);
+          resetMemberNames.push(m.name);
+        }
+      });
+
+      const restoredPoll = {
+        id: archivedPoll.id,
+        eventType: archivedPoll.eventType || "rehearsal",
+        date: archivedPoll.date,
+        timeMode: archivedPoll.timeMode || "day",
+        period: archivedPoll.period || "",
+        startTime: archivedPoll.startTime || "",
+        endTime: archivedPoll.endTime || "",
+        location: archivedPoll.location || "",
+        note: archivedPoll.note || "",
+        createdBy: archivedPoll.createdBy || me?.name || "",
+        restoredAt: Date.now(),
+        restoredBy: me?.name || "",
+        ...(Object.keys(keptVotes).length ? { votes: keptVotes } : {}),
+        ...(Object.keys(keptNotes).length ? { voteNotes: keptNotes } : {})
+      };
+
+      try {
+        await update(ref(db, `ensembles/${ensId}`), {
+          [`polls/${archivedPoll.id}`]: restoredPoll,
+          [`archivedPolls/${archivedPoll.id}`]: null
+        });
+
+        const tMeta = getEventMeta(restoredPoll.eventType);
+        const timeLabel = formatPollTimeLabel(restoredPoll);
+        const targetInfo = resetMemberNames.length
+          ? `${resetMemberNames.join(", ")} : le sondage est rouvert pour mettre à jour votre disponibilité.`
+          : "Le créneau a été remis en sondage actif.";
+
+        await publishEnsembleNotification(
+          `Sondage rouvert (${tMeta.label}) — ${currentEnsembleData?.name || "Cadenza"}`,
+          `${me?.name || "Un membre"} a récupéré le ${formatDateFr(restoredPoll.date)}${timeLabel ? ` (${timeLabel})` : ""}. ${targetInfo}`,
+          resetMemberIds.length ? { targetMemberIds: resetMemberIds } : {}
+        );
+
+        availFilterMode = "all";
+        document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === "all"));
+        pendingScrollToPollId = restoredPoll.id;
+        showToast("Créneau récupéré et remis en sondage actif.");
+      } catch (err) {
+        handleFirebaseError(err);
+      }
+    }
+
+    function promptRestoreArchivedPoll(archivedPoll) {
+      if (!archivedPoll) return;
+      const t = formatPollTimeLabel(archivedPoll);
+      const tMeta = getEventMeta(archivedPoll.eventType);
+      const unavailNames = archivedPoll.unavailableMembers?.length
+        ? archivedPoll.unavailableMembers.join(", ")
+        : "les membres indisponibles";
+
+      openConfirmationModal({
+        title: "Récupérer ce créneau ?",
+        context: `${tMeta.label} • ${formatDateFr(archivedPoll.date)}${t ? ` • ${t}` : ""}`,
+        message: `Ce créneau sera remis dans les sondages actifs. Les réponses « Oui » et « Peut-être » seront conservées, tandis que les « Non » (${unavailNames}) seront réinitialisés pour permettre un nouveau vote.`,
+        confirmLabel: "Remettre en sondage",
+        danger: false,
+        onConfirm: () => restoreArchivedPoll(archivedPoll)
+      });
+    }
+
+    function promptDeleteArchivedPoll(archivedPoll) {
+      if (!archivedPoll) return;
+      const t = formatPollTimeLabel(archivedPoll);
+      const tMeta = getEventMeta(archivedPoll.eventType);
+      openConfirmationModal({
+        title: "Supprimer définitivement ?",
+        context: `${tMeta.label} • ${formatDateFr(archivedPoll.date)}${t ? ` • ${t}` : ""}`,
+        message: "Cette archive sera définitivement effacée (et le créneau ne sera plus bloqué).",
+        confirmLabel: "Supprimer",
+        danger: true,
+        onConfirm: async () => {
+          try {
+            await remove(ref(db, `ensembles/${session.activeEnsembleId}/archivedPolls/${archivedPoll.id}`));
+            showToast("Archive supprimée.");
+          } catch (err) { handleFirebaseError(err); }
+        }
+      });
     }
 
     function smartSortPolls(polls, members, myId) {
@@ -1607,15 +1716,24 @@
       const warnBox = $("poll-unavail-warning"), lockBox = $("poll-archive-lock-warning"), subBtn = $("btn-submit-poll");
       const slots = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row")).map(readSlotRow).filter((s) => s.date);
 
+      const lockedMatches = [];
       const lockedLines = slots.map((s) => {
         const arch = findArchivedSlotMatch(s);
         if (!arch) return "";
+        lockedMatches.push(arch);
         const abs = arch.unavailableMembers?.length ? ` (indisponibilité de ${esc(arch.unavailableMembers.join(", "))})` : "";
         return `• <strong>${esc(formatDateFr(s.date))} (${esc(formatPollTimeLabel(s))})</strong> : sondage déjà effectué et archivé${abs}.`;
       }).filter(Boolean);
 
       lockBox.classList.toggle("hidden", !lockedLines.length);
-      lockBox.innerHTML = lockedLines.length ? `<strong>Créneau bloqué (déjà archivé)</strong>${lockedLines.join("<br>")}Impossible de relancer un sondage archivé.` : "";
+      if (lockedLines.length) {
+        const restoreBtnHtml = lockedMatches.length === 1
+          ? `<div style="margin-top:8px"><button type="button" class="btn-secondary btn-xs" data-unlock-archived="${esc(lockedMatches[0].id)}">↻ Récupérer ce sondage archivé</button></div>`
+          : `<div style="margin-top:8px"><button type="button" class="btn-secondary btn-xs" data-goto-archived-tab>Voir les archives pour récupérer</button></div>`;
+        lockBox.innerHTML = `<strong>Créneau archivé détecté</strong>${lockedLines.join("<br>")}Récupérez-le depuis les archives si un membre est finalement disponible.${restoreBtnHtml}`;
+      } else {
+        lockBox.innerHTML = "";
+      }
       subBtn.disabled = lockedLines.length > 0;
 
       const conflictLines = [];
@@ -1629,6 +1747,22 @@
       warnBox.classList.toggle("hidden", !conflictLines.length);
       warnBox.innerHTML = conflictLines.length ? `<strong>Indisponibilité signalée sur ces dates</strong>${conflictLines.join("<br>")}` : "";
     }
+
+    $("poll-archive-lock-warning").addEventListener("click", (e) => {
+      const unlockBtn = e.target.closest("[data-unlock-archived]");
+      if (unlockBtn) {
+        const arch = currentEnsembleData?.archivedPolls?.[unlockBtn.dataset.unlockArchived];
+        closeModal("modal-poll");
+        if (arch) promptRestoreArchivedPoll(arch);
+        return;
+      }
+      if (e.target.closest("[data-goto-archived-tab]")) {
+        closeModal("modal-poll");
+        availFilterMode = "archived";
+        document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === "archived"));
+        renderPolls();
+      }
+    });
 
     function refreshPollSlotsUI() {
       const rows = $("poll-slots-container").querySelectorAll(".poll-slot-row");
@@ -1731,7 +1865,7 @@
       const cand = { date: $("edit-poll-date").value, ...readSlotRow(holder) };
       const arch = cand.date ? findArchivedSlotMatch(cand) : null;
       warn.classList.toggle("hidden", !arch);
-      warn.innerHTML = arch ? `<strong>Créneau bloqué (déjà archivé)</strong>Ce créneau (${esc(formatDateFr(cand.date))} • ${esc(formatPollTimeLabel(cand))}) a déjà été archivé.` : "";
+      warn.innerHTML = arch ? `<strong>Créneau archivé détecté</strong>Ce créneau (${esc(formatDateFr(cand.date))} • ${esc(formatPollTimeLabel(cand))}) est dans les archives. Vous pouvez le récupérer depuis l'onglet <em>Archives</em>.` : "";
       btn.disabled = Boolean(arch);
     }
 
@@ -1759,7 +1893,7 @@
       const slot = { date: $("edit-poll-date").value, ...readSlotRow($("edit-poll-mode-holder")) };
       const eventType = $("edit-poll-type-holder").dataset.value || "rehearsal";
       if (!slot.date || (slot.timeMode === "exact" && (!slot.startTime || !slot.endTime))) return;
-      if (findArchivedSlotMatch(slot)) return showToast("Ce créneau a déjà été archivé.");
+      if (findArchivedSlotMatch(slot)) return showToast("Ce créneau est dans les archives. Récupérez-le depuis l'onglet Archives.");
 
       const changed = getSlotFingerprint(oldPoll) !== getSlotFingerprint(slot);
       const me = session.ensembles[session.activeEnsembleId];
@@ -2270,14 +2404,20 @@
           return;
         }
         const sortedArch = [...archList].sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
-        container.innerHTML = `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Créneaux clos avec au moins une indisponibilité.</div>` + sortedArch.map((p) => {
+        container.innerHTML = `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Créneaux clos avec au moins une indisponibilité. Récupérez un créneau si un membre est finalement libre.</div>` + sortedArch.map((p) => {
           const v = p.votes || {}, yes = members.filter((m) => v[m.id] === "yes").length, tMeta = getEventMeta(p.eventType);
           return `<article class="card archived-card">
             <div class="poll-head-row"><h3 class="card-date">${esc(formatDateFr(p.date))}</h3><span class="consensus-badge archived">✕ ${yes}/${total}</span></div>
             <div class="poll-subline"><span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(p.location)}</strong>` : ""}</div>
             ${p.note ? `<div class="card-meta">${esc(p.note)}</div>` : ""}
             <div class="member-votes-list">${members.map((m) => chipHtml(m, v, p.voteNotes || {})).join("")}</div>
-            <div class="archive-lock-banner"><span>🔒 Sondage archivé — relance verrouillée.</span></div>
+            <div class="archive-lock-banner">
+              <span>🔒 Sondage archivé</span>
+              <div class="archive-actions-group">
+                <button type="button" class="btn-primary btn-xs" data-restore-arch="${esc(p.id)}">↻ Récupérer</button>
+                <button type="button" class="btn-del-subtle btn-xs" data-del-arch="${esc(p.id)}" aria-label="Supprimer définitivement">✕</button>
+              </div>
+            </div>
           </article>`;
         }).join("");
         return;
@@ -2419,7 +2559,8 @@
     $("polls-list").addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (!btn) return;
-      const pollsObj = currentEnsembleData?.polls || {}, myId = session.ensembles[session.activeEnsembleId]?.memberId;
+      const pollsObj = currentEnsembleData?.polls || {}, archObj = currentEnsembleData?.archivedPolls || {};
+      const myId = session.ensembles[session.activeEnsembleId]?.memberId;
 
       if (btn.hasAttribute("data-empty-add-poll")) { resetPollSlots(); return openModal("modal-poll"); }
       if (btn.hasAttribute("data-reset-filter") || btn.hasAttribute("data-go-arch")) {
@@ -2427,6 +2568,8 @@
         document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === availFilterMode));
         return renderPolls();
       }
+      if (btn.dataset.restoreArch) return promptRestoreArchivedPoll(archObj[btn.dataset.restoreArch]);
+      if (btn.dataset.delArch) return promptDeleteArchivedPoll(archObj[btn.dataset.delArch]);
       if (btn.dataset.vote) {
         const p = pollsObj[btn.dataset.vote];
         return p?.votes?.[myId] === btn.dataset.val ? promptClearMyVote(p) : castPollVote(btn.dataset.vote, btn.dataset.val, lastRenderedFilteredPolls, true);
@@ -2599,7 +2742,7 @@
       const slots = Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row")).map(readSlotRow).filter((s) => s.date && (s.timeMode !== "exact" || (s.startTime && s.endTime)));
       if (!slots.length) return;
       const blocked = slots.find(findArchivedSlotMatch);
-      if (blocked) { updatePollConflictsWarning(); return showToast(`Impossible : le ${formatCompactDateFr(blocked.date)} a déjà été archivé.`); }
+      if (blocked) { updatePollConflictsWarning(); return showToast(`Le ${formatCompactDateFr(blocked.date)} est dans les archives : récupérez-le pour le rouvrir.`); }
 
       const eventType = $("poll-type-holder").dataset.value || "rehearsal";
       const location = $("poll-location").value.trim(), note = $("poll-note").value.trim(), me = session.ensembles[session.activeEnsembleId];
