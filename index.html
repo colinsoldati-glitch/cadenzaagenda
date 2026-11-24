@@ -418,18 +418,73 @@
     }
     @media (min-width: 640px) {
       .modal-backdrop { align-items: center; padding: 16px; }
-      .modal-sheet { border-radius: 12px; border: 1px solid var(--border); max-width: 460px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1); }
+      .modal-sheet { border-radius: 12px; border: 1px solid var(--border); max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, .1); }
     }
     .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .modal-title { font-family: var(--font-serif); font-size: 19px; margin: 0; }
 
-    /* Portail Admin, Nouveautés & Onboarding */
+    /* Portail Admin, Sondages & Retours Utilisateurs */
     .pin-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 26px; font-weight: 700; letter-spacing: .45em; text-align: center; padding: 12px 14px; }
     .whats-new-hero { background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border: 1px solid var(--accent-border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
     .whats-new-badge { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent-fg); background: #fff; border: 1px solid var(--accent-border); padding: 2px 8px; border-radius: 999px; margin-bottom: 6px; }
     .release-notes-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 9px; }
     .release-notes-list li { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; background: var(--subtle); padding: 9px 11px; border-radius: 8px; }
     .release-notes-check { color: var(--yes-fg); font-weight: 700; flex-shrink: 0; }
+
+    .admin-nav-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--subtle); border: 1px solid var(--border); border-radius: 9px; padding: 3px; margin-bottom: 16px; }
+    .admin-nav-tab { border: none; background: transparent; color: var(--muted); padding: 8px 10px; font-size: 13px; font-weight: 500; border-radius: 7px; }
+    .admin-nav-tab.active { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+    .admin-count-pill { display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: var(--accent-bg); color: var(--accent-fg); border: 1px solid var(--accent-border); }
+
+    .admin-type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 14px; }
+    .admin-type-btn {
+      flex-direction: column; align-items: flex-start; gap: 2px; padding: 9px 10px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--fg); text-align: left;
+    }
+    .admin-type-btn .atype-title { font-size: 13px; font-weight: 600; }
+    .admin-type-btn .atype-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+    .admin-type-btn.active { border-color: var(--fg); background: var(--fg); color: #fff; }
+    .admin-type-btn.active .atype-sub { color: rgba(255, 255, 255, .75); }
+
+    .poll-opt-builder-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+    .poll-opt-builder-row input { font-size: 13.5px; padding: 8px 10px; }
+    .btn-remove-opt { width: 34px; height: 36px; padding: 0; border-color: var(--border); color: var(--muted); flex-shrink: 0; }
+    .btn-remove-opt:hover { color: var(--no-fg); border-color: var(--no-border); background: var(--no-bg); }
+
+    .user-poll-options-list { display: grid; gap: 8px; margin-bottom: 14px; }
+    .user-poll-option-btn {
+      width: 100%; justify-content: flex-start; text-align: left; padding: 11px 13px;
+      border: 1.5px solid var(--border); background: var(--surface); color: var(--fg); font-size: 14px; font-weight: 500;
+    }
+    .user-poll-option-btn:hover { border-color: var(--muted); background: var(--subtle); }
+    .user-poll-option-btn.selected { border-color: var(--accent-fg); background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
+    .poll-radio-circle {
+      width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--muted);
+      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px;
+    }
+    .user-poll-option-btn.selected .poll-radio-circle { border-color: var(--accent-fg); background: var(--accent-fg); color: #fff; }
+
+    .message-free-box {
+      background: var(--subtle); border: 1px solid var(--border); border-radius: 10px;
+      padding: 13px 14px; margin-bottom: 16px; font-size: 14.5px; line-height: 1.55;
+      color: var(--fg); white-space: pre-line;
+    }
+
+    .result-stat-row { margin-bottom: 11px; }
+    .result-stat-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 4px; gap: 8px; }
+    .result-bar-track { height: 9px; background: var(--subtle); border-radius: 999px; overflow: hidden; border: 1px solid var(--border); }
+    .result-bar-fill { height: 100%; background: var(--accent-fg); border-radius: 999px; transition: width .3s ease; }
+    .result-bar-fill.winner { background: var(--yes-solid); }
+    .feedback-response-card {
+      border: 1px solid var(--border); background: var(--subtle); border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 8px; font-size: 13px;
+    }
+    .feedback-response-meta { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+    .code-snippet-box {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+      background: #1e293b; color: #f8fafc; padding: 10px; border-radius: 8px;
+      overflow-x: auto; margin-top: 8px; white-space: pre;
+    }
 
     .onboarding-wrap { max-width: 460px; margin: 20px auto; }
     .onboarding-logo { text-align: center; margin-bottom: 24px; }
@@ -743,43 +798,161 @@
     </div>
   </div>
 
+  <!-- Portail d'Administration enrichi : Diffusion Pop-up + Résultats & Retours -->
   <div id="modal-admin-portal" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title">Portail d'administration</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-admin-portal">Fermer</button></div>
+
+      <div class="admin-nav-tabs" role="tablist">
+        <button type="button" class="admin-nav-tab active" data-admin-tab="publish">Diffuser une pop-up</button>
+        <button type="button" class="admin-nav-tab" data-admin-tab="results">Résultats &amp; Retours <span id="admin-results-badge" class="admin-count-pill hidden">0</span></button>
+      </div>
+
       <div id="admin-firebase-warning" class="alert-box hidden"><strong>Accès refusé par Firebase</strong><span>Vérifiez <code>admin_config/secret_pin</code> dans Firebase.</span></div>
-      <div class="card" style="padding: 12px 14px; margin-bottom: 16px;">
-        <div class="card-kicker">Annonce actuellement active</div>
-        <div id="admin-current-announcement" style="font-size: 13.5px; color: var(--muted); margin-top: 4px;">Aucune annonce publiée.</div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
-          <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Revoir la pop-up</button>
-          <button type="button" id="btn-admin-clear-announcement" class="btn-del-subtle btn-xs hidden">Désactiver</button>
+
+      <!-- ONGLET 1 : DIFFUSER UNE POP-UP -->
+      <div id="admin-panel-publish">
+        <div class="card" style="padding: 12px 14px; margin-bottom: 16px;">
+          <div class="card-kicker">Pop-up actuellement active</div>
+          <div id="admin-current-announcement" style="font-size: 13.5px; color: var(--muted); margin-top: 4px;">Aucune pop-up publiée.</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+            <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Revoir la pop-up</button>
+            <button type="button" id="btn-admin-clear-announcement" class="btn-del-subtle btn-xs hidden">Désactiver</button>
+          </div>
+        </div>
+
+        <form id="form-admin-announcement" novalidate>
+          <div class="field" style="margin-bottom: 10px;">
+            <label>Type de fenêtre pop-up</label>
+            <div class="admin-type-grid" id="admin-popup-type-grid">
+              <button type="button" class="admin-type-btn active" data-popup-type="poll">
+                <span class="atype-title">📊 Sondage (Vote)</span>
+                <span class="atype-sub">Choix personnalisés</span>
+              </button>
+              <button type="button" class="admin-type-btn" data-popup-type="feedback">
+                <span class="atype-title">💬 Demande d'avis</span>
+                <span class="atype-sub">Retour écrit libre</span>
+              </button>
+              <button type="button" class="admin-type-btn" data-popup-type="message">
+                <span class="atype-title">📢 Message libre</span>
+                <span class="atype-sub">Annonce personnalisée</span>
+              </button>
+              <button type="button" class="admin-type-btn" data-popup-type="update">
+                <span class="atype-title">✨ Mise à jour</span>
+                <span class="atype-sub">Liste de nouveautés</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="row-2">
+            <div class="field"><label for="admin-ann-version">Badge / Étiquette</label><input type="text" id="admin-ann-version" placeholder="Ex: Sondage, v20.2..." required /></div>
+            <div class="field"><label for="admin-ann-title">Titre de la fenêtre</label><input type="text" id="admin-ann-title" value="Votre avis sur Cadenza" required /></div>
+          </div>
+          <div class="field"><label for="admin-ann-subtitle" id="lbl-admin-subtitle">Question ou sous-titre</label><input type="text" id="admin-ann-subtitle" placeholder="Ex: Quelle fonctionnalité souhaitez-vous en priorité ?" /></div>
+
+          <!-- Champs : Sondage personnalisé -->
+          <div id="admin-fields-poll">
+            <div class="field">
+              <label>Choix de vote personnalisés</label>
+              <div id="admin-poll-options-list"></div>
+              <button type="button" id="btn-admin-add-option" class="btn-secondary btn-xs btn-full" style="margin-top: 4px;">+ Ajouter un choix de vote</button>
+            </div>
+            <label class="toggle-row" for="admin-poll-allow-comment" style="margin-top: 0; margin-bottom: 14px; padding-top: 8px;">
+              <input type="checkbox" id="admin-poll-allow-comment" checked />
+              <span>Permettre aux utilisateurs d'ajouter un commentaire écrit facultatif</span>
+            </label>
+          </div>
+
+          <!-- Champs : Demande de retour écrit -->
+          <div id="admin-fields-feedback" class="hidden">
+            <div class="field">
+              <label for="admin-feedback-placeholder">Indication dans le champ de réponse</label>
+              <input type="text" id="admin-feedback-placeholder" value="Écrivez votre retour, idée ou remarque ici..." />
+            </div>
+          </div>
+
+          <!-- Champs : Message libre personnalisé -->
+          <div id="admin-fields-message" class="hidden">
+            <div class="field">
+              <label for="admin-message-body">Contenu de votre message</label>
+              <textarea id="admin-message-body" rows="4" placeholder="Écrivez librement le texte que vous souhaitez afficher aux utilisateurs..."></textarea>
+            </div>
+            <div class="field">
+              <label for="admin-message-cta">Texte du bouton de fermeture</label>
+              <input type="text" id="admin-message-cta" value="J'ai compris, fermer" />
+            </div>
+          </div>
+
+          <!-- Champs : Annonce de mise à jour -->
+          <div id="admin-fields-update" class="hidden">
+            <div class="field"><label for="admin-ann-notes">Nouveautés (une par ligne)</label><textarea id="admin-ann-notes" rows="4" placeholder="Nouveau calendrier multi-dates&#10;Gestion des concerts et cours"></textarea></div>
+          </div>
+
+          <div style="display: grid; gap: 8px;">
+            <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser la pop-up</button>
+            <button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ONGLET 2 : RÉSULTATS DES SONDAGES & RETOURS UTILISATEURS -->
+      <div id="admin-panel-results" class="hidden">
+        <div id="admin-feedback-rules-warning" class="alert-box hidden">
+          <strong>Autorisation Firebase requise pour les retours</strong>
+          <span>Ajoutez la règle suivante dans Firebase Realtime Database pour recevoir et lire les votes/retours :</span>
+          <div class="code-snippet-box" id="firebase-feedback-rule-snippet">"app_feedback": {
+  ".read": true,
+  ".write": true
+}</div>
+          <button type="button" id="btn-copy-fb-rule" class="btn-secondary btn-xs" style="margin-top: 8px;">Copier la règle</button>
+        </div>
+
+        <div id="admin-results-empty" class="empty-state" style="padding: 24px 14px;">
+          <p style="margin-bottom: 6px;">Aucun sondage ni retour utilisateur enregistré pour le moment.</p>
+          <span style="font-size: 12.5px;">Publiez un sondage ou une demande d'avis pour voir les réponses s'afficher ici en direct.</span>
+        </div>
+
+        <div id="admin-results-content" class="hidden">
+          <div class="field">
+            <label for="admin-results-campaign-select">Sondage ou campagne de retour</label>
+            <select id="admin-results-campaign-select"></select>
+          </div>
+
+          <div class="card" style="padding: 13px 14px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+              <div>
+                <span class="whats-new-badge" id="res-campaign-badge" style="margin-bottom: 4px;">Sondage</span>
+                <div style="font-weight: 700; font-size: 15px;" id="res-campaign-title">—</div>
+                <div style="font-size: 13px; color: var(--muted);" id="res-campaign-subtitle">—</div>
+              </div>
+              <span class="consensus-badge full" id="res-total-count">0 réponse</span>
+            </div>
+
+            <div id="res-poll-bars-container" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--subtle);"></div>
+          </div>
+
+          <div class="card" style="padding: 13px 14px;">
+            <div class="card-kicker" style="margin-bottom: 8px;">Commentaires &amp; Retours écrits (<span id="res-comments-count">0</span>)</div>
+            <div id="res-comments-list"></div>
+          </div>
+
+          <button type="button" id="btn-admin-delete-campaign-results" class="btn-del-subtle btn-xs btn-full">Supprimer les résultats de cette campagne</button>
         </div>
       </div>
-      <form id="form-admin-announcement">
-        <div class="row-2">
-          <div class="field"><label for="admin-ann-version">Version / Badge</label><input type="text" id="admin-ann-version" placeholder="Ex: v19" required /></div>
-          <div class="field"><label for="admin-ann-title">Titre</label><input type="text" id="admin-ann-title" value="Nouveautés sur Cadenza" required /></div>
-        </div>
-        <div class="field"><label for="admin-ann-subtitle">Sous-titre (optionnel)</label><input type="text" id="admin-ann-subtitle" placeholder="Ex: Une nouvelle mise à jour est disponible :" /></div>
-        <div class="field"><label for="admin-ann-notes">Nouveautés (une par ligne)</label><textarea id="admin-ann-notes" rows="4" required></textarea></div>
-        <div style="display: grid; gap: 8px;">
-          <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser</button>
-          <button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
-        </div>
-      </form>
     </div>
   </div>
 
+  <!-- Modale Universelle Pop-up Utilisateur (Mise à jour, Sondage, Avis, Message libre) -->
   <div id="modal-whats-new" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title" id="whats-new-title">Nouveautés sur Cadenza</h3><button type="button" class="btn-secondary btn-sm" id="btn-close-whats-new-top">Fermer</button></div>
       <div class="whats-new-hero">
         <span class="whats-new-badge" id="whats-new-version-badge">Mise à jour</span>
-        <div id="whats-new-subtitle" style="font-size: 14px; font-weight: 500;">Découvrez les dernières améliorations :</div>
+        <div id="whats-new-subtitle" style="font-size: 14.5px; font-weight: 600; color: var(--fg);">Découvrez les dernières améliorations :</div>
         <div id="whats-new-date" style="font-size: 12px; color: var(--muted); margin-top: 3px;"></div>
       </div>
-      <ul id="whats-new-list" class="release-notes-list"></ul>
-      <button type="button" id="btn-dismiss-whats-new" class="btn-primary btn-full">J'ai compris, fermer</button>
+      <div id="whats-new-dynamic-body"></div>
+      <div id="whats-new-footer-actions" style="display: grid; gap: 8px;"></div>
     </div>
   </div>
 
@@ -1025,7 +1198,7 @@
     import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
     import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-    const APP_VERSION = "v20.1";
+    const APP_VERSION = "v20.2";
     const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
     const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
     const KEYS = {
@@ -1033,7 +1206,8 @@
       invite: "cadenza_pending_invite_v2",
       tuto: "cadenza_install_tuto_seen_v1",
       ann: "cadenza_seen_announcement_id_v1",
-      evtTs: "cadenza_last_event_ts"
+      evtTs: "cadenza_last_event_ts",
+      voter: "cadenza_voter_device_id_v1"
     };
 
     const EVENT_TYPES = {
@@ -1066,6 +1240,10 @@
     const selectedCalDates = new Set();
     let ensembleTapCount = 0, ensembleTapTimer = null, verifiedAdminPin = null;
     let latestAnnouncementData = null, displayedAnnouncementId = null, isPreviewingWhatsNew = false;
+    let adminActiveTab = "publish", adminPopupType = "poll";
+    let adminPollOptions = ["Oui, tout à fait", "Plutôt oui", "Non, pas besoin"];
+    let selectedUserPollOptionIndex = null, currentRenderedPopupData = null;
+    let allFeedbackCampaigns = {}, selectedResultsCampaignId = null, feedbackPermissionDenied = false;
     const openNoteEditors = new Set(), openLocationEditors = new Set(), expandedMemberLists = new Set();
     const activeSlotByDate = new Map();
 
@@ -1074,6 +1252,19 @@
     const haptic = () => navigator.vibrate && navigator.vibrate(10);
     const genId = (p) => `${p}-${Array.from({ length: 6 }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("")}`;
     const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
+
+    function getVoterDeviceId() {
+      let id = localStorage.getItem(KEYS.voter);
+      if (!id) { id = genId("usr"); localStorage.setItem(KEYS.voter, id); }
+      return id;
+    }
+
+    function getCurrentRespondentLabel() {
+      const ses = session.activeEnsembleId ? session.ensembles[session.activeEnsembleId] : null;
+      if (!ses?.name) return "Utilisateur Cadenza";
+      const details = [ses.instrument, ses.ensembleName].filter(Boolean).join(" — ");
+      return details ? `${ses.name} (${details})` : ses.name;
+    }
 
     $("app-version-label").textContent = APP_VERSION;
 
@@ -1533,7 +1724,17 @@
       return out;
     }
 
-    // Portail Admin & Pop-up Nouveautés
+    // =========================================================================
+    // PORTAIL ADMIN : DIFFUSION DE POP-UPS (SONDAGES, AVIS, MESSAGES, MISES À JOUR)
+    // ET CONSULTATION DES RÉSULTATS EN TEMPS RÉEL
+    // =========================================================================
+    const POPUP_TYPE_META = {
+      poll: { label: "Sondage", defaultBadge: "Sondage", defaultTitle: "Votre avis sur Cadenza", defaultSub: "Quelle option préférez-vous ?" },
+      feedback: { label: "Demande d'avis", defaultBadge: "Retour", defaultTitle: "Vos idées & retours", defaultSub: "Aidez-nous à améliorer Cadenza :" },
+      message: { label: "Message", defaultBadge: "Info", defaultTitle: "Message de l'équipe Cadenza", defaultSub: "Information importante :" },
+      update: { label: "Mise à jour", defaultBadge: APP_VERSION, defaultTitle: "Nouveautés sur Cadenza", defaultSub: "Découvrez les dernières améliorations :" }
+    };
+
     function openAdminPinPrompt() {
       haptic();
       $("admin-pin-input").value = "";
@@ -1542,34 +1743,297 @@
       setTimeout(() => $("admin-pin-input").focus(), 80);
     }
 
+    function switchAdminPortalTab(tab) {
+      adminActiveTab = tab;
+      document.querySelectorAll("[data-admin-tab]").forEach((b) => b.classList.toggle("active", b.dataset.adminTab === tab));
+      $("admin-panel-publish").classList.toggle("hidden", tab !== "publish");
+      $("admin-panel-results").classList.toggle("hidden", tab !== "results");
+      if (tab === "results") renderAdminResultsPanel();
+    }
+
+    document.querySelectorAll("[data-admin-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        haptic();
+        switchAdminPortalTab(btn.dataset.adminTab);
+      });
+    });
+
+    function setAdminPopupType(type) {
+      adminPopupType = POPUP_TYPE_META[type] ? type : "poll";
+      document.querySelectorAll("[data-popup-type]").forEach((b) => b.classList.toggle("active", b.dataset.popupType === adminPopupType));
+      $("admin-fields-poll").classList.toggle("hidden", adminPopupType !== "poll");
+      $("admin-fields-feedback").classList.toggle("hidden", adminPopupType !== "feedback");
+      $("admin-fields-message").classList.toggle("hidden", adminPopupType !== "message");
+      $("admin-fields-update").classList.toggle("hidden", adminPopupType !== "update");
+
+      const meta = POPUP_TYPE_META[adminPopupType];
+      $("admin-ann-version").placeholder = `Ex: ${meta.defaultBadge}`;
+      if (!$("admin-ann-version").dataset.touched) $("admin-ann-version").value = meta.defaultBadge;
+      if (!$("admin-ann-title").dataset.touched) $("admin-ann-title").value = meta.defaultTitle;
+      $("lbl-admin-subtitle").textContent = adminPopupType === "poll" ? "Question du sondage" : adminPopupType === "feedback" ? "Question posée aux utilisateurs" : "Sous-titre (optionnel)";
+      $("admin-ann-subtitle").placeholder = meta.defaultSub;
+      if (adminPopupType === "poll") renderAdminPollOptionsBuilder();
+    }
+
+    ["admin-ann-version", "admin-ann-title"].forEach((id) => {
+      $(id).addEventListener("input", () => { $(id).dataset.touched = "1"; });
+    });
+
+    document.querySelectorAll("[data-popup-type]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        haptic();
+        setAdminPopupType(btn.dataset.popupType);
+      });
+    });
+
+    function renderAdminPollOptionsBuilder() {
+      const box = $("admin-poll-options-list");
+      box.innerHTML = adminPollOptions.map((opt, idx) => `
+        <div class="poll-opt-builder-row">
+          <input type="text" class="admin-poll-opt-input" data-opt-idx="${idx}" value="${esc(opt)}" placeholder="Option ${idx + 1} (ex: Oui, Non...)" />
+          ${adminPollOptions.length > 2 ? `<button type="button" class="btn-remove-opt" data-del-opt="${idx}" aria-label="Retirer cette option">✕</button>` : ""}
+        </div>`).join("");
+    }
+
+    $("admin-poll-options-list").addEventListener("input", (e) => {
+      const inp = e.target.closest(".admin-poll-opt-input");
+      if (inp) adminPollOptions[Number(inp.dataset.optIdx)] = inp.value;
+    });
+
+    $("admin-poll-options-list").addEventListener("click", (e) => {
+      const del = e.target.closest("[data-del-opt]");
+      if (!del || adminPollOptions.length <= 2) return;
+      haptic();
+      adminPollOptions.splice(Number(del.dataset.delOpt), 1);
+      renderAdminPollOptionsBuilder();
+    });
+
+    $("btn-admin-add-option").addEventListener("click", () => {
+      haptic();
+      adminPollOptions.push("");
+      renderAdminPollOptionsBuilder();
+      const inputs = $("admin-poll-options-list").querySelectorAll(".admin-poll-opt-input");
+      inputs[inputs.length - 1]?.focus();
+    });
+
     function refreshAdminAnnouncementStatusUI() {
       const box = $("admin-current-announcement"), retest = $("btn-admin-retest-popup"), clear = $("btn-admin-clear-announcement");
       if (!latestAnnouncementData?.active) {
-        box.textContent = "Aucune annonce publiée.";
+        box.textContent = "Aucune pop-up publiée actuellement.";
         retest.classList.add("hidden"); clear.classList.add("hidden");
         return;
       }
+      const pType = latestAnnouncementData.type || "update";
+      const typeLabel = POPUP_TYPE_META[pType]?.label || "Annonce";
       const d = latestAnnouncementData.publishedAt ? new Date(latestAnnouncementData.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
-      box.innerHTML = `<div style="color:var(--fg);font-weight:600">${esc(latestAnnouncementData.title || "Nouveautés")}${latestAnnouncementData.version ? `<span class="whats-new-badge" style="margin-left:6px;margin-bottom:0">${esc(latestAnnouncementData.version)}</span>` : ""}</div>${d ? `<div style="font-size:12px;margin-top:2px">Publiée le ${esc(d)}</div>` : ""}`;
+      box.innerHTML = `
+        <div style="color:var(--fg);font-weight:600">
+          <span class="event-type-badge" style="margin-right:5px">${esc(typeLabel)}</span>
+          ${esc(latestAnnouncementData.title || "Pop-up")}
+          ${latestAnnouncementData.version ? `<span class="whats-new-badge" style="margin-left:6px;margin-bottom:0">${esc(latestAnnouncementData.version)}</span>` : ""}
+        </div>
+        ${latestAnnouncementData.subtitle ? `<div style="font-size:12.5px;color:var(--fg);margin-top:3px">${esc(latestAnnouncementData.subtitle)}</div>` : ""}
+        ${d ? `<div style="font-size:12px;margin-top:2px">Publiée le ${esc(d)}</div>` : ""}`;
       retest.classList.remove("hidden"); clear.classList.remove("hidden");
     }
 
+    function buildAdminAnnouncementPayload(id) {
+      const version = $("admin-ann-version").value.trim() || POPUP_TYPE_META[adminPopupType].defaultBadge;
+      const title = $("admin-ann-title").value.trim() || POPUP_TYPE_META[adminPopupType].defaultTitle;
+      const subtitle = $("admin-ann-subtitle").value.trim();
+
+      if (adminPopupType === "poll") {
+        const cleanOpts = adminPollOptions.map((o) => String(o || "").trim()).filter(Boolean);
+        if (cleanOpts.length < 2) {
+          showToast("Ajoutez au moins 2 choix de vote.");
+          return null;
+        }
+        return {
+          id, active: true, type: "poll", version, title,
+          subtitle: subtitle || "Faites votre choix ci-dessous :",
+          options: cleanOpts,
+          allowComment: $("admin-poll-allow-comment").checked,
+          publishedAt: Date.now()
+        };
+      }
+
+      if (adminPopupType === "feedback") {
+        const ph = $("admin-feedback-placeholder").value.trim() || "Écrivez votre retour ou suggestion ici...";
+        if (!subtitle) {
+          showToast("Indiquez la question posée aux utilisateurs.");
+          return null;
+        }
+        return {
+          id, active: true, type: "feedback", version, title, subtitle,
+          placeholder: ph, publishedAt: Date.now()
+        };
+      }
+
+      if (adminPopupType === "message") {
+        const body = $("admin-message-body").value.trim();
+        if (!body) {
+          showToast("Écrivez le contenu du message à afficher.");
+          return null;
+        }
+        return {
+          id, active: true, type: "message", version, title, subtitle,
+          body, ctaLabel: $("admin-message-cta").value.trim() || "J'ai compris, fermer",
+          publishedAt: Date.now()
+        };
+      }
+
+      const items = $("admin-ann-notes").value.split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
+      if (!items.length) {
+        showToast("Ajoutez au moins une nouveauté.");
+        return null;
+      }
+      return {
+        id, active: true, type: "update", version, title,
+        subtitle: subtitle || "Découvrez les dernières améliorations :",
+        items, publishedAt: Date.now()
+      };
+    }
+
+    // Affichage de la pop-up côté utilisateur (Mise à jour, Sondage, Avis ou Message libre)
     function showWhatsNewModal(ann, isPreview = false) {
       if (!ann) return;
       isPreviewingWhatsNew = isPreview;
+      currentRenderedPopupData = ann;
       displayedAnnouncementId = ann.id || null;
-      $("whats-new-title").textContent = ann.title || "Nouveautés sur Cadenza";
-      $("whats-new-version-badge").textContent = ann.version ? (isPreview ? `Aperçu • ${ann.version}` : ann.version) : (isPreview ? "Aperçu" : "Mise à jour");
-      $("whats-new-subtitle").textContent = ann.subtitle || "Découvrez les dernières améliorations de l'application :";
+      selectedUserPollOptionIndex = null;
+
+      const pType = ann.type || "update";
+      $("whats-new-title").textContent = ann.title || "Cadenza";
+      $("whats-new-version-badge").textContent = ann.version ? (isPreview ? `Aperçu • ${ann.version}` : ann.version) : (isPreview ? "Aperçu" : "Information");
+
+      const subEl = $("whats-new-subtitle");
+      if (ann.subtitle) {
+        subEl.textContent = ann.subtitle;
+        subEl.classList.remove("hidden");
+      } else {
+        subEl.classList.add("hidden");
+      }
+
       const dEl = $("whats-new-date");
       if (ann.publishedAt) {
         dEl.textContent = new Date(ann.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
         dEl.classList.remove("hidden");
       } else dEl.classList.add("hidden");
-      const lines = Array.isArray(ann.items) ? ann.items : String(ann.message || "").split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
-      $("whats-new-list").innerHTML = lines.map((l) => `<li><span class="release-notes-check">✓</span><span>${esc(l)}</span></li>`).join("");
+
+      const bodyEl = $("whats-new-dynamic-body");
+      const footerEl = $("whats-new-footer-actions");
+
+      if (pType === "poll") {
+        const opts = Array.isArray(ann.options) ? ann.options : [];
+        bodyEl.innerHTML = `
+          <div class="user-poll-options-list" id="user-poll-options-list">
+            ${opts.map((opt, idx) => `
+              <button type="button" class="user-poll-option-btn" data-user-poll-opt="${idx}">
+                <span class="poll-radio-circle"></span>
+                <span>${esc(opt)}</span>
+              </button>`).join("")}
+          </div>
+          ${ann.allowComment ? `
+            <div class="field" style="margin-bottom: 14px;">
+              <label for="user-popup-comment-input">Commentaire ou précision (facultatif)</label>
+              <textarea id="user-popup-comment-input" rows="2" maxlength="400" placeholder="Ajoutez une remarque si vous le souhaitez..."></textarea>
+            </div>` : ""}`;
+
+        footerEl.innerHTML = `
+          <button type="button" id="btn-submit-user-popup-response" class="btn-confirm btn-full">Envoyer mon vote</button>
+          <button type="button" id="btn-skip-user-popup" class="btn-secondary btn-sm btn-full">Fermer sans voter</button>`;
+      } else if (pType === "feedback") {
+        bodyEl.innerHTML = `
+          <div class="field" style="margin-bottom: 14px;">
+            <label for="user-popup-comment-input">Votre réponse</label>
+            <textarea id="user-popup-comment-input" rows="4" maxlength="600" placeholder="${esc(ann.placeholder || "Écrivez votre retour ici...")}"></textarea>
+          </div>`;
+
+        footerEl.innerHTML = `
+          <button type="button" id="btn-submit-user-popup-response" class="btn-confirm btn-full">Envoyer mon retour</button>
+          <button type="button" id="btn-skip-user-popup" class="btn-secondary btn-sm btn-full">Fermer sans répondre</button>`;
+      } else if (pType === "message") {
+        bodyEl.innerHTML = `<div class="message-free-box">${esc(ann.body || ann.message || "")}</div>`;
+        footerEl.innerHTML = `<button type="button" id="btn-skip-user-popup" class="btn-primary btn-full">${esc(ann.ctaLabel || "J'ai compris, fermer")}</button>`;
+      } else {
+        const lines = Array.isArray(ann.items) ? ann.items : String(ann.message || "").split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
+        bodyEl.innerHTML = `<ul class="release-notes-list">${lines.map((l) => `<li><span class="release-notes-check">✓</span><span>${esc(l)}</span></li>`).join("")}</ul>`;
+        footerEl.innerHTML = `<button type="button" id="btn-skip-user-popup" class="btn-primary btn-full">J'ai compris, fermer</button>`;
+      }
+
       $("modal-whats-new").classList.add("open");
     }
+
+    $("whats-new-dynamic-body").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-user-poll-opt]");
+      if (!btn) return;
+      haptic();
+      selectedUserPollOptionIndex = Number(btn.dataset.userPollOpt);
+      $("whats-new-dynamic-body").querySelectorAll(".user-poll-option-btn").forEach((b) => {
+        const isSel = Number(b.dataset.userPollOpt) === selectedUserPollOptionIndex;
+        b.classList.toggle("selected", isSel);
+        b.querySelector(".poll-radio-circle").textContent = isSel ? "✓" : "";
+      });
+    });
+
+    $("whats-new-footer-actions").addEventListener("click", async (e) => {
+      if (e.target.closest("#btn-skip-user-popup")) {
+        return dismissWhatsNewModal();
+      }
+      const submitBtn = e.target.closest("#btn-submit-user-popup-response");
+      if (!submitBtn || !currentRenderedPopupData) return;
+      haptic();
+
+      const ann = currentRenderedPopupData;
+      const pType = ann.type || "update";
+      const commentVal = $("user-popup-comment-input")?.value.trim() || "";
+
+      if (pType === "poll" && selectedUserPollOptionIndex === null) {
+        return showToast("Sélectionnez une option avant d'envoyer votre vote.");
+      }
+      if (pType === "feedback" && !commentVal) {
+        return showToast("Écrivez un message avant d'envoyer votre retour.");
+      }
+
+      if (isPreviewingWhatsNew) {
+        showToast("Aperçu : votre réponse a bien été simulée.");
+        return dismissWhatsNewModal();
+      }
+
+      submitBtn.disabled = true;
+      const voterId = getVoterDeviceId();
+      const optionLabel = pType === "poll" ? (ann.options?.[selectedUserPollOptionIndex] || "") : "";
+
+      try {
+        await update(ref(db, `app_feedback/${ann.id}`), {
+          meta: {
+            id: ann.id,
+            type: pType,
+            version: ann.version || "",
+            title: ann.title || "",
+            subtitle: ann.subtitle || "",
+            options: ann.options || null,
+            publishedAt: ann.publishedAt || Date.now()
+          },
+          [`responses/${voterId}`]: {
+            voterId,
+            respondent: getCurrentRespondentLabel(),
+            optionIndex: pType === "poll" ? selectedUserPollOptionIndex : null,
+            optionLabel,
+            comment: commentVal,
+            submittedAt: Date.now()
+          }
+        });
+        showToast(pType === "poll" ? "Merci ! Votre vote a été enregistré." : "Merci ! Votre retour a été envoyé.");
+        dismissWhatsNewModal();
+      } catch (err) {
+        console.warn("Feedback write error:", err);
+        showToast("Impossible d'enregistrer la réponse (vérifiez les règles Firebase).");
+        dismissWhatsNewModal();
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
 
     function dismissWhatsNewModal() {
       haptic();
@@ -1589,6 +2053,150 @@
       maybeDisplayLatestAnnouncement();
     }, () => {});
 
+    // Écoute en temps réel des résultats de sondages et retours utilisateurs
+    onValue(ref(db, "app_feedback"), (snap) => {
+      feedbackPermissionDenied = false;
+      allFeedbackCampaigns = snap.exists() ? (snap.val() || {}) : {};
+      updateAdminResultsBadge();
+      if (adminActiveTab === "results" && $("modal-admin-portal").classList.contains("open")) {
+        renderAdminResultsPanel();
+      }
+    }, (err) => {
+      if (String(err?.message || "").toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED") {
+        feedbackPermissionDenied = true;
+        if (adminActiveTab === "results" && $("modal-admin-portal").classList.contains("open")) {
+          renderAdminResultsPanel();
+        }
+      }
+    });
+
+    function updateAdminResultsBadge() {
+      const badge = $("admin-results-badge");
+      let totalResponses = 0;
+      Object.values(allFeedbackCampaigns).forEach((camp) => {
+        totalResponses += Object.keys(camp?.responses || {}).length;
+      });
+      badge.textContent = String(totalResponses);
+      badge.classList.toggle("hidden", totalResponses === 0);
+    }
+
+    function renderAdminResultsPanel() {
+      $("admin-feedback-rules-warning").classList.toggle("hidden", !feedbackPermissionDenied);
+
+      const campaignsMap = { ...allFeedbackCampaigns };
+      if (latestAnnouncementData?.id && (latestAnnouncementData.type === "poll" || latestAnnouncementData.type === "feedback") && !campaignsMap[latestAnnouncementData.id]) {
+        campaignsMap[latestAnnouncementData.id] = { meta: latestAnnouncementData, responses: {} };
+      }
+
+      const campaigns = Object.values(campaignsMap)
+        .filter((c) => c?.meta)
+        .sort((a, b) => (b.meta.publishedAt || 0) - (a.meta.publishedAt || 0));
+
+      if (!campaigns.length) {
+        $("admin-results-empty").classList.remove("hidden");
+        $("admin-results-content").classList.add("hidden");
+        return;
+      }
+
+      $("admin-results-empty").classList.add("hidden");
+      $("admin-results-content").classList.remove("hidden");
+
+      const select = $("admin-results-campaign-select");
+      if (!selectedResultsCampaignId || !campaignsMap[selectedResultsCampaignId]) {
+        selectedResultsCampaignId = (latestAnnouncementData?.id && campaignsMap[latestAnnouncementData.id]) ? latestAnnouncementData.id : campaigns[0].meta.id;
+      }
+
+      select.innerHTML = campaigns.map((c) => {
+        const count = Object.keys(c.responses || {}).length;
+        const tLabel = POPUP_TYPE_META[c.meta.type]?.label || "Campagne";
+        const isCurrent = c.meta.id === latestAnnouncementData?.id && latestAnnouncementData?.active;
+        return `<option value="${esc(c.meta.id)}" ${c.meta.id === selectedResultsCampaignId ? "selected" : ""}>[${tLabel}] ${esc(c.meta.title || "Sans titre")} (${count} rép.)${isCurrent ? " — Actif" : ""}</option>`;
+      }).join("");
+
+      const activeCamp = campaignsMap[selectedResultsCampaignId] || campaigns[0];
+      const meta = activeCamp.meta || {};
+      const responses = Object.values(activeCamp.responses || {}).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+
+      $("res-campaign-badge").textContent = `${POPUP_TYPE_META[meta.type]?.label || "Campagne"}${meta.version ? ` • ${meta.version}` : ""}`;
+      $("res-campaign-title").textContent = meta.title || "Sondage";
+      $("res-campaign-subtitle").textContent = meta.subtitle || "";
+      $("res-total-count").textContent = `${responses.length} réponse${responses.length > 1 ? "s" : ""}`;
+
+      const barsBox = $("res-poll-bars-container");
+      if (meta.type === "poll" && Array.isArray(meta.options) && meta.options.length) {
+        barsBox.classList.remove("hidden");
+        const counts = meta.options.map((_, idx) => responses.filter((r) => r.optionIndex === idx).length);
+        const maxCount = Math.max(...counts, 0);
+
+        barsBox.innerHTML = meta.options.map((opt, idx) => {
+          const c = counts[idx];
+          const pct = responses.length > 0 ? Math.round((c / responses.length) * 100) : 0;
+          const isWinner = maxCount > 0 && c === maxCount;
+          return `
+            <div class="result-stat-row">
+              <div class="result-stat-head">
+                <span style="font-weight:${isWinner ? "700" : "500"}">${esc(opt)}</span>
+                <span style="font-weight:700;color:${isWinner ? "var(--yes-fg)" : "var(--muted)"}">${c} (${pct}%)</span>
+              </div>
+              <div class="result-bar-track">
+                <div class="result-bar-fill ${isWinner ? "winner" : ""}" style="width:${pct}%"></div>
+              </div>
+            </div>`;
+        }).join("");
+      } else {
+        barsBox.classList.add("hidden");
+        barsBox.innerHTML = "";
+      }
+
+      const comments = responses.filter((r) => Boolean(r.comment));
+      $("res-comments-count").textContent = String(comments.length);
+      $("res-comments-list").innerHTML = comments.length
+        ? comments.map((r) => {
+            const dStr = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+            return `
+              <div class="feedback-response-card">
+                <div class="feedback-response-meta">
+                  <strong>${esc(r.respondent || "Utilisateur")}</strong>
+                  <span>${esc(dStr)}</span>
+                </div>
+                ${r.optionLabel ? `<div style="font-size:11.5px;color:var(--accent-fg);font-weight:600;margin-bottom:3px">Vote : ${esc(r.optionLabel)}</div>` : ""}
+                <div style="white-space:pre-line;color:var(--fg)">${esc(r.comment)}</div>
+              </div>`;
+          }).join("")
+        : `<div style="font-size:13px;color:var(--muted)">Aucun commentaire écrit pour le moment.</div>`;
+    }
+
+    $("admin-results-campaign-select").addEventListener("change", (e) => {
+      selectedResultsCampaignId = e.target.value;
+      renderAdminResultsPanel();
+    });
+
+    $("btn-copy-fb-rule").addEventListener("click", async () => {
+      haptic();
+      const ok = await copyTextReliable($("firebase-feedback-rule-snippet").textContent);
+      showToast(ok ? "Règle Firebase copiée." : "Copiez la règle affichée.");
+    });
+
+    $("btn-admin-delete-campaign-results").addEventListener("click", () => {
+      if (!selectedResultsCampaignId || !verifiedAdminPin) return;
+      const campId = selectedResultsCampaignId;
+      openConfirmationModal({
+        title: "Supprimer ces résultats ?",
+        context: $("res-campaign-title").textContent,
+        message: "Tous les votes et commentaires associés à cette campagne seront définitivement effacés.",
+        confirmLabel: "Supprimer les résultats",
+        onConfirm: async () => {
+          try {
+            await remove(ref(db, `app_feedback/${campId}`));
+            selectedResultsCampaignId = null;
+            showToast("Résultats supprimés.");
+          } catch (err) {
+            handleFirebaseError(err);
+          }
+        }
+      });
+    });
+
     $("form-admin-pin").addEventListener("submit", async (e) => {
       e.preventDefault(); haptic();
       const entered = $("admin-pin-input").value.trim();
@@ -1599,7 +2207,10 @@
         verifiedAdminPin = entered;
         closeModal("modal-admin-pin");
         $("admin-firebase-warning").classList.add("hidden");
-        if (!$("admin-ann-version").value) $("admin-ann-version").value = APP_VERSION;
+        delete $("admin-ann-version").dataset.touched;
+        delete $("admin-ann-title").dataset.touched;
+        setAdminPopupType(adminPopupType);
+        switchAdminPortalTab("publish");
         refreshAdminAnnouncementStatusUI();
         $("modal-admin-portal").classList.add("open");
       } catch (_) {
@@ -1609,30 +2220,34 @@
       } finally { btn.disabled = false; }
     });
 
-    const parseAdminNotes = () => $("admin-ann-notes").value.split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
-
     $("btn-admin-preview").addEventListener("click", () => {
       haptic();
-      const items = parseAdminNotes();
-      if (!items.length) return showToast("Ajoutez au moins une nouveauté.");
-      showWhatsNewModal({ id: "preview", version: $("admin-ann-version").value.trim() || APP_VERSION, title: $("admin-ann-title").value.trim(), subtitle: $("admin-ann-subtitle").value.trim(), items, publishedAt: Date.now() }, true);
+      const payload = buildAdminAnnouncementPayload("preview");
+      if (!payload) return;
+      showWhatsNewModal(payload, true);
     });
 
     $("form-admin-announcement").addEventListener("submit", async (e) => {
       e.preventDefault(); haptic();
       if (!verifiedAdminPin) { closeModal("modal-admin-portal"); return openAdminPinPrompt(); }
-      const items = parseAdminNotes();
-      if (!items.length) return showToast("Veuillez saisir au moins une nouveauté.");
-      const btn = $("btn-admin-publish"), newId = genId("ann");
+      const newId = genId("ann");
+      const payload = buildAdminAnnouncementPayload(newId);
+      if (!payload) return;
+
+      const btn = $("btn-admin-publish");
       btn.disabled = true;
       try {
         await set(ref(db, "app_announcements/latest"), {
-          public: { id: newId, active: true, version: $("admin-ann-version").value.trim() || APP_VERSION, title: $("admin-ann-title").value.trim(), subtitle: $("admin-ann-subtitle").value.trim(), items, publishedAt: Date.now() },
+          public: payload,
           auth: { pin: verifiedAdminPin }
         });
+        if (payload.type === "poll" || payload.type === "feedback") {
+          set(ref(db, `app_feedback/${newId}/meta`), payload).catch(() => {});
+          selectedResultsCampaignId = newId;
+        }
         localStorage.setItem(KEYS.ann, newId);
         closeModal("modal-admin-portal");
-        showToast("Mise à jour publiée pour tous les utilisateurs !");
+        showToast("Pop-up publiée pour tous les utilisateurs !");
       } catch (_) { $("admin-firebase-warning").classList.remove("hidden"); showToast("Accès refusé par Firebase."); }
       finally { btn.disabled = false; }
     });
@@ -1649,11 +2264,10 @@
       if (!verifiedAdminPin) { closeModal("modal-admin-portal"); return openAdminPinPrompt(); }
       try {
         await set(ref(db, "app_announcements/latest"), { public: { ...(latestAnnouncementData || {}), active: false }, auth: { pin: verifiedAdminPin } });
-        showToast("L'annonce a été désactivée.");
+        showToast("La pop-up a été désactivée.");
       } catch (_) { $("admin-firebase-warning").classList.remove("hidden"); }
     });
 
-    $("btn-dismiss-whats-new").addEventListener("click", dismissWhatsNewModal);
     $("btn-close-whats-new-top").addEventListener("click", dismissWhatsNewModal);
 
     // Modale de confirmation universelle
@@ -3226,12 +3840,13 @@
         const ens = currentEnsembleData?.name || "Cadenza", s0 = slots[0];
         await publishEnsembleNotification(
           wasRefining ? `Horaires proposés (${tMeta.label}) — ${ens}` : slots.length === 1 ? `Nouvelle date proposée (${tMeta.label}) — ${ens}` : `${slots.length} dates proposées (${tMeta.label}) — ${ens}`,
-          wasRefining ? `${me.name} propose ${slots.length === 1 ? formatPollTimeLabel(s0) : `${slots.length} créneaux horaires`} pour le ${formatDateFr(s0.date)}.`
-            : slots.length === 1 ? `${me.name} propose le ${formatDateFr(s0.date)} (${formatPollTimeLabel(s0)})`
-            : `${me.name} propose ${slots.length} créneaux à voter.`
+          wasRefining ? `${me.name} propose ${slots.length === 1 ? formatPollTimeLabel(s0) : `${slots.length} horaires`} pour le ${formatDateFr(s0.date)}.`
+            : slots.length === 1 ? `${me.name} propose le ${formatDateFr(s0.date)} (${formatPollTimeLabel(s0)}).`
+            : `${me.name} a proposé ${slots.length} dates (${slots.map((s) => formatCompactDateFr(s.date)).join(", ")}).`
         );
         $("form-poll").reset(); resetPollSlots(); closeModal("modal-poll");
-        showToast(`${slots.length} ${wasRefining ? "horaire(s)" : "créneau(x)"} proposé(s) aux membres.`);
+        showToast(wasRefining ? "Horaires envoyés aux membres." : slots.length > 1 ? `${slots.length} dates envoyées aux membres.` : "Date envoyée aux membres.");
+        switchTab("avail");
       } catch (err) { handleFirebaseError(err); }
     });
 
@@ -3247,49 +3862,44 @@
         await set(ref(db, `ensembles/${session.activeEnsembleId}/rehearsals/${id}`), {
           id, eventType, date, startTime, endTime, ...concertData, location, program, notes, createdAt: Date.now()
         });
-        await publishEnsembleNotification(`Nouveau ${tMeta.label.toLowerCase()} — ${currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
-        $("form-rehearsal").reset(); closeModal("modal-rehearsal"); showToast(`${tMeta.label} ajouté(e) à l'agenda.`);
+        await publishEnsembleNotification(`${tMeta.label} ajouté(e) — ${currentEnsembleData.name}`, `${formatDateFr(date)} • ${startTime}–${endTime} (${location})`);
+        $("form-rehearsal").reset(); closeModal("modal-rehearsal"); showToast(`${tMeta.label} ajouté(e) à l'agenda.`); switchTab("agenda");
       } catch (err) { handleFirebaseError(err); }
     });
 
-    // Boutons d'action globaux
-    $("btn-open-poll").addEventListener("click", () => { resetPollSlots(); openModal("modal-poll"); });
+    // Boutons d'actions globaux
     $("btn-open-rehearsal").addEventListener("click", () => openModal("modal-rehearsal"));
+    $("btn-open-poll").addEventListener("click", () => { resetPollSlots(); openModal("modal-poll"); });
     $("btn-open-unavail").addEventListener("click", () => openModal("modal-unavailability"));
     $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
     $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
     $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
-    $("btn-share-invite").addEventListener("click", () => openModal("modal-invite"));
     $("btn-notif-top").addEventListener("click", togglePushForEnsemble);
     $("btn-toggle-push").addEventListener("click", togglePushForEnsemble);
-    $("btn-test-push").addEventListener("click", () => isEnsemblePushActive() ? triggerLocalSystemNotification(`Cadenza — ${currentEnsembleData?.name || "Ensemble"}`, "Alerte système opérationnelle.") : togglePushForEnsemble());
-
-    $("btn-copy-invite").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable(getInviteUrl(session.activeEnsembleId))) ? "Lien d'invitation copié." : "Sélectionnez et copiez le lien."); });
-    $("btn-native-share").addEventListener("click", () => {
-      const ens = currentEnsembleData?.name || "notre ensemble";
-      shareOrCopy(getInviteUrl(session.activeEnsembleId), `Rejoindre ${ens} sur Cadenza`, `Rejoins ${ens} sur Cadenza pour indiquer tes disponibilités :`, "Lien copié.");
-    });
-    $("btn-copy-transfer").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable(getTransferUrl(session.activeEnsembleId, session.ensembles[session.activeEnsembleId]?.memberId || ""))) ? "Lien personnel copié." : "Copiez le lien."); });
-    $("btn-share-transfer").addEventListener("click", () => {
-      const me = session.ensembles[session.activeEnsembleId];
-      shareOrCopy(getTransferUrl(session.activeEnsembleId, me?.memberId || ""), `Mon profil Cadenza`, `Lien personnel pour restaurer mon profil (${me?.name || ""}) sur Cadenza :`, "Lien personnel copié.");
+    $("btn-test-push").addEventListener("click", async () => {
+      haptic();
+      if (!isEnsemblePushActive()) return showToast("Activez d'abord les notifications.");
+      await triggerLocalSystemNotification(`Cadenza — ${currentEnsembleData?.name || "Ensemble"}`, "Test réussi : vos notifications fonctionnent.");
+      showToast("Notification de test envoyée.");
     });
 
-    $("btn-switch-onboarding").addEventListener("click", () => {
-      $("join-card").classList.remove("featured");
-      ["join-code-field", "create-card", "onboarding-divider"].forEach((id) => $(id).classList.remove("hidden"));
-      $("join-kicker").textContent = "Rejoindre un ensemble";
-      $("join-ensemble-title").textContent = "Accéder à un espace existant";
-      $("join-code").value = ""; renderClaimableMembers(null, null); showOnboarding();
-    });
+    $("btn-share-invite").addEventListener("click", () => shareOrCopy(getInviteUrl(session.activeEnsembleId), `Cadenza — ${currentEnsembleData.name}`, `Rejoignez l'agenda de ${currentEnsembleData.name} sur Cadenza :`, "Lien d'invitation copié."));
+    $("btn-copy-invite").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable(getInviteUrl(session.activeEnsembleId))) ? "Lien d'invitation copié." : "Copiez le lien affiché."); });
+    $("btn-native-share").addEventListener("click", () => shareOrCopy(getInviteUrl(session.activeEnsembleId), `Cadenza — ${currentEnsembleData.name}`, `Rejoignez notre ensemble ${currentEnsembleData.name} sur Cadenza :`, "Lien d'invitation copié."));
+    $("btn-copy-transfer").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable($("transfer-link-display").textContent)) ? "Lien personnel copié." : "Copiez le lien affiché."); });
+    $("btn-share-transfer").addEventListener("click", () => shareOrCopy($("transfer-link-display").textContent, `Cadenza — Profil de ${session.ensembles[session.activeEnsembleId]?.name || "Musicien"}`, "Ouvrez ce lien sur votre appareil pour retrouver votre profil Cadenza :", "Lien personnel copié."));
+    $("btn-switch-onboarding").addEventListener("click", () => { haptic(); unsubscribeEnsemble?.(); showOnboarding(); });
 
     // Démarrage de l'application
-    await initServiceWorkerAndPush();
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("ensemble")) localStorage.setItem(KEYS.invite, JSON.stringify({ ensembleId: params.get("ensemble"), memberId: params.get("member") || null }));
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || Boolean(window.navigator.standalone);
-    if (!isStandalone && localStorage.getItem(KEYS.tuto) !== "1") showInstallTutorial();
-    else { await proceedAfterTutorial(); maybeDisplayLatestAnnouncement(); }
+    (async function init() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("ensemble")) localStorage.setItem(KEYS.invite, JSON.stringify({ ensembleId: p.get("ensemble"), memberId: p.get("member") || null }));
+      await initServiceWorkerAndPush();
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+      if (isStandalone) localStorage.setItem(KEYS.tuto, "1");
+      if (!localStorage.getItem(KEYS.tuto) && !isStandalone) showInstallTutorial();
+      else { await proceedAfterTutorial(); maybeDisplayLatestAnnouncement(); }
+    })();
   </script>
 </body>
 </html>
