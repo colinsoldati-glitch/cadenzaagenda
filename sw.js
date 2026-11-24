@@ -1,5 +1,17 @@
 const CACHE_NAME = "cadenza-cache-v20.2";
-const APP_SHELL = ["./", "./index.html", "./manifest.json"];
+const APP_SHELL = [
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./manifest.json",
+  "./js/config.js",
+  "./js/ui.js",
+  "./js/admin.js",
+  "./js/polls.js",
+  "./js/agenda.js",
+  "./js/ensemble.js",
+  "./js/app.js"
+];
 
 // Installation et mise en cache de l'interface
 self.addEventListener("install", (event) => {
