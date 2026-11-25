@@ -1,37 +1,30 @@
-import { APP_VERSION, KEYS, state, $, haptic, showToast } from "./config.js";
-import { applyDomTranslations, setLang, onLanguageChange } from "./i18n.js";
+import { APP_VERSION, KEYS, $ } from "./config.js";
 import {
-  registerUiHooks, initFormSelectors, initCalendarControls, initModalGlobalListeners,
-  renderMultiCalendar
+  registerUiHooks, initFormSelectors, initCalendarControls, initModalGlobalListeners
 } from "./ui.js";
 import {
-  registerAdminHooks, initAdminListeners,
-  openAdminPinPrompt, dismissWhatsNewModal, maybeDisplayLatestAnnouncement
+  openAdminPinPrompt, maybeDisplayLatestAnnouncement, dismissWhatsNewModal, initAdminListeners
 } from "./admin.js";
 import {
-  registerPollsHooks, initPollsListeners,
-  archiveFailedPollsIfNeeded, updatePollConflictsWarning, checkEditPollArchiveLock,
-  resetPollSlots, renderPolls
+  registerPollsHooks, archiveFailedPollsIfNeeded, renderPolls,
+  updatePollConflictsWarning, checkEditPollArchiveLock, resetPollSlots, initPollsListeners
 } from "./polls.js";
 import {
-  registerAgendaHooks, initAgendaListeners, renderAgenda
+  registerAgendaHooks, renderAgenda, initAgendaListeners
 } from "./agenda.js";
 import {
-  registerEnsembleHooks, initEnsembleListeners, initServiceWorkerAndPush,
-  publishEnsembleNotification, showTutorialScreen, proceedAfterTutorial,
-  switchTab, renderAll, updatePushUI
+  registerEnsembleHooks, initServiceWorkerAndPush, showInstallTutorial,
+  proceedAfterTutorial, publishEnsembleNotification, switchTab, initEnsembleListeners
 } from "./ensemble.js";
 
-// Enregistrement des hooks inter-modules pour éviter toute dépendance circulaire
+$("app-version-label").textContent = APP_VERSION;
+
+// Connexion des modules entre eux (évite les dépendances circulaires)
 registerUiHooks({
   updatePollConflictsWarning,
   checkEditPollArchiveLock,
   resetPollSlots,
   dismissWhatsNewModal
-});
-
-registerAdminHooks({
-  publishEnsembleNotification
 });
 
 registerPollsHooks({
@@ -52,55 +45,30 @@ registerEnsembleHooks({
   maybeDisplayLatestAnnouncement
 });
 
-// Mise à jour dynamique lors d'un changement de langue
-onLanguageChange(() => {
-  initFormSelectors();
-  renderMultiCalendar();
-  if (state.currentEnsembleData) {
-    renderAll();
-    updatePushUI();
-  }
-});
-
-// Écouteurs de changement de langue (FR / DE / EN)
-document.addEventListener("click", (e) => {
-  const langBtn = e.target.closest("[data-set-lang]");
-  if (!langBtn) return;
-  haptic();
-  const toastMsg = setLang(langBtn.dataset.setLang, { notify: true });
-  if (toastMsg) showToast(toastMsg);
-});
-
-// Installation PWA
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault(); state.deferredInstallPrompt = e;
-  $("install-banner").classList.remove("hidden"); $("tuto-direct-install-card")?.classList.remove("hidden");
-});
-const triggerInstallPrompt = async () => {
-  if (!state.deferredInstallPrompt) return;
-  state.deferredInstallPrompt.prompt();
-  await state.deferredInstallPrompt.userChoice;
-  state.deferredInstallPrompt = null; $("install-banner").classList.add("hidden"); $("tuto-direct-install-card")?.classList.add("hidden");
-};
-$("btn-install-pwa").addEventListener("click", triggerInstallPrompt);
-$("btn-tuto-direct-install").addEventListener("click", triggerInstallPrompt);
-window.addEventListener("appinstalled", () => { $("install-banner").classList.add("hidden"); $("tuto-direct-install-card")?.classList.add("hidden"); });
-
-// Initialisation globale
-$("app-version-label").textContent = APP_VERSION;
-applyDomTranslations();
+// Initialisation de l'interface et des écouteurs
 initFormSelectors();
 initCalendarControls();
 initModalGlobalListeners();
+initAdminListeners();
 initPollsListeners();
 initAgendaListeners();
 initEnsembleListeners();
-initAdminListeners();
-initServiceWorkerAndPush();
 
-const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-if (!isStandalone && !localStorage.getItem(KEYS.tuto)) {
-  showTutorialScreen();
-} else {
-  proceedAfterTutorial();
-}
+// Démarrage de l'application
+(async function init() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get("ensemble")) {
+    localStorage.setItem(KEYS.invite, JSON.stringify({
+      ensembleId: p.get("ensemble"),
+      memberId: p.get("member") || null
+    }));
+  }
+  await initServiceWorkerAndPush();
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  if (isStandalone) localStorage.setItem(KEYS.tuto, "1");
+  if (!localStorage.getItem(KEYS.tuto) && !isStandalone) showInstallTutorial();
+  else {
+    await proceedAfterTutorial();
+    maybeDisplayLatestAnnouncement();
+  }
+})();

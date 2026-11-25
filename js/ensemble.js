@@ -6,7 +6,6 @@ import {
   showToast, handleFirebaseError, formatShortDateFr,
   extractEnsembleCode, getInviteUrl, copyTextReliable, shareOrCopy
 } from "./config.js";
-import { t, translateFormation } from "./i18n.js";
 import { openConfirmationModal, openModal, closeModal } from "./ui.js";
 
 let hooks = {
@@ -29,7 +28,7 @@ export async function initServiceWorkerAndPush() {
     if (await isSupported().catch(() => false)) {
       state.messagingInstance = getMessaging();
       onMessage(state.messagingInstance, (p) => {
-        if (isEnsemblePushActive()) triggerLocalSystemNotification(p.notification?.title || p.data?.title || "Cadenza", p.notification?.body || p.data?.body || t("push.defaultUpdate"));
+        if (isEnsemblePushActive()) triggerLocalSystemNotification(p.notification?.title || p.data?.title || "Cadenza", p.notification?.body || p.data?.body || "Mise à jour.");
       });
     }
   } catch (e) { console.warn("SW init:", e); }
@@ -52,388 +51,351 @@ export async function triggerLocalSystemNotification(title, body) {
 export async function fetchFcmTokenSafe() {
   if (!state.messagingInstance || !state.swRegistration) return null;
   try { await navigator.serviceWorker.ready; return await getToken(state.messagingInstance, { vapidKey: FIREBASE_VAPID_KEY, serviceWorkerRegistration: state.swRegistration }); }
-  catch (e) { console.warn("FCM token:", e); return null; }
-}
-
-export async function saveMemberPushPreferences(ensId, memberId, active, token) {
-  if (!ensId || !memberId) return;
-  try {
-    await update(ref(db, `ensembles/${ensId}/members/${memberId}`), {
-      pushEnabled: Boolean(active), fcmToken: active && token ? token : null, pushUpdatedAt: Date.now()
-    });
-  } catch (e) { console.warn("Save push prefs:", e); }
+  catch (_) { return null; }
 }
 
 export async function togglePushForEnsemble() {
   haptic();
-  const ensId = state.session.activeEnsembleId, myId = ensId ? state.session.ensembles[ensId]?.memberId : null;
-  if (!ensId || !myId) return;
-  const ensName = state.currentEnsembleData?.name || "Cadenza";
+  const ensId = state.session.activeEnsembleId, mbrId = state.session.ensembles[ensId]?.memberId;
+  const ensName = state.currentEnsembleData?.name || "cet ensemble";
 
   if (isEnsemblePushActive()) {
-    await saveMemberPushPreferences(ensId, myId, false, null);
-    updatePushUI();
-    return showToast(t("push.disabledToast", { ensemble: ensName }));
+    if (!ensId || !mbrId) return;
+    try {
+      await update(ref(db, `ensembles/${ensId}/members/${mbrId}`), { pushEnabled: false, fcmToken: null });
+      updatePushUI(); showToast(`Notifications désactivées pour ${ensName}.`);
+    } catch (err) { handleFirebaseError(err); }
+    return;
   }
-  if (!("Notification" in window)) return showToast(t("push.unsupportedToast"));
-  if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.matchMedia("(display-mode: standalone)").matches) {
-    return showToast(t("push.iosInstallFirstToast"));
+
+  if (!("Notification" in window)) return showToast("Notifications non supportées sur ce navigateur.");
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isIOS && !isStandalone) return showToast("Sur iPhone/iPad : Partager > Sur l'écran d'accueil d'abord.");
+
+  if ((await Notification.requestPermission()) !== "granted") {
+    updatePushUI(); return showToast("Autorisation refusée dans les réglages du navigateur.");
   }
-  const perm = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-  if (perm !== "granted") { updatePushUI(); return showToast(t("push.deniedToast")); }
 
-  const token = await fetchFcmTokenSafe();
-  await saveMemberPushPreferences(ensId, myId, true, token);
-  updatePushUI();
-  showToast(t("push.enabledToast", { ensemble: ensName }));
-  await triggerLocalSystemNotification(`Cadenza • ${ensName}`, t("push.enabledNotifBody"));
-}
-
-export async function syncExistingPushPermissionSilently() {
-  const ensId = state.session.activeEnsembleId, myId = ensId ? state.session.ensembles[ensId]?.memberId : null;
-  const member = myId ? state.currentEnsembleData?.members?.[myId] : null;
-  if (!ensId || !myId || !member || !("Notification" in window) || Notification.permission !== "granted") return updatePushUI();
-  if (member.pushEnabled === true && !member.fcmToken) {
-    const token = await fetchFcmTokenSafe();
-    if (token) await saveMemberPushPreferences(ensId, myId, true, token);
+  const fcmToken = await fetchFcmTokenSafe();
+  if (ensId && mbrId) {
+    try {
+      await update(ref(db, `ensembles/${ensId}/members/${mbrId}`), { pushEnabled: true, ...(fcmToken ? { fcmToken } : {}) });
+    } catch (err) { return handleFirebaseError(err); }
   }
   updatePushUI();
+  showToast(`Notifications activées pour ${ensName}.`);
+  await triggerLocalSystemNotification(`Cadenza — ${ensName}`, "Les alertes de l'ensemble sont activées.");
 }
 
 export function updatePushUI() {
-  const msg = $("push-status-msg"), toggle = $("btn-toggle-push"), test = $("btn-test-push");
-  if (!msg || !toggle) return;
-  const ensName = state.currentEnsembleData?.name || "Cadenza";
-  const supported = "Notification" in window;
-  const active = isEnsemblePushActive();
-
-  msg.textContent = !supported
-    ? t("push.statusUnsupported")
-    : active
-      ? t("push.statusActive", { ensemble: ensName })
-      : Notification.permission === "denied"
-        ? t("push.statusDenied")
-        : t("push.statusInactive", { ensemble: ensName });
-
-  toggle.textContent = active ? t("ensemble.pushDisableBtn") : t("ensemble.pushEnableBtn");
-  toggle.className = active ? "btn-secondary btn-sm" : "btn-primary btn-sm";
+  const dot = $("notif-status-dot"), msg = $("push-status-msg"), toggle = $("btn-toggle-push"), test = $("btn-test-push");
+  if (!("Notification" in window)) {
+    dot.classList.add("off"); msg.textContent = "Navigateur non compatible."; toggle.disabled = true; return;
+  }
+  const active = isEnsemblePushActive(), ensName = state.currentEnsembleData?.name || "cet ensemble";
+  dot.classList.toggle("off", !active);
+  toggle.textContent = active ? "Désactiver pour cet ensemble" : "Activer les notifications";
+  toggle.className = `${active ? "btn-del-subtle" : "btn-primary"} btn-sm`;
   test.classList.toggle("hidden", !active);
-
-  const remToggle = $("toggle-auto-remind-eve");
-  if (remToggle && state.currentEnsembleData) {
-    remToggle.checked = state.currentEnsembleData.autoRemindEve !== false;
-  }
+  msg.textContent = active
+    ? `Statut : Actives pour « ${ensName} ».`
+    : Notification.permission === "denied"
+      ? "Statut : Bloquées dans les réglages de votre navigateur."
+      : `Statut : Désactivées pour « ${ensName} ».`;
 }
 
-export async function publishEnsembleNotification(title, body, options = {}) {
-  const ensId = state.session.activeEnsembleId;
-  if (!ensId) return;
-  const senderId = state.session.ensembles[ensId]?.memberId || "";
-  const targetMemberIds = Array.isArray(options.targetMemberIds) ? options.targetMemberIds.filter(Boolean) : [];
-  const evt = { title, body, senderId, timestamp: Date.now(), ...(targetMemberIds.length ? { targetMemberIds } : {}) };
-  try { await set(ref(db, `ensembles/${ensId}/lastEvent`), evt); } catch (e) { console.warn("lastEvent:", e); }
-  if (!PUSH_WORKER_URL || !state.currentEnsembleData?.members) return;
-
-  const recipients = Object.values(state.currentEnsembleData.members).filter((m) =>
-    m.id !== senderId && m.pushEnabled === true && m.fcmToken && (!targetMemberIds.length || targetMemberIds.includes(m.id))
-  );
-  const tokens = [...new Set(recipients.map((m) => m.fcmToken))];
-  if (!tokens.length) return;
-  try {
-    await fetch(PUSH_WORKER_URL, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, tokens, ensembleId: ensId, url: getInviteUrl(ensId) })
-    });
-  } catch (e) { console.warn("Worker push:", e); }
+export async function triggerNativeInstall() {
+  if (!state.deferredInstallPrompt) return;
+  state.deferredInstallPrompt.prompt(); await state.deferredInstallPrompt.userChoice; state.deferredInstallPrompt = null;
+  $("install-banner").classList.add("hidden"); $("tuto-direct-install-card").classList.add("hidden");
 }
 
-// Tutoriel, Onboarding & Multi-Ensembles
-export function showTutorialScreen() {
-  ["app-header", "app-nav", "view-onboarding", "view-agenda", "view-avail", "view-ensemble"].forEach((id) => $(id).classList.add("hidden"));
+// Navigation entre vues
+export function switchTab(tab) {
+  haptic();
+  ["agenda", "avail", "ensemble"].forEach((t) => $(`view-${t}`).classList.toggle("hidden", t !== tab));
+  document.querySelectorAll(".tab-item").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+}
+
+// Tutoriel & Onboarding
+export function showInstallTutorial() {
+  ["app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble", "view-onboarding", "install-banner"].forEach((id) => $(id).classList.add("hidden"));
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  $("tuto-ios-card").classList.toggle("featured", isIOS);
+  $("tuto-android-card").classList.toggle("featured", !isIOS);
   $("view-install-tuto").classList.remove("hidden");
-  $("tuto-direct-install-card").classList.toggle("hidden", !state.deferredInstallPrompt);
-  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  $("tuto-ios-card").style.order = isIos ? "1" : "2";
-  $("tuto-android-card").style.order = isIos ? "2" : "1";
 }
 
-export function completeTutorial() {
-  localStorage.setItem(KEYS.tuto, "true");
-  $("view-install-tuto").classList.add("hidden");
-  proceedAfterTutorial();
-}
-
-export function renderClaimableMembers(ensId, ensData) {
+export function renderClaimableMembers(ensId, data) {
   const box = $("join-existing-members-box"), list = $("join-existing-members-list"), kicker = $("join-new-member-kicker");
-  const members = Object.values(ensData?.members || {});
-  if (!members.length) {
-    box.classList.add("hidden"); kicker.classList.add("hidden"); list.innerHTML = "";
-    return;
-  }
-  box.classList.remove("hidden"); kicker.classList.remove("hidden");
-  list.innerHTML = members.map((m) => `
-    <div class="claim-member-row">
-      <div>
-        <div class="member-name">${esc(m.name)}</div>
-        <div class="member-role">${esc(m.instrument)}</div>
-      </div>
-      <button type="button" class="btn-secondary btn-xs" data-claim-member="${esc(m.id)}">${esc(t("onboarding.reclaimBtn"))}</button>
-    </div>`).join("");
-
-  list.onclick = (e) => {
-    const btn = e.target.closest("[data-claim-member]");
-    if (!btn) return;
-    const m = ensData.members?.[btn.dataset.claimMember];
-    if (!m) return;
+  const members = data?.members ? Object.values(data.members) : [];
+  if (!data || !members.length) { box.classList.add("hidden"); list.innerHTML = ""; kicker.classList.add("hidden"); return; }
+  kicker.classList.remove("hidden"); box.classList.remove("hidden");
+  list.innerHTML = members.map((m) => `<button type="button" class="btn-secondary btn-sm btn-full" style="justify-content:space-between" data-claim="${esc(m.id)}"><span><strong>${esc(m.name)}</strong> • ${esc(m.instrument)}</span><span style="font-size:12px;color:var(--muted)">Reprendre →</span></button>`).join("");
+  list.onclick = async (e) => {
+    const b = e.target.closest("[data-claim]");
+    if (!b) return;
     haptic();
-    state.session.ensembles[ensId] = { memberId: m.id, name: m.name, instrument: m.instrument, ensembleName: ensData.name };
-    state.session.activeEnsembleId = ensId;
-    saveSession();
-    localStorage.removeItem(KEYS.invite);
-    enterEnsemble(ensId);
-    showToast(t("onboarding.profileRestoredToast", { name: m.name }));
+    const m = data.members[b.dataset.claim];
+    if (!m) return;
+    state.session.ensembles[ensId] = { memberId: m.id, name: m.name, instrument: m.instrument, ensembleName: data.name };
+    state.session.activeEnsembleId = ensId; saveSession();
+    if (m.pushEnabled && Notification.permission === "granted") {
+      const tok = await fetchFcmTokenSafe();
+      if (tok) update(ref(db, `ensembles/${ensId}/members/${m.id}`), { fcmToken: tok }).catch(() => {});
+    }
+    window.history.replaceState({}, "", window.location.pathname);
+    showToast(`Profil de ${m.name} restauré.`); enterEnsemble(ensId);
   };
 }
 
 export async function proceedAfterTutorial() {
   const params = new URLSearchParams(window.location.search);
-  const urlEnsemble = params.get("ensemble"), urlMember = params.get("member");
-  const invitedId = urlEnsemble || localStorage.getItem(KEYS.invite);
+  let pending = null;
+  try { pending = JSON.parse(localStorage.getItem(KEYS.invite) || "null"); } catch (_) {}
+  const ensId = params.get("ensemble") || pending?.ensembleId || null;
+  const mbrId = params.get("member") || pending?.memberId || null;
 
-  if (urlEnsemble || urlMember) window.history.replaceState({}, document.title, window.location.pathname);
-
-  if (invitedId) {
-    localStorage.setItem(KEYS.invite, invitedId);
+  if (ensId) {
+    localStorage.removeItem(KEYS.invite);
+    if (mbrId) {
+      try {
+        const snap = await get(ref(db, `ensembles/${ensId}`));
+        const d = snap.exists() ? snap.val() : null;
+        const target = d?.members?.[mbrId];
+        if (target) {
+          state.session.ensembles[ensId] = { memberId: target.id, name: target.name, instrument: target.instrument, ensembleName: d.name };
+          state.session.activeEnsembleId = ensId; saveSession();
+          window.history.replaceState({}, "", window.location.pathname);
+          showToast(`Profil de ${target.name} restauré.`);
+          return enterEnsemble(ensId);
+        }
+      } catch (err) { handleFirebaseError(err); }
+    }
+    if (state.session.ensembles[ensId]) {
+      state.session.activeEnsembleId = ensId; saveSession();
+      window.history.replaceState({}, "", window.location.pathname);
+      return enterEnsemble(ensId);
+    }
+    $("join-code").value = ensId; $("join-card").classList.add("featured");
     try {
-      const snap = await get(ref(db, `ensembles/${invitedId}`));
+      const snap = await get(ref(db, `ensembles/${ensId}`));
       if (snap.exists()) {
         const d = snap.val();
-        if (urlMember && d.members?.[urlMember]) {
-          const target = d.members[urlMember];
-          state.session.ensembles[invitedId] = { memberId: target.id, name: target.name, instrument: target.instrument, ensembleName: d.name };
-          state.session.activeEnsembleId = invitedId;
-          saveSession(); localStorage.removeItem(KEYS.invite);
-          return enterEnsemble(invitedId, () => showToast(t("onboarding.profileRestoredToast", { name: target.name })));
-        }
-        if (state.session.ensembles[invitedId]) {
-          state.session.activeEnsembleId = invitedId; saveSession(); localStorage.removeItem(KEYS.invite);
-          return enterEnsemble(invitedId);
-        }
-        showOnboardingScreen();
-        $("join-code").value = invitedId;
-        $("join-kicker").textContent = t("onboarding.inviteKicker", { formation: translateFormation(d.formation) || t("ensemble.defaultFormation") });
-        $("join-ensemble-title").textContent = t("onboarding.inviteJoinTitle", { name: d.name });
-        renderClaimableMembers(invitedId, d);
-        $("create-card").classList.add("hidden"); $("onboarding-divider").classList.add("hidden");
-        return;
-      } else {
-        localStorage.removeItem(KEYS.invite);
-        showToast(t("onboarding.ensembleNotFoundToast"));
-      }
+        $("join-kicker").textContent = `Invitation — ${d.formation || "Ensemble"}`;
+        $("join-ensemble-title").textContent = `Rejoindre « ${d.name} »`;
+        ["join-code-field", "create-card", "onboarding-divider"].forEach((id) => $(id).classList.add("hidden"));
+        renderClaimableMembers(ensId, d);
+      } else showToast("Cet ensemble est introuvable.");
     } catch (err) { handleFirebaseError(err); }
+    return showOnboarding();
   }
-
-  if (state.session.activeEnsembleId && state.session.ensembles[state.session.activeEnsembleId]) {
-    enterEnsemble(state.session.activeEnsembleId);
-  } else {
-    showOnboardingScreen();
-  }
+  state.session.activeEnsembleId && state.session.ensembles[state.session.activeEnsembleId] ? enterEnsemble(state.session.activeEnsembleId) : showOnboarding();
 }
 
-export function showOnboardingScreen() {
-  if (state.unsubscribeEnsemble) { state.unsubscribeEnsemble(); state.unsubscribeEnsemble = null; }
-  state.currentEnsembleData = null;
-  ["app-header", "app-nav", "view-install-tuto", "view-agenda", "view-avail", "view-ensemble"].forEach((id) => $(id).classList.add("hidden"));
+export function showOnboarding() {
+  ["view-install-tuto", "app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble"].forEach((id) => $(id).classList.add("hidden"));
   $("view-onboarding").classList.remove("hidden");
-  $("create-card").classList.remove("hidden");
-  $("onboarding-divider").classList.remove("hidden");
-  $("join-kicker").textContent = t("onboarding.joinKicker");
-  $("join-ensemble-title").textContent = t("onboarding.joinTitle");
-  $("join-existing-members-box").classList.add("hidden");
-  $("join-new-member-kicker").classList.add("hidden");
-  $("join-existing-members-list").innerHTML = "";
 }
 
-export function enterEnsemble(ensId, onReady) {
-  if (state.unsubscribeEnsemble) { state.unsubscribeEnsemble(); state.unsubscribeEnsemble = null; }
+export function enterEnsemble(ensembleId) {
   ["view-install-tuto", "view-onboarding"].forEach((id) => $(id).classList.add("hidden"));
   ["app-header", "app-nav"].forEach((id) => $(id).classList.remove("hidden"));
+  $("header-ensemble-name").textContent = state.session.ensembles[ensembleId]?.ensembleName || ensembleId;
   switchTab("agenda");
 
-  state.unsubscribeEnsemble = onValue(ref(db, `ensembles/${ensId}`), (snap) => {
+  if (state.unsubscribeEnsemble) state.unsubscribeEnsemble();
+  state.unsubscribeEnsemble = onValue(ref(db, `ensembles/${ensembleId}`), (snap) => {
     $("firebase-error-banner").classList.add("hidden");
     if (!snap.exists()) {
-      delete state.session.ensembles[ensId];
-      state.session.activeEnsembleId = Object.keys(state.session.ensembles)[0] || null;
-      saveSession();
-      showToast(t("ensemble.deletedEnsembleToast"));
-      return state.session.activeEnsembleId ? enterEnsemble(state.session.activeEnsembleId) : showOnboardingScreen();
+      showToast("Cet ensemble n'existe plus.");
+      delete state.session.ensembles[ensembleId]; state.session.activeEnsembleId = null; saveSession();
+      return showOnboarding();
     }
     state.currentEnsembleData = snap.val();
-    const myInfo = state.session.ensembles[ensId];
-    if (myInfo && state.currentEnsembleData.members?.[myInfo.memberId]) {
-      const m = state.currentEnsembleData.members[myInfo.memberId];
-      myInfo.name = m.name; myInfo.instrument = m.instrument; myInfo.ensembleName = state.currentEnsembleData.name;
+    const mySes = state.session.ensembles[ensembleId];
+    if (mySes) {
+      mySes.ensembleName = state.currentEnsembleData.name;
+      const m = state.currentEnsembleData.members?.[mySes.memberId];
+      if (m) { mySes.name = m.name; mySes.instrument = m.instrument; }
       saveSession();
     }
-    const evt = state.currentEnsembleData.lastEvent;
-    if (evt && evt.timestamp > state.lastNotifiedTimestamp) {
-      state.lastNotifiedTimestamp = evt.timestamp;
-      localStorage.setItem(KEYS.evtTs, String(state.lastNotifiedTimestamp));
-      const targets = Array.isArray(evt.targetMemberIds) ? evt.targetMemberIds : [];
-      const isTargeted = !targets.length || (myInfo?.memberId && targets.includes(myInfo.memberId));
-      if (myInfo && evt.senderId !== myInfo.memberId && isTargeted && isEnsemblePushActive()) {
-        triggerLocalSystemNotification(evt.title, evt.body);
-      }
+
+    const myId = mySes?.memberId, evt = state.currentEnsembleData.lastEvent;
+    const targeted = !Array.isArray(evt?.targetMemberIds) || evt.targetMemberIds.includes(myId);
+    if (state.currentEnsembleData.members?.[myId]?.pushEnabled && evt && evt.timestamp > state.lastNotifiedTimestamp && evt.authorId !== myId && targeted) {
+      state.lastNotifiedTimestamp = evt.timestamp; localStorage.setItem(KEYS.evtTs, String(state.lastNotifiedTimestamp));
+      triggerLocalSystemNotification(evt.title, evt.body);
     }
-    renderAll();
     hooks.archiveFailedPollsIfNeeded();
-    syncExistingPushPermissionSilently();
-    hooks.maybeDisplayLatestAnnouncement();
-    if (onReady) { const fn = onReady; onReady = null; fn(); }
+    renderAll();
   }, handleFirebaseError);
 }
 
-export function switchTab(tab) {
-  haptic();
-  ["agenda", "avail", "ensemble"].forEach((tName) => {
-    $(`view-${tName}`).classList.toggle("hidden", tName !== tab);
-    document.querySelector(`.nav-btn[data-tab="${tName}"]`).classList.toggle("active", tName === tab);
-  });
-  window.scrollTo({ top: 0, behavior: "smooth" });
+export async function publishEnsembleNotification(title, body, options = {}) {
+  if (!state.session.activeEnsembleId) return;
+  const authorId = state.session.ensembles[state.session.activeEnsembleId]?.memberId, ts = Date.now();
+  state.lastNotifiedTimestamp = ts; localStorage.setItem(KEYS.evtTs, String(ts));
+  const targetMemberIds = Array.isArray(options.targetMemberIds) ? options.targetMemberIds : null;
+  try {
+    await update(ref(db, `ensembles/${state.session.activeEnsembleId}`), {
+      lastEvent: { title, body, timestamp: ts, authorId, ...(targetMemberIds ? { targetMemberIds } : {}) }
+    });
+    if (PUSH_WORKER_URL) {
+      fetch(PUSH_WORKER_URL, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ensembleId: state.session.activeEnsembleId, title, body, authorId, ...(targetMemberIds ? { targetMemberIds } : {}), url: getInviteUrl(state.session.activeEnsembleId) })
+      }).catch(() => {});
+    }
+  } catch (err) { handleFirebaseError(err); }
 }
 
 export function renderAll() {
   if (!state.currentEnsembleData) return;
-  $("header-ensemble-name").textContent = `${state.currentEnsembleData.name}${state.currentEnsembleData.formation ? ` • ${translateFormation(state.currentEnsembleData.formation)}` : ""}`;
+  $("header-ensemble-name").textContent = `${state.currentEnsembleData.name} • ${state.currentEnsembleData.formation || ""}`;
+  updatePushUI();
   hooks.renderAgenda();
   hooks.renderPolls();
   renderEnsembleInfo();
 }
 
 export function renderEnsembleInfo() {
-  const members = Object.values(state.currentEnsembleData.members || {});
-  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
-  $("info-ensemble-name").textContent = state.currentEnsembleData.name;
-  $("info-formation").textContent = translateFormation(state.currentEnsembleData.formation) || t("ensemble.defaultFormation");
+  const membersObj = state.currentEnsembleData.members || {}, members = Object.values(membersObj);
+  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId, today = new Date().toISOString().split("T")[0];
+
+  $("info-formation").textContent = state.currentEnsembleData.formation || "Ensemble";
+  $("info-name").textContent = state.currentEnsembleData.name;
   $("info-code").textContent = state.session.activeEnsembleId;
-  $("members-count").textContent = String(members.length);
+  $("members-count").textContent = members.length;
+  $("toggle-auto-remind-eve").checked = state.currentEnsembleData.autoRemindEve !== false;
 
   $("members-list").innerHTML = members.map((m) => {
-    const abs = Object.keys(m.unavailabilities || {}).length, isMe = m.id === myId;
+    const isMe = m.id === myId, abs = Object.values(m.unavailabilities || {}).filter((u) => u.endDate >= today).length;
     return `<div class="member-row">
-      <div style="min-width:0;flex:1">
-        <div class="member-name">${esc(m.name)}${isMe ? ` ${esc(t("common.youParen"))}` : ""}</div>
-        <div class="member-role">${esc(m.instrument)} • ${esc(m.pushEnabled ? t("ensemble.memberPushOn") : t("ensemble.memberPushOff"))}${abs ? ` • ${esc(t("ensemble.memberAbsencesCount", { count: abs }))}` : ""}</div>
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button type="button" class="btn-secondary btn-xs" data-edit-member="${esc(m.id)}">${esc(t("common.edit"))}</button>
-        <button type="button" class="btn-del-subtle btn-xs" data-remove-member="${esc(m.id)}">${esc(isMe ? t("ensemble.leaveBtn") : t("ensemble.removeBtn"))}</button>
-      </div>
+      <div style="min-width:0"><div><strong>${esc(m.name)}</strong> ${isMe ? "(Vous)" : ""}</div><div style="font-size:12.5px;color:var(--muted)">${esc(m.instrument)} • ${m.pushEnabled ? "Alertes actives" : "Sans alerte"}${abs ? ` • ${abs} absence(s)` : ""}</div></div>
+      <div class="member-row-actions"><button type="button" class="btn-secondary btn-xs" data-edit-member="${esc(m.id)}">Modifier</button><button type="button" class="btn-secondary btn-xs" data-remove-member="${esc(m.id)}">${isMe ? "Quitter" : "Retirer"}</button></div>
     </div>`;
   }).join("");
 
-  const myUnav = Object.values(state.currentEnsembleData.members?.[myId]?.unavailabilities || {}).sort((a, b) => a.startDate.localeCompare(b.startDate));
-  $("my-unavailabilities-list").innerHTML = myUnav.length
-    ? myUnav.map((u) => `<div class="unavail-item"><div><div style="font-weight:600;font-size:13.5px">${esc(u.startDate === u.endDate ? t("unavail.onSingleDate", { date: formatShortDateFr(u.startDate) }) : t("unavail.rangeFromToCap", { start: formatShortDateFr(u.startDate), end: formatShortDateFr(u.endDate) }))}</div>${u.reason ? `<div style="font-size:12.5px;color:var(--muted)">${esc(u.reason)}</div>` : ""}</div><button type="button" class="btn-secondary btn-xs" data-del-unavail="${esc(u.id)}">${esc(t("common.delete"))}</button></div>`).join("")
-    : `<p style="font-size:13px;color:var(--muted);margin-bottom:4px">${esc(t("ensemble.noUnavailRecorded"))}</p>`;
+  const myUnavails = Object.values(membersObj[myId]?.unavailabilities || {}).sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
+  $("my-unavailabilities-list").innerHTML = myUnavails.length
+    ? myUnavails.map((u) => `<div class="member-row"><div style="min-width:0"><div style="font-size:13.5px"><strong>${esc(u.startDate === u.endDate ? `Le ${formatShortDateFr(u.startDate)}` : `Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`)}</strong></div>${u.reason ? `<div style="font-size:12.5px;color:var(--muted)">${esc(u.reason)}</div>` : ""}</div><button type="button" class="btn-secondary btn-xs" data-del-unavail="${esc(u.id)}">Supprimer</button></div>`).join("")
+    : `<div style="font-size:13px;color:var(--muted);padding-bottom:4px">Aucune période d'indisponibilité enregistrée.</div>`;
 
-  $("saved-ensembles-list").innerHTML = Object.entries(state.session.ensembles).map(([id, info]) => {
-    const cur = id === state.session.activeEnsembleId;
-    return `<div class="ensemble-switch-row ${cur ? "active-ens" : ""}"><div><div style="font-weight:600;font-size:14px">${esc(info.ensembleName || id)}</div><div style="font-size:12px;color:var(--muted)">${esc(info.name)} (${esc(info.instrument)})</div></div><button type="button" class="btn-secondary btn-xs" data-switch-ens="${esc(id)}" ${cur ? "disabled" : ""}>${esc(cur ? t("ensemble.activeBadge") : t("ensemble.openBtn"))}</button></div>`;
+  $("saved-ensembles-list").innerHTML = Object.keys(state.session.ensembles).map((id) => {
+    const it = state.session.ensembles[id], cur = id === state.session.activeEnsembleId;
+    return `<div class="member-row"><div><strong>${esc(it.ensembleName || id)}</strong><div style="font-size:12px;color:var(--muted)">${esc(it.name)} • ${esc(it.instrument)}</div></div>${cur ? `<span style="font-size:12px;font-weight:600;color:var(--yes-fg)">Actif</span>` : `<button type="button" class="btn-secondary btn-sm" data-switch-ens="${esc(id)}">Ouvrir</button>`}</div>`;
   }).join("");
 }
 
 export function initEnsembleListeners() {
-  document.querySelectorAll(".nav-btn").forEach((b) => b.addEventListener("click", () => {
-    if (b.dataset.tab === "ensemble") {
-      state.ensembleTapCount++;
-      clearTimeout(state.ensembleTapTimer);
-      state.ensembleTapTimer = setTimeout(() => { state.ensembleTapCount = 0; }, 1400);
-      if (state.ensembleTapCount >= 5) {
-        state.ensembleTapCount = 0;
-        hooks.openAdminPinPrompt();
-      }
-    } else {
-      state.ensembleTapCount = 0;
-    }
-    switchTab(b.dataset.tab);
-  }));
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); state.deferredInstallPrompt = e;
+    $("install-banner").classList.remove("hidden"); $("tuto-direct-install-card").classList.remove("hidden");
+  });
 
-  let joinLookupTimer = null;
+  $("btn-install-pwa").addEventListener("click", triggerNativeInstall);
+  $("btn-tuto-direct-install").addEventListener("click", triggerNativeInstall);
+
+  document.querySelectorAll(".tab-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+      switchTab(tab);
+      if (tab === "ensemble") {
+        state.ensembleTapCount++;
+        clearTimeout(state.ensembleTapTimer);
+        if (state.ensembleTapCount >= 4) { state.ensembleTapCount = 0; return hooks.openAdminPinPrompt(); }
+        state.ensembleTapTimer = setTimeout(() => { state.ensembleTapCount = 0; }, 1500);
+      } else { state.ensembleTapCount = 0; clearTimeout(state.ensembleTapTimer); }
+    });
+  });
+
+  $("btn-finish-tuto").addEventListener("click", async () => {
+    haptic(); localStorage.setItem(KEYS.tuto, "1");
+    $("view-install-tuto").classList.add("hidden");
+    await proceedAfterTutorial(); hooks.maybeDisplayLatestAnnouncement();
+  });
+  $("btn-reopen-tuto").addEventListener("click", () => { haptic(); showInstallTutorial(); });
+
+  let codeLookupTimer = null;
   $("join-code").addEventListener("input", () => {
-    clearTimeout(joinLookupTimer);
-    joinLookupTimer = setTimeout(async () => {
-      const code = extractEnsembleCode($("join-code").value);
-      if (!code.startsWith("ens-") || code.length < 8) {
-        $("join-existing-members-box").classList.add("hidden");
-        $("join-new-member-kicker").classList.add("hidden");
-        return;
-      }
+    clearTimeout(codeLookupTimer);
+    const code = extractEnsembleCode($("join-code").value);
+    if (code.length < 6) return renderClaimableMembers(null, null);
+    codeLookupTimer = setTimeout(async () => {
       try {
         const snap = await get(ref(db, `ensembles/${code}`));
         if (snap.exists()) {
           const d = snap.val();
-          $("join-kicker").textContent = t("onboarding.ensembleFoundKicker", { formation: translateFormation(d.formation) || t("ensemble.defaultFormation") });
-          $("join-ensemble-title").textContent = t("onboarding.inviteJoinTitle", { name: d.name });
+          $("join-kicker").textContent = `Ensemble trouvé — ${d.formation || "Ensemble"}`;
+          $("join-ensemble-title").textContent = d.name;
           renderClaimableMembers(code, d);
-        }
+        } else renderClaimableMembers(null, null);
       } catch (_) {}
-    }, 350);
-  });
-
-  $("form-join").addEventListener("submit", async (e) => {
-    e.preventDefault(); haptic();
-    const code = extractEnsembleCode($("join-code").value);
-    const name = $("join-name").value.trim(), instrument = $("join-instrument").value.trim();
-    const btn = $("btn-submit-join"); btn.disabled = true;
-    try {
-      const snap = await get(ref(db, `ensembles/${code}`));
-      if (!snap.exists()) return showToast(t("onboarding.ensembleNotFoundToast"));
-      const d = snap.val();
-
-      const dup = Object.values(d.members || {}).find((m) => m.name.trim().toLowerCase() === name.toLowerCase());
-      if (dup) {
-        return openConfirmationModal({
-          title: t("onboarding.dupTitle"),
-          context: `${dup.name} (${dup.instrument}) — ${d.name}`,
-          message: t("onboarding.dupMsg", { name: dup.name }),
-          confirmLabel: t("onboarding.dupConfirmBtn"),
-          danger: false,
-          onConfirm: () => {
-            state.session.ensembles[code] = { memberId: dup.id, name: dup.name, instrument: dup.instrument, ensembleName: d.name };
-            state.session.activeEnsembleId = code;
-            saveSession(); localStorage.removeItem(KEYS.invite);
-            $("form-join").reset();
-            enterEnsemble(code);
-            showToast(t("onboarding.profileRestoredToast", { name: dup.name }));
-          }
-        });
-      }
-
-      const memberId = genId("mbr");
-      await set(ref(db, `ensembles/${code}/members/${memberId}`), { id: memberId, name, instrument, pushEnabled: false });
-      state.session.ensembles[code] = { memberId, name, instrument, ensembleName: d.name };
-      state.session.activeEnsembleId = code; saveSession(); localStorage.removeItem(KEYS.invite);
-      $("form-join").reset(); enterEnsemble(code); showToast(t("onboarding.welcomeEnsembleToast", { name: d.name }));
-    } catch (err) { handleFirebaseError(err); }
-    finally { btn.disabled = false; }
+    }, 300);
   });
 
   $("form-create").addEventListener("submit", async (e) => {
     e.preventDefault(); haptic();
-    const ensembleName = $("create-ensemble-name").value.trim(), formation = $("create-formation").value;
-    const memberName = $("create-member-name").value.trim(), instrument = $("create-member-instrument").value.trim();
     const btn = $("btn-submit-create"); btn.disabled = true;
     try {
-      const ensId = genId("ens"), memberId = genId("mbr");
-      await set(ref(db, `ensembles/${ensId}`), {
-        id: ensId, name: ensembleName, formation, createdAt: Date.now(), autoRemindEve: true,
-        members: { [memberId]: { id: memberId, name: memberName, instrument, pushEnabled: false } }
+      const ensembleName = $("create-ensemble-name").value.trim(), formation = $("create-formation").value;
+      const memberName = $("create-member-name").value.trim(), instrument = $("create-member-instrument").value.trim();
+      const ensembleId = genId("ens"), memberId = genId("mbr");
+      const pushEnabled = "Notification" in window && Notification.permission === "granted";
+      const fcmToken = pushEnabled ? await fetchFcmTokenSafe() : null;
+
+      await set(ref(db, `ensembles/${ensembleId}`), {
+        id: ensembleId, name: ensembleName, formation, autoRemindEve: true, createdAt: Date.now(),
+        members: { [memberId]: { id: memberId, name: memberName, instrument, pushEnabled, ...(fcmToken ? { fcmToken } : {}), joinedAt: Date.now() } }
       });
-      state.session.ensembles[ensId] = { memberId, name: memberName, instrument, ensembleName };
-      state.session.activeEnsembleId = ensId; saveSession(); localStorage.removeItem(KEYS.invite);
-      $("form-create").reset(); enterEnsemble(ensId, () => openModal("modal-invite"));
+      $("firebase-error-banner").classList.add("hidden");
+      state.session.ensembles[ensembleId] = { memberId, name: memberName, instrument, ensembleName };
+      state.session.activeEnsembleId = ensembleId; saveSession();
+      enterEnsemble(ensembleId); openModal("modal-invite");
+    } catch (err) { handleFirebaseError(err); }
+    finally { btn.disabled = false; }
+  });
+
+  $("form-join").addEventListener("submit", async (e) => {
+    e.preventDefault(); haptic();
+    const btn = $("btn-submit-join"); btn.disabled = true;
+    try {
+      const code = extractEnsembleCode($("join-code").value), name = $("join-name").value.trim(), instrument = $("join-instrument").value.trim();
+      const snap = await get(ref(db, `ensembles/${code}`));
+      $("firebase-error-banner").classList.add("hidden");
+      if (!snap.exists()) { showToast("Ensemble introuvable."); return; }
+
+      const d = snap.val();
+      const dup = Object.values(d.members || {}).find((m) => m.name?.trim().toLowerCase() === name.toLowerCase());
+      const finalizeJoin = async (memberId, finalName, isRestore) => {
+        const pushEnabled = isRestore ? Boolean(dup.pushEnabled) : ("Notification" in window && Notification.permission === "granted");
+        const fcmToken = (pushEnabled && Notification.permission === "granted") ? await fetchFcmTokenSafe() : null;
+        if (isRestore) {
+          await update(ref(db, `ensembles/${code}/members/${memberId}`), { instrument, ...(fcmToken ? { fcmToken } : {}) });
+        } else {
+          await set(ref(db, `ensembles/${code}/members/${memberId}`), { id: memberId, name: finalName, instrument, pushEnabled, ...(fcmToken ? { fcmToken } : {}), joinedAt: Date.now() });
+        }
+        state.session.ensembles[code] = { memberId, name: finalName, instrument, ensembleName: d.name };
+        state.session.activeEnsembleId = code; saveSession();
+        window.history.replaceState({}, "", window.location.pathname);
+        showToast(isRestore ? `Profil de ${finalName} restauré.` : `Bienvenue dans ${d.name}.`);
+        enterEnsemble(code);
+      };
+
+      if (dup) {
+        openConfirmationModal({
+          title: "Profil existant détecté",
+          context: `${dup.name} • ${dup.instrument}`,
+          message: `Un membre nommé « ${dup.name} » existe déjà. Voulez-vous restaurer ce profil et ses votes plutôt que d'en créer un nouveau ?`,
+          confirmLabel: "Restaurer ce profil",
+          danger: false,
+          onConfirm: () => finalizeJoin(dup.id, dup.name, true)
+        });
+      } else {
+        await finalizeJoin(genId("mbr"), name, false);
+      }
     } catch (err) { handleFirebaseError(err); }
     finally { btn.disabled = false; }
   });
@@ -441,168 +403,117 @@ export function initEnsembleListeners() {
   $("view-ensemble").addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
-    const ensId = state.session.activeEnsembleId;
-    const myId = state.session.ensembles[ensId]?.memberId;
+    const membersObj = state.currentEnsembleData?.members || {}, myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
 
     if (btn.dataset.editMember) {
-      const m = state.currentEnsembleData?.members?.[btn.dataset.editMember];
-      if (!m) return;
-      $("edit-member-id").value = m.id;
-      $("edit-member-name").value = m.name || "";
-      $("edit-member-instrument").value = m.instrument || "";
+      const m = membersObj[btn.dataset.editMember]; if (!m) return;
+      $("edit-member-id").value = m.id; $("edit-member-name").value = m.name || ""; $("edit-member-instrument").value = m.instrument || "";
       return openModal("modal-edit-member");
     }
     if (btn.dataset.removeMember) {
-      const targetId = btn.dataset.removeMember;
-      const m = state.currentEnsembleData?.members?.[targetId];
-      if (!m) return;
-      const isMe = targetId === myId;
+      const tid = btn.dataset.removeMember, m = membersObj[tid]; if (!m) return;
+      const isMe = tid === myId;
       return openConfirmationModal({
-        title: isMe ? t("ensemble.leaveConfirmTitle") : t("ensemble.removeConfirmTitle", { name: m.name }),
-        context: `${m.name} (${m.instrument})`,
-        message: isMe
-          ? t("ensemble.leaveConfirmMsg", { ensemble: state.currentEnsembleData.name })
-          : t("ensemble.removeConfirmMsg", { name: m.name }),
-        confirmLabel: isMe ? t("ensemble.leaveBtn") : t("ensemble.removeBtn"),
+        title: isMe ? "Quitter cet ensemble ?" : `Retirer ${m.name} ?`,
+        context: `${m.name} • ${m.instrument}`,
+        message: isMe ? `Vous quitterez « ${state.currentEnsembleData.name} » et vos votes seront retirés.` : `${m.name} sera retiré de l'ensemble ainsi que ses votes.`,
+        confirmLabel: isMe ? "Quitter" : "Retirer",
         onConfirm: async () => {
           try {
-            const updates = { [`members/${targetId}`]: null };
-            Object.values(state.currentEnsembleData.polls || {}).forEach((p) => {
-              if (p.votes?.[targetId]) updates[`polls/${p.id}/votes/${targetId}`] = null;
-              if (p.voteNotes?.[targetId]) updates[`polls/${p.id}/voteNotes/${targetId}`] = null;
-            });
-            await update(ref(db, `ensembles/${ensId}`), updates);
+            const ensId = state.session.activeEnsembleId;
+            await remove(ref(db, `ensembles/${ensId}/members/${tid}`));
+            await Promise.all(Object.keys(state.currentEnsembleData.polls || {}).flatMap((pid) => [
+              remove(ref(db, `ensembles/${ensId}/polls/${pid}/votes/${tid}`)),
+              remove(ref(db, `ensembles/${ensId}/polls/${pid}/voteNotes/${tid}`))
+            ]));
             if (isMe) {
               delete state.session.ensembles[ensId];
               state.session.activeEnsembleId = Object.keys(state.session.ensembles)[0] || null;
-              saveSession();
-              showToast(t("ensemble.leftEnsembleToast"));
-              state.session.activeEnsembleId ? enterEnsemble(state.session.activeEnsembleId) : showOnboardingScreen();
-            } else {
-              showToast(t("ensemble.removedMemberToast", { name: m.name }));
-            }
+              saveSession(); showToast("Vous avez quitté l'ensemble.");
+              state.session.activeEnsembleId ? enterEnsemble(state.session.activeEnsembleId) : (state.unsubscribeEnsemble?.(), showOnboarding());
+            } else showToast(`${m.name} a été retiré.`);
           } catch (err) { handleFirebaseError(err); }
         }
       });
     }
     if (btn.dataset.delUnavail) {
-      const u = state.currentEnsembleData?.members?.[myId]?.unavailabilities?.[btn.dataset.delUnavail];
-      if (!u) return;
-      openConfirmationModal({
-        title: t("unavail.deleteConfirmTitle"),
-        context: u.startDate === u.endDate
-          ? t("unavail.onSingleDate", { date: formatShortDateFr(u.startDate) })
-          : t("unavail.rangeFromToCap", { start: formatShortDateFr(u.startDate), end: formatShortDateFr(u.endDate) }),
-        message: t("unavail.deleteConfirmMsg"),
-        confirmLabel: t("common.delete"),
+      const u = membersObj[myId]?.unavailabilities?.[btn.dataset.delUnavail]; if (!u) return;
+      const rTxt = u.startDate === u.endDate ? `Le ${formatShortDateFr(u.startDate)}` : `Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`;
+      return openConfirmationModal({
+        title: "Supprimer cette absence ?", context: `${rTxt}${u.reason ? ` — ${u.reason}` : ""}`,
+        message: "Cette période ne sera plus signalée.", confirmLabel: "Supprimer",
         onConfirm: async () => {
-          try {
-            await remove(ref(db, `ensembles/${ensId}/members/${myId}/unavailabilities/${u.id}`));
-            showToast(t("unavail.deletedToast"));
-          } catch (err) { handleFirebaseError(err); }
+          try { await remove(ref(db, `ensembles/${state.session.activeEnsembleId}/members/${myId}/unavailabilities/${u.id}`)); showToast("Absence supprimée."); }
+          catch (err) { handleFirebaseError(err); }
         }
       });
     }
     if (btn.dataset.switchEns) {
-      state.session.activeEnsembleId = btn.dataset.switchEns; saveSession(); enterEnsemble(btn.dataset.switchEns);
+      state.session.activeEnsembleId = btn.dataset.switchEns; saveSession(); enterEnsemble(state.session.activeEnsembleId);
     }
   });
 
   $("form-unavailability").addEventListener("submit", async (e) => {
     e.preventDefault(); haptic();
     const startDate = $("unavail-start").value, endDate = $("unavail-end").value, reason = $("unavail-reason").value.trim();
-    if (endDate < startDate) return showToast(t("unavail.endBeforeStartToast"));
-    const ensId = state.session.activeEnsembleId, myId = state.session.ensembles[ensId]?.memberId;
-    if (!ensId || !myId) return;
+    const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
+    if (!startDate || !endDate || !myId) return;
+    if (endDate < startDate) return showToast("La date de fin doit être postérieure ou égale au début.");
     try {
       const id = genId("una");
-      await set(ref(db, `ensembles/${ensId}/members/${myId}/unavailabilities/${id}`), { id, startDate, endDate, reason, createdAt: Date.now() });
-      $("form-unavailability").reset(); closeModal("modal-unavailability"); showToast(t("unavail.savedToast"));
+      await set(ref(db, `ensembles/${state.session.activeEnsembleId}/members/${myId}/unavailabilities/${id}`), { id, startDate, endDate, reason, createdAt: Date.now() });
+      $("form-unavailability").reset(); closeModal("modal-unavailability"); showToast("Indisponibilité enregistrée.");
     } catch (err) { handleFirebaseError(err); }
   });
 
   $("toggle-auto-remind-eve").addEventListener("change", async (e) => {
-    if (!state.session.activeEnsembleId) return;
-    haptic();
-    const enabled = Boolean(e.target.checked);
+    haptic(); if (!state.session.activeEnsembleId) return;
     try {
-      await update(ref(db, `ensembles/${state.session.activeEnsembleId}`), { autoRemindEve: enabled });
-      showToast(enabled ? t("push.autoRemindOnToast") : t("push.autoRemindOffToast"));
+      await update(ref(db, `ensembles/${state.session.activeEnsembleId}`), { autoRemindEve: e.target.checked });
+      showToast(e.target.checked ? "Rappel automatique la veille à 19h00 activé." : "Rappel automatique désactivé.");
     } catch (err) { handleFirebaseError(err); }
   });
 
   $("form-edit-ensemble").addEventListener("submit", async (e) => {
     e.preventDefault(); haptic();
-    const ensId = state.session.activeEnsembleId;
-    const name = $("edit-ensemble-name").value.trim();
-    const formation = $("edit-ensemble-formation").value;
-    if (!ensId || !name) return;
+    const name = $("edit-ensemble-name").value.trim(), formation = $("edit-ensemble-formation").value;
+    if (!name || !state.session.activeEnsembleId) return;
     try {
-      await update(ref(db, `ensembles/${ensId}`), { name, formation, updatedAt: Date.now() });
-      if (state.session.ensembles[ensId]) {
-        state.session.ensembles[ensId].ensembleName = name;
-        saveSession();
-      }
-      closeModal("modal-edit-ensemble");
-      showToast(t("ensemble.updatedToast"));
+      await update(ref(db, `ensembles/${state.session.activeEnsembleId}`), { name, formation });
+      state.session.ensembles[state.session.activeEnsembleId].ensembleName = name; saveSession();
+      closeModal("modal-edit-ensemble"); showToast("Ensemble mis à jour.");
     } catch (err) { handleFirebaseError(err); }
   });
 
   $("form-edit-member").addEventListener("submit", async (e) => {
     e.preventDefault(); haptic();
-    const ensId = state.session.activeEnsembleId;
-    const memberId = $("edit-member-id").value;
-    const name = $("edit-member-name").value.trim();
-    const instrument = $("edit-member-instrument").value.trim();
-    if (!ensId || !memberId || !name || !instrument) return;
+    const id = $("edit-member-id").value, name = $("edit-member-name").value.trim(), instrument = $("edit-member-instrument").value.trim();
+    if (!id || !name || !instrument || !state.session.activeEnsembleId) return;
     try {
-      await update(ref(db, `ensembles/${ensId}/members/${memberId}`), { name, instrument });
-      if (state.session.ensembles[ensId]?.memberId === memberId) {
-        state.session.ensembles[ensId].name = name;
-        state.session.ensembles[ensId].instrument = instrument;
-        saveSession();
-      }
-      closeModal("modal-edit-member");
-      showToast(t("ensemble.memberUpdatedToast"));
+      await update(ref(db, `ensembles/${state.session.activeEnsembleId}/members/${id}`), { name, instrument });
+      const mySes = state.session.ensembles[state.session.activeEnsembleId];
+      if (mySes?.memberId === id) { mySes.name = name; mySes.instrument = instrument; saveSession(); }
+      closeModal("modal-edit-member"); showToast("Profil mis à jour.");
     } catch (err) { handleFirebaseError(err); }
   });
 
+  $("btn-open-unavail").addEventListener("click", () => openModal("modal-unavailability"));
+  $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
+  $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
+  $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
+  $("btn-notif-top").addEventListener("click", togglePushForEnsemble);
   $("btn-toggle-push").addEventListener("click", togglePushForEnsemble);
   $("btn-test-push").addEventListener("click", async () => {
     haptic();
-    if (!isEnsemblePushActive()) return showToast(t("push.enableFirstToast"));
-    await triggerLocalSystemNotification(`Cadenza • ${state.currentEnsembleData?.name || "Test"}`, t("push.testNotifBody"));
-    showToast(t("push.testSentToast"));
+    if (!isEnsemblePushActive()) return showToast("Activez d'abord les notifications.");
+    await triggerLocalSystemNotification(`Cadenza — ${state.currentEnsembleData?.name || "Ensemble"}`, "Test réussi : vos notifications fonctionnent.");
+    showToast("Notification de test envoyée.");
   });
 
-  $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
-  $("btn-notif-top").addEventListener("click", () => { switchTab("ensemble"); setTimeout(() => $("push-settings-card").scrollIntoView({ behavior: "smooth" }), 80); });
-  $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
-  $("btn-open-unavail").addEventListener("click", () => openModal("modal-unavailability"));
-  $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
-  $("btn-switch-onboarding").addEventListener("click", showOnboardingScreen);
-  $("btn-reopen-tuto").addEventListener("click", showTutorialScreen);
-  $("btn-finish-tuto").addEventListener("click", completeTutorial);
-
-  const shareInvite = () => shareOrCopy(
-    $("invite-link-display").textContent,
-    `Cadenza — ${state.currentEnsembleData?.name || "Ensemble"}`,
-    t("modal.inviteShareText", { ensemble: state.currentEnsembleData?.name || "Cadenza" }),
-    t("modal.inviteCopiedToast")
-  );
-  $("btn-share-invite").addEventListener("click", () => { openModal("modal-invite"); shareInvite(); });
-  $("btn-copy-invite").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable($("invite-link-display").textContent)) ? t("modal.inviteCopiedToast") : t("common.copiedFallback")); });
-  $("btn-native-share").addEventListener("click", shareInvite);
-
-  const shareTransfer = () => {
-    const me = state.session.ensembles[state.session.activeEnsembleId];
-    return shareOrCopy(
-      $("transfer-link-display").textContent,
-      t("modal.transferShareTitle", { name: me?.name || "Cadenza" }),
-      t("modal.transferShareText"),
-      t("modal.transferCopiedToast")
-    );
-  };
-  $("btn-copy-transfer").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable($("transfer-link-display").textContent)) ? t("modal.transferCopiedToast") : t("common.copiedFallback")); });
-  $("btn-share-transfer").addEventListener("click", shareTransfer);
+  $("btn-share-invite").addEventListener("click", () => shareOrCopy(getInviteUrl(state.session.activeEnsembleId), `Cadenza — ${state.currentEnsembleData.name}`, `Rejoignez l'agenda de ${state.currentEnsembleData.name} sur Cadenza :`, "Lien d'invitation copié."));
+  $("btn-copy-invite").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable(getInviteUrl(state.session.activeEnsembleId))) ? "Lien d'invitation copié." : "Copiez le lien affiché."); });
+  $("btn-native-share").addEventListener("click", () => shareOrCopy(getInviteUrl(state.session.activeEnsembleId), `Cadenza — ${state.currentEnsembleData.name}`, `Rejoignez notre ensemble ${state.currentEnsembleData.name} sur Cadenza :`, "Lien d'invitation copié."));
+  $("btn-copy-transfer").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable($("transfer-link-display").textContent)) ? "Lien personnel copié." : "Copiez le lien affiché."); });
+  $("btn-share-transfer").addEventListener("click", () => shareOrCopy($("transfer-link-display").textContent, `Cadenza — Profil de ${state.session.ensembles[state.session.activeEnsembleId]?.name || "Musicien"}`, "Ouvrez ce lien sur votre appareil pour retrouver votre profil Cadenza :", "Lien personnel copié."));
+  $("btn-switch-onboarding").addEventListener("click", () => { haptic(); state.unsubscribeEnsemble?.(); showOnboarding(); });
 }
