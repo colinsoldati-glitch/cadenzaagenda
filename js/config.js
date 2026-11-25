@@ -2,8 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebas
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
 import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
 import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
+import { t, getDateLocale, translatePeriod } from "./i18n.js";
 
-export const APP_VERSION = "v20.2";
+export const APP_VERSION = "v20.4";
 export const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
 export const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
 
@@ -17,11 +18,20 @@ export const KEYS = {
 };
 
 export const EVENT_TYPES = {
-  rehearsal: { label: "Répétition", badgeCls: "", cardCls: "", nextLabel: "Prochaine répétition" },
-  cours: { label: "Cours", badgeCls: "cours", cardCls: "cours-card", nextLabel: "Prochain cours" },
-  concert: { label: "Concert", badgeCls: "concert", cardCls: "concert-card", nextLabel: "Prochain concert" }
+  rehearsal: { labelKey: "eventType.rehearsal", badgeCls: "", cardCls: "", nextLabelKey: "eventType.nextRehearsal" },
+  cours: { labelKey: "eventType.cours", badgeCls: "cours", cardCls: "cours-card", nextLabelKey: "eventType.nextCours" },
+  concert: { labelKey: "eventType.concert", badgeCls: "concert", cardCls: "concert-card", nextLabelKey: "eventType.nextConcert" }
 };
-export const getEventMeta = (t) => EVENT_TYPES[t] || EVENT_TYPES.rehearsal;
+
+export const getEventMeta = (type) => {
+  const cfg = EVENT_TYPES[type] || EVENT_TYPES.rehearsal;
+  return {
+    label: t(cfg.labelKey),
+    badgeCls: cfg.badgeCls,
+    cardCls: cfg.cardCls,
+    nextLabel: t(cfg.nextLabelKey)
+  };
+};
 
 const app = initializeApp({
   apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
@@ -116,19 +126,30 @@ export function handleFirebaseError(err) {
   console.error("Firebase error:", err);
   const msg = String(err?.message || err || "");
   $("firebase-error-text").textContent = (msg.toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED")
-    ? "Accès refusé par Firebase : autorisez .read et .write sur \"ensembles\"."
-    : `Erreur de synchronisation Firebase : ${msg}`;
+    ? t("firebase.permissionDenied")
+    : t("firebase.syncError", { msg });
   $("firebase-error-banner").classList.remove("hidden");
-  showToast("Erreur de connexion à la base de données.");
+  showToast(t("firebase.dbToastError"));
 }
 
 // Formatage des dates & créneaux
 export const parseIso = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
-export const formatDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
-export const formatCompactDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "";
-export const formatShortDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "";
-export const formatPollTimeLabel = (p) => p.timeMode === "day" ? "Journée entière" : p.timeMode === "period" && p.period ? p.period : p.startTime && p.endTime ? `${p.startTime} – ${p.endTime}` : (p.startTime || p.period || "");
-export const formatVoteLabelFr = (v) => ({ yes: "Oui (Disponible)", maybe: "Peut-être (Incertain)", no: "Non (Indisponible)" }[v] || "");
+export const formatDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString(getDateLocale(), { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
+export const formatCompactDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString(getDateLocale(), { weekday: "short", day: "numeric", month: "short" }) : "";
+export const formatShortDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString(getDateLocale(), { day: "numeric", month: "short", year: "numeric" }) : "";
+export const formatPollTimeLabel = (p) => p.timeMode === "day"
+  ? t("time.fullDay")
+  : p.timeMode === "period" && p.period
+    ? translatePeriod(p.period)
+    : p.startTime && p.endTime
+      ? `${p.startTime} – ${p.endTime}`
+      : (p.startTime || translatePeriod(p.period) || "");
+
+export const formatVoteLabelFr = (v) => ({
+  yes: t("vote.yesLong"),
+  maybe: t("vote.maybeLong"),
+  no: t("vote.noLong")
+}[v] || "");
 
 export function getPollSortKey(p) {
   if (p.timeMode === "day") return `${p.date}T00:00`;
@@ -165,10 +186,10 @@ export async function copyTextReliable(text) {
     try { await navigator.clipboard.writeText(text); return true; } catch (_) {}
   }
   try {
-    const t = Object.assign(document.createElement("textarea"), { value: text, style: "position:fixed;opacity:0" });
-    document.body.appendChild(t); t.select();
+    const tArea = Object.assign(document.createElement("textarea"), { value: text, style: "position:fixed;opacity:0" });
+    document.body.appendChild(tArea); tArea.select();
     const ok = document.execCommand("copy");
-    document.body.removeChild(t);
+    document.body.removeChild(tArea);
     return ok;
   } catch (_) { return false; }
 }
@@ -178,7 +199,7 @@ export async function shareOrCopy(url, title, text, copiedMsg) {
   if (navigator.share) {
     try { await navigator.share({ title, text, url }); return; } catch (e) { if (e?.name === "AbortError") return; }
   }
-  showToast((await copyTextReliable(url)) ? copiedMsg : "Copiez le lien affiché ci-dessus.");
+  showToast((await copyTextReliable(url)) ? copiedMsg : t("common.copiedFallback"));
 }
 
 export function getUnavailabilityConflictsForDate(iso) {
