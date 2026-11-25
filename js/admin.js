@@ -25,7 +25,9 @@ export function switchAdminPortalTab(tab) {
   document.querySelectorAll("[data-admin-tab]").forEach((b) => b.classList.toggle("active", b.dataset.adminTab === tab));
   $("admin-panel-publish").classList.toggle("hidden", tab !== "publish");
   $("admin-panel-results").classList.toggle("hidden", tab !== "results");
+  $("admin-panel-stats").classList.toggle("hidden", tab !== "stats");
   if (tab === "results") renderAdminResultsPanel();
+  if (tab === "stats") renderAdminStatsPanel();
 }
 
 export function setAdminPopupType(type) {
@@ -314,6 +316,162 @@ export function renderAdminResultsPanel() {
     : `<div style="font-size:13px;color:var(--muted)">Aucun commentaire écrit pour le moment.</div>`;
 }
 
+// Extraction de l'horodatage de création d'un ensemble (avec repli sur le 1er membre)
+function getEnsembleTimestamp(ens) {
+  if (!ens || typeof ens !== "object") return 0;
+  if (typeof ens.createdAt === "number" && ens.createdAt > 0) return ens.createdAt;
+  if (typeof ens.createdAt === "string") {
+    const parsed = Date.parse(ens.createdAt);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  const memberTimes = Object.values(ens.members || {})
+    .map((m) => {
+      if (!m || typeof m !== "object") return 0;
+      if (typeof m.joinedAt === "number") return m.joinedAt;
+      if (typeof m.createdAt === "number") return m.createdAt;
+      return 0;
+    })
+    .filter((t) => t > 0);
+  if (memberTimes.length) return Math.min(...memberTimes);
+  return 0;
+}
+
+function formatEnsembleRegistrationDate(ts) {
+  if (!ts) return "Inscription récente";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "Inscription récente";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startOfToday - startOfDay) / 86400000);
+  const timeStr = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (diffDays === 0) return `Aujourd'hui à ${timeStr}`;
+  if (diffDays === 1) return `Hier à ${timeStr}`;
+  if (diffDays > 1 && diffDays < 7) return `Il y a ${diffDays} jours`;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function ensureAdminEnsemblesListener() {
+  if (state.unsubscribeAdminEnsembles) return;
+  state.adminEnsemblesLoaded = false;
+  state.unsubscribeAdminEnsembles = onValue(ref(db, "ensembles"), (snap) => {
+    state.ensemblesPermissionDenied = false;
+    state.adminEnsemblesLoaded = true;
+    const list = [];
+    let idx = 0;
+    snap.forEach((childSnap) => {
+      const val = childSnap.val();
+      if (val && typeof val === "object") {
+        const membersList = Object.values(val.members || {}).filter((m) => m && typeof m === "object" && m.name);
+        list.push({
+          id: val.id || childSnap.key,
+          name: val.name || "Ensemble sans nom",
+          formation: val.formation || "Ensemble",
+          members: membersList,
+          memberCount: membersList.length,
+          timestamp: getEnsembleTimestamp(val),
+          orderIndex: idx++
+        });
+      }
+    });
+    list.sort((a, b) => (b.timestamp !== a.timestamp ? b.timestamp - a.timestamp : b.orderIndex - a.orderIndex));
+    state.allAdminEnsembles = list;
+    if (state.adminActiveTab === "stats" && $("modal-admin-portal").classList.contains("open")) {
+      renderAdminStatsPanel();
+    }
+  }, (err) => {
+    state.adminEnsemblesLoaded = true;
+    if (String(err?.message || "").toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED") {
+      state.ensemblesPermissionDenied = true;
+    }
+    if (state.adminActiveTab === "stats" && $("modal-admin-portal").classList.contains("open")) {
+      renderAdminStatsPanel();
+    }
+  });
+}
+
+export function renderAdminStatsPanel() {
+  $("admin-stats-rules-warning").classList.toggle("hidden", !state.ensemblesPermissionDenied);
+
+  if (state.ensemblesPermissionDenied) {
+    $("admin-stats-loading").classList.add("hidden");
+    $("admin-stats-empty").classList.add("hidden");
+    $("admin-stats-content").classList.add("hidden");
+    return;
+  }
+
+  if (!state.adminEnsemblesLoaded) {
+    $("admin-stats-loading").classList.remove("hidden");
+    $("admin-stats-empty").classList.add("hidden");
+    $("admin-stats-content").classList.add("hidden");
+    return;
+  }
+
+  $("admin-stats-loading").classList.add("hidden");
+
+  const allEnsembles = state.allAdminEnsembles || [];
+  if (!allEnsembles.length) {
+    $("admin-stats-empty").classList.remove("hidden");
+    $("admin-stats-content").classList.add("hidden");
+    return;
+  }
+
+  $("admin-stats-empty").classList.add("hidden");
+  $("admin-stats-content").classList.remove("hidden");
+
+  const activeEnsembles = allEnsembles.filter((e) => e.memberCount > 0);
+  const totalMusicians = allEnsembles.reduce((sum, e) => sum + e.memberCount, 0);
+  const avgMusicians = activeEnsembles.length > 0 ? (totalMusicians / activeEnsembles.length).toFixed(1).replace(".", ",") : "0";
+
+  $("stat-active-ensembles").textContent = String(activeEnsembles.length);
+  $("stat-active-ensembles-sub").textContent = allEnsembles.length > activeEnsembles.length
+    ? `sur ${allEnsembles.length} créés au total`
+    : `${activeEnsembles.length > 1 ? "espaces actifs" : "espace actif"}`;
+
+  $("stat-total-musicians").textContent = String(totalMusicians);
+  $("stat-total-musicians-sub").textContent = `moy. ${avgMusicians} / ensemble`;
+
+  const sourceList = activeEnsembles.length > 0 ? activeEnsembles : allEnsembles;
+  const limit = 10;
+  const visibleList = state.showAllRecentEnsembles ? sourceList : sourceList.slice(0, limit);
+
+  $("stat-recent-count-badge").textContent = String(sourceList.length);
+
+  $("stat-recent-ensembles-list").innerHTML = visibleList.map((ens) => {
+    const membersPreview = ens.members
+      .slice(0, 5)
+      .map((m) => (m.instrument ? `${m.name} (${m.instrument})` : m.name))
+      .join(", ") + (ens.memberCount > 5 ? ` +${ens.memberCount - 5}` : "");
+    const dateLabel = formatEnsembleRegistrationDate(ens.timestamp);
+    return `
+      <div class="admin-stat-ensemble-row">
+        <div class="admin-stat-ens-top">
+          <div style="min-width: 0;">
+            <span class="admin-stat-ens-name">${esc(ens.name)}</span>
+            <span class="event-type-badge" style="margin-left: 6px;">${esc(ens.formation)}</span>
+          </div>
+          <span class="consensus-badge partial-good">${ens.memberCount} musicien${ens.memberCount > 1 ? "s" : ""}</span>
+        </div>
+        <div class="admin-stat-ens-meta">
+          <span>${esc(dateLabel)}</span>
+          <span>•</span>
+          <code style="font-size: 11px;">${esc(ens.id)}</code>
+        </div>
+        ${membersPreview ? `<div class="admin-stat-ens-members">${esc(membersPreview)}</div>` : ""}
+      </div>`;
+  }).join("");
+
+  const toggleBtn = $("btn-toggle-all-recent-ensembles");
+  if (sourceList.length > limit) {
+    toggleBtn.classList.remove("hidden");
+    toggleBtn.textContent = state.showAllRecentEnsembles
+      ? "Afficher uniquement les 10 derniers"
+      : `Afficher tous les ensembles (${sourceList.length})`;
+  } else {
+    toggleBtn.classList.add("hidden");
+  }
+}
+
 export function initAdminListeners() {
   document.querySelectorAll("[data-admin-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -459,6 +617,18 @@ export function initAdminListeners() {
     showToast(ok ? "Règle Firebase copiée." : "Copiez la règle affichée.");
   });
 
+  $("btn-copy-ensembles-rule").addEventListener("click", async () => {
+    haptic();
+    const ok = await copyTextReliable($("firebase-ensembles-rule-snippet").textContent);
+    showToast(ok ? "Règle Firebase copiée." : "Copiez la règle affichée.");
+  });
+
+  $("btn-toggle-all-recent-ensembles").addEventListener("click", () => {
+    haptic();
+    state.showAllRecentEnsembles = !state.showAllRecentEnsembles;
+    renderAdminStatsPanel();
+  });
+
   $("btn-admin-delete-campaign-results").addEventListener("click", () => {
     if (!state.selectedResultsCampaignId || !state.verifiedAdminPin) return;
     const campId = state.selectedResultsCampaignId;
@@ -487,6 +657,8 @@ export function initAdminListeners() {
     try {
       await set(ref(db, "admin_sessions/last_check"), { pin: entered, ts: Date.now() });
       state.verifiedAdminPin = entered;
+      state.showAllRecentEnsembles = false;
+      ensureAdminEnsemblesListener();
       closeModal("modal-admin-pin");
       $("admin-firebase-warning").classList.add("hidden");
       delete $("admin-ann-version").dataset.touched;
