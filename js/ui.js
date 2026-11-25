@@ -2,6 +2,7 @@ import {
   state, $, haptic, esc, EVENT_TYPES,
   formatCompactDateFr, getInviteUrl, getTransferUrl, getUnavailabilityConflictsForDate
 } from "./config.js";
+import { t, getDateLocale } from "./i18n.js";
 
 let hooks = {
   updatePollConflictsWarning: () => {},
@@ -15,14 +16,15 @@ export function registerUiHooks(h) {
 }
 
 // Composants réutilisables : Sélecteur de type d'événement & champs Concert
-export function buildTypeSelectorHtml(label = "Nature de l'événement") {
+export function buildTypeSelectorHtml(label = "") {
+  const resolvedLabel = label || t("form.eventNature");
   return `
     <div class="field" style="margin-bottom: 10px;">
-      <label>${esc(label)}</label>
+      <label>${esc(resolvedLabel)}</label>
       <div class="type-selector-group">
-        <button type="button" class="type-btn active" data-etype="rehearsal">Répétition</button>
-        <button type="button" class="type-btn" data-etype="cours">Cours</button>
-        <button type="button" class="type-btn" data-etype="concert">Concert</button>
+        <button type="button" class="type-btn active" data-etype="rehearsal">${esc(t("eventType.rehearsal"))}</button>
+        <button type="button" class="type-btn" data-etype="cours">${esc(t("eventType.cours"))}</button>
+        <button type="button" class="type-btn" data-etype="concert">${esc(t("eventType.concert"))}</button>
       </div>
     </div>`;
 }
@@ -30,28 +32,30 @@ export function buildTypeSelectorHtml(label = "Nature de l'événement") {
 export function buildConcertFieldsHtml(prefix) {
   return `
     <div id="${prefix}-concert-box" class="concert-fields-box hidden">
-      <div class="concert-box-title">Informations Concert</div>
+      <div class="concert-box-title">${esc(t("concert.infoTitle"))}</div>
       <div class="row-2" style="margin-bottom: 10px;">
         <div class="field" style="margin-bottom: 0;">
-          <label for="${prefix}-soundcheck">Raccord / Arrivée</label>
+          <label for="${prefix}-soundcheck">${esc(t("concert.soundcheck"))}</label>
           <input type="time" id="${prefix}-soundcheck" />
         </div>
         <div class="field" style="margin-bottom: 0;">
-          <label for="${prefix}-fee">Cachet / Billetterie</label>
-          <input type="text" id="${prefix}-fee" placeholder="Ex: 250 CHF / Entrée libre" />
+          <label for="${prefix}-fee">${esc(t("concert.fee"))}</label>
+          <input type="text" id="${prefix}-fee" placeholder="${esc(t("concert.feePlaceholder"))}" />
         </div>
       </div>
       <div class="field" style="margin-bottom: 0;">
-        <label for="${prefix}-dresscode">Tenue de scène (Dress code)</label>
-        <input type="text" id="${prefix}-dresscode" placeholder="Ex: Tout noir, Costume sombre..." />
+        <label for="${prefix}-dresscode">${esc(t("concert.dressCode"))}</label>
+        <input type="text" id="${prefix}-dresscode" placeholder="${esc(t("concert.dressCodePlaceholder"))}" />
       </div>
     </div>`;
 }
 
 export function bindTypeSelector(holder, onChange) {
-  holder.innerHTML = buildTypeSelectorHtml(holder.dataset.label || "Nature de l'événement");
-  holder.dataset.value = "rehearsal";
+  const currentVal = holder.dataset.value || "rehearsal";
+  holder.innerHTML = buildTypeSelectorHtml(holder.dataset.label || "");
+  holder.dataset.value = currentVal;
   holder.querySelectorAll(".type-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.etype === currentVal);
     btn.addEventListener("click", () => {
       haptic();
       setEventTypeValue(holder, btn.dataset.etype, onChange);
@@ -70,8 +74,8 @@ export function syncConcertFieldsVisibility(prefix, type, startLabelId, endLabel
   const box = $(`${prefix}-concert-box`);
   const isConcert = type === "concert";
   if (box) box.classList.toggle("hidden", !isConcert);
-  if (startLabelId && $(startLabelId)) $(startLabelId).textContent = isConcert ? "Début concert" : "Début";
-  if (endLabelId && $(endLabelId)) $(endLabelId).textContent = isConcert ? "Fin estimée" : "Fin";
+  if (startLabelId && $(startLabelId)) $(startLabelId).textContent = isConcert ? t("concert.startConcert") : t("form.start");
+  if (endLabelId && $(endLabelId)) $(endLabelId).textContent = isConcert ? t("concert.endEstimated") : t("form.end");
 }
 
 export function readConcertFields(prefix, type) {
@@ -93,18 +97,18 @@ export function populateConcertFields(prefix, item) {
 export function buildModeSelectorHtml(startVal = "14:00", endVal = "17:00") {
   return `
     <div class="field" style="margin-bottom: 10px;">
-      <label>Moment ou horaire</label>
+      <label>${esc(t("form.timeOrPeriod"))}</label>
       <div class="slot-mode-group">
-        <button type="button" class="slot-mode-btn span-full" data-mode="day" data-period="">Journée entière (sans horaire)</button>
-        <button type="button" class="slot-mode-btn" data-mode="period" data-period="Matin">Matin</button>
-        <button type="button" class="slot-mode-btn" data-mode="period" data-period="Après-midi">Après-midi</button>
-        <button type="button" class="slot-mode-btn" data-mode="period" data-period="Soir">Soir</button>
-        <button type="button" class="slot-mode-btn span-full" data-mode="exact" data-period="">Heure précise</button>
+        <button type="button" class="slot-mode-btn span-full" data-mode="day" data-period="">${esc(t("time.fullDayNoTime"))}</button>
+        <button type="button" class="slot-mode-btn" data-mode="period" data-period="Matin">${esc(t("time.morning"))}</button>
+        <button type="button" class="slot-mode-btn" data-mode="period" data-period="Après-midi">${esc(t("time.afternoon"))}</button>
+        <button type="button" class="slot-mode-btn" data-mode="period" data-period="Soir">${esc(t("time.evening"))}</button>
+        <button type="button" class="slot-mode-btn span-full" data-mode="exact" data-period="">${esc(t("time.exactTime"))}</button>
       </div>
     </div>
     <div class="row-2 slot-exact-times" style="margin-bottom: 12px;">
-      <div class="field" style="margin-bottom: 0;"><label>Début</label><input type="time" class="slot-start" value="${esc(startVal)}" /></div>
-      <div class="field" style="margin-bottom: 0;"><label>Fin</label><input type="time" class="slot-end" value="${esc(endVal)}" /></div>
+      <div class="field" style="margin-bottom: 0;"><label>${esc(t("form.start"))}</label><input type="time" class="slot-start" value="${esc(startVal)}" /></div>
+      <div class="field" style="margin-bottom: 0;"><label>${esc(t("form.end"))}</label><input type="time" class="slot-end" value="${esc(endVal)}" /></div>
     </div>`;
 }
 
@@ -143,30 +147,37 @@ export function initFormSelectors() {
   $("edit-reh-concert-fields").innerHTML = buildConcertFieldsHtml("edit-reh");
   $("confirm-poll-concert-fields").innerHTML = buildConcertFieldsHtml("confirm-poll");
 
-  bindTypeSelector($("reh-type-holder"), (t) => {
-    syncConcertFieldsVisibility("reh", t, "lbl-reh-start", "lbl-reh-end");
-    $("modal-reh-title").textContent = t === "concert" ? "Planifier un concert" : t === "cours" ? "Planifier un cours" : "Planifier une répétition";
-    if (t === "concert" && $("reh-start").value === "14:00") { $("reh-start").value = "20:00"; $("reh-end").value = "22:00"; $("reh-soundcheck").value = "18:30"; }
+  bindTypeSelector($("reh-type-holder"), (tVal) => {
+    syncConcertFieldsVisibility("reh", tVal, "lbl-reh-start", "lbl-reh-end");
+    $("modal-reh-title").textContent = tVal === "concert" ? t("modal.planConcertTitle") : tVal === "cours" ? t("modal.planCoursTitle") : t("modal.planRehearsalTitle");
+    if (tVal === "concert" && $("reh-start").value === "14:00") { $("reh-start").value = "20:00"; $("reh-end").value = "22:00"; $("reh-soundcheck").value = "18:30"; }
   });
 
-  bindTypeSelector($("edit-reh-type-holder"), (t) => {
-    syncConcertFieldsVisibility("edit-reh", t, "lbl-edit-reh-start", "lbl-edit-reh-end");
-    $("modal-edit-reh-title").textContent = t === "concert" ? "Modifier le concert" : t === "cours" ? "Modifier le cours" : "Modifier la répétition";
+  bindTypeSelector($("edit-reh-type-holder"), (tVal) => {
+    syncConcertFieldsVisibility("edit-reh", tVal, "lbl-edit-reh-start", "lbl-edit-reh-end");
+    $("modal-edit-reh-title").textContent = tVal === "concert" ? t("modal.editConcertTitle") : tVal === "cours" ? t("modal.editCoursTitle") : t("modal.editRehearsalTitle");
   });
 
-  bindTypeSelector($("confirm-poll-type-holder"), (t) => {
-    syncConcertFieldsVisibility("confirm-poll", t, "lbl-confirm-poll-start", "lbl-confirm-poll-end");
+  bindTypeSelector($("confirm-poll-type-holder"), (tVal) => {
+    syncConcertFieldsVisibility("confirm-poll", tVal, "lbl-confirm-poll-start", "lbl-confirm-poll-end");
   });
 
   bindTypeSelector($("poll-type-holder"), () => {});
   bindTypeSelector($("edit-poll-type-holder"), () => {});
 
-  $("edit-poll-mode-holder").innerHTML = buildModeSelectorHtml();
-  bindModeSelector($("edit-poll-mode-holder"), () => hooks.checkEditPollArchiveLock());
+  const editModeHolder = $("edit-poll-mode-holder");
+  const prevEditMode = editModeHolder.dataset.mode || "day";
+  const prevEditPeriod = editModeHolder.dataset.period || "Après-midi";
+  editModeHolder.innerHTML = buildModeSelectorHtml();
+  bindModeSelector(editModeHolder, () => hooks.checkEditPollArchiveLock());
+  applyModeState(editModeHolder, prevEditMode, prevEditPeriod);
 
-  $("poll-global-mode-holder").innerHTML = buildModeSelectorHtml("14:00", "17:00");
-  bindModeSelector($("poll-global-mode-holder"), () => hooks.updatePollConflictsWarning());
-  applyModeState($("poll-global-mode-holder"), "day", "Après-midi");
+  const globalModeHolder = $("poll-global-mode-holder");
+  const prevGlobalMode = globalModeHolder.dataset.mode || "day";
+  const prevGlobalPeriod = globalModeHolder.dataset.period || "Après-midi";
+  globalModeHolder.innerHTML = buildModeSelectorHtml("14:00", "17:00");
+  bindModeSelector(globalModeHolder, () => hooks.updatePollConflictsWarning());
+  applyModeState(globalModeHolder, prevGlobalMode, prevGlobalPeriod);
 }
 
 // Calendrier Multi-Sélection Tap-Tap-Tap
@@ -176,7 +187,7 @@ export function renderMultiCalendar() {
   const grid = $("multi-cal-grid"), label = $("cal-month-label"), pills = $("cal-selected-pills");
   if (!grid) return;
   const firstDay = new Date(state.calYear, state.calMonth, 1);
-  label.textContent = firstDay.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  label.textContent = firstDay.toLocaleDateString(getDateLocale(), { month: "long", year: "numeric" });
 
   const startOffset = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(state.calYear, state.calMonth + 1, 0).getDate();
@@ -207,8 +218,8 @@ export function renderMultiCalendar() {
 
   const sorted = [...state.selectedCalDates].sort();
   pills.innerHTML = sorted.length
-    ? sorted.map((iso) => `<span class="selected-date-pill">${esc(formatCompactDateFr(iso))}<button type="button" data-unselect-iso="${iso}" aria-label="Retirer">×</button></span>`).join("")
-    : `<span style="font-size:12px;color:var(--muted)">Aucune date sélectionnée</span>`;
+    ? sorted.map((iso) => `<span class="selected-date-pill">${esc(formatCompactDateFr(iso))}<button type="button" data-unselect-iso="${iso}" aria-label="${esc(t("common.remove"))}">×</button></span>`).join("")
+    : `<span style="font-size:12px;color:var(--muted)">${esc(t("cal.noDateSelected"))}</span>`;
   hooks.updatePollConflictsWarning();
 }
 
@@ -273,15 +284,15 @@ export function renderLocationSuggestions(containerId, inputId) {
 }
 
 // Modale de confirmation universelle & gestion des modales
-export function openConfirmationModal({ title, context, message, confirmLabel = "Confirmer", danger = true, onConfirm }) {
+export function openConfirmationModal({ title, context, message, confirmLabel, danger = true, onConfirm }) {
   haptic();
-  $("confirm-delete-title").textContent = title || "Confirmer";
+  $("confirm-delete-title").textContent = title || t("common.confirm");
   const ctxEl = $("confirm-delete-context");
   ctxEl.textContent = context || "";
   ctxEl.classList.toggle("hidden", !context);
   $("confirm-delete-message").textContent = message || "";
   const btn = $("btn-execute-delete");
-  btn.textContent = confirmLabel;
+  btn.textContent = confirmLabel || t("common.confirm");
   btn.className = `${danger ? "btn-danger" : "btn-primary"} btn-full`;
   btn.disabled = false;
   state.pendingDeleteCallback = onConfirm;
@@ -296,8 +307,8 @@ export function openModal(id) {
     renderLocationSuggestions("poll-location-suggestions", "poll-location");
   }
   if (id === "modal-rehearsal") {
-    setEventTypeValue($("reh-type-holder"), "rehearsal", (t) => syncConcertFieldsVisibility("reh", t, "lbl-reh-start", "lbl-reh-end"));
-    $("modal-reh-title").textContent = "Planifier un événement";
+    setEventTypeValue($("reh-type-holder"), "rehearsal", (tVal) => syncConcertFieldsVisibility("reh", tVal, "lbl-reh-start", "lbl-reh-end"));
+    $("modal-reh-title").textContent = t("modal.planEventTitle");
     populateConcertFields("reh", null);
     if (!$("reh-date").value) $("reh-date").value = today;
   }
