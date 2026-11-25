@@ -310,7 +310,7 @@
     </div>
   </div>
 
-  <!-- Portail d'Administration enrichi : Diffusion Pop-up + Résultats & Retours -->
+  <!-- Portail d'Administration enrichi : Diffusion Pop-up + Résultats & Retours + Statistiques -->
   <div id="modal-admin-portal" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title">Portail d'administration</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-admin-portal">Fermer</button></div>
@@ -318,6 +318,7 @@
       <div class="admin-nav-tabs" role="tablist">
         <button type="button" class="admin-nav-tab active" data-admin-tab="publish">Diffuser une pop-up</button>
         <button type="button" class="admin-nav-tab" data-admin-tab="results">Résultats &amp; Retours <span id="admin-results-badge" class="admin-count-pill hidden">0</span></button>
+        <button type="button" class="admin-nav-tab" data-admin-tab="stats">Statistiques</button>
       </div>
 
       <div id="admin-firebase-warning" class="alert-box hidden"><strong>Accès refusé par Firebase</strong><span>Vérifiez <code>admin_config/secret_pin</code> dans Firebase.</span></div>
@@ -449,6 +450,51 @@
           </div>
 
           <button type="button" id="btn-admin-delete-campaign-results" class="btn-del-subtle btn-xs btn-full">Supprimer les résultats de cette campagne</button>
+        </div>
+      </div>
+
+      <!-- ONGLET 3 : STATISTIQUES GLOBALES -->
+      <div id="admin-panel-stats" class="hidden">
+        <div id="admin-stats-rules-warning" class="alert-box hidden">
+          <strong>Autorisation Firebase requise pour les statistiques</strong>
+          <span>Autorisez la lecture globale du nœud <code>ensembles</code> dans Firebase Realtime Database pour afficher les compteurs et les ensembles récents :</span>
+          <div class="code-snippet-box" id="firebase-ensembles-rule-snippet">"ensembles": {
+  ".read": true
+}</div>
+          <button type="button" id="btn-copy-ensembles-rule" class="btn-secondary btn-xs" style="margin-top: 8px;">Copier la règle</button>
+        </div>
+
+        <div id="admin-stats-loading" class="empty-state" style="padding: 24px 14px;">
+          <p style="margin: 0;">Chargement des statistiques globales...</p>
+        </div>
+
+        <div id="admin-stats-empty" class="empty-state hidden" style="padding: 24px 14px;">
+          <p style="margin-bottom: 4px;">Aucun ensemble inscrit pour le moment.</p>
+          <span style="font-size: 12.5px;">Les ensembles créés sur Cadenza apparaîtront ici automatiquement.</span>
+        </div>
+
+        <div id="admin-stats-content" class="hidden">
+          <div class="stats-kpi-grid">
+            <div class="stat-kpi-card accent">
+              <div class="stat-kpi-label">Ensembles actifs</div>
+              <div class="stat-kpi-value" id="stat-active-ensembles">0</div>
+              <div class="stat-kpi-sub" id="stat-active-ensembles-sub">espaces actifs</div>
+            </div>
+            <div class="stat-kpi-card emerald">
+              <div class="stat-kpi-label">Musiciens inscrits</div>
+              <div class="stat-kpi-value" id="stat-total-musicians">0</div>
+              <div class="stat-kpi-sub" id="stat-total-musicians-sub">moy. 0 / ensemble</div>
+            </div>
+          </div>
+
+          <div class="card" style="padding: 13px 14px; margin-bottom: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+              <div class="card-kicker" style="margin-bottom: 0;">Derniers ensembles inscrits</div>
+              <span class="admin-count-pill" id="stat-recent-count-badge">0</span>
+            </div>
+            <div id="stat-recent-ensembles-list"></div>
+            <button type="button" id="btn-toggle-all-recent-ensembles" class="btn-secondary btn-xs btn-full hidden" style="margin-top: 10px;">Afficher tous les ensembles</button>
+          </div>
         </div>
       </div>
     </div>
