@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://cadenzaapp.ch/sitemap.xml

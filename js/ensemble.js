@@ -113,7 +113,7 @@ export function registerEnsembleHooks(h) {
 export async function initServiceWorkerAndPush() {
   if (!("serviceWorker" in navigator)) return;
   try {
-    state.swRegistration = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+    state.swRegistration = await navigator.serviceWorker.register(new URL("../sw.js", import.meta.url), { scope: new URL("../", import.meta.url).href });
     if (await isSupported().catch(() => false)) {
       state.messagingInstance = getMessaging();
       onMessage(state.messagingInstance, (p) => {

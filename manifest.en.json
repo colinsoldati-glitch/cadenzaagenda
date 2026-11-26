@@ -2,7 +2,7 @@
   "name": "Cadenza — Ensemble calendar",
   "short_name": "Cadenza",
   "description": "Availability and shared calendar for music ensembles.",
-  "start_url": "./",
+  "start_url": "./app/",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -16,5 +16,6 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "./"
 }
