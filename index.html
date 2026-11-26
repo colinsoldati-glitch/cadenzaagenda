@@ -352,11 +352,11 @@
       <!-- ONGLET 1 : DIFFUSER UNE POP-UP -->
       <div id="admin-panel-publish">
         <div class="card" style="padding: 12px 14px; margin-bottom: 16px;">
-          <div class="card-kicker">Pop-up actuellement active</div>
+          <div class="card-kicker">Pop-up actives (maximum 2)</div>
           <div id="admin-current-announcement" style="font-size: 13.5px; color: var(--muted); margin-top: 4px;">Aucune pop-up publiée.</div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
-            <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Revoir la pop-up</button>
-            <button type="button" id="btn-admin-clear-announcement" class="btn-del-subtle btn-xs hidden">Désactiver</button>
+            <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Prévisualiser la séquence</button>
+            <button type="button" id="btn-admin-clear-announcement" class="btn-del-subtle btn-xs hidden">Tout désactiver</button>
           </div>
         </div>
 
@@ -429,7 +429,7 @@
 
           <div style="display: grid; gap: 8px;">
             <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser la pop-up</button>
-            <button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
+            <p id="admin-queue-help" class="admin-queue-help" aria-live="polite"></p><button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
           </div>
         </form>
       </div>
@@ -533,6 +533,7 @@
       <div class="whats-new-hero">
         <span class="whats-new-badge" id="whats-new-version-badge">Mise à jour</span>
         <div id="whats-new-subtitle" style="font-size: 14.5px; font-weight: 600; color: var(--fg);">Découvrez les dernières améliorations :</div>
+        <div id="whats-new-progress" class="popup-progress hidden" aria-live="polite"></div>
         <div id="whats-new-date" style="font-size: 12px; color: var(--muted); margin-top: 3px;"></div>
       </div>
       <div id="whats-new-dynamic-body"></div>
@@ -594,12 +595,18 @@
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title">Déclarer une indisponibilité</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-unavailability">Fermer</button></div>
       <form id="form-unavailability">
-        <div class="row-2">
-          <div class="field"><label for="unavail-start">Du</label><input type="date" id="unavail-start" required /></div>
-          <div class="field"><label for="unavail-end">Au (inclus)</label><input type="date" id="unavail-end" required /></div>
+        <div class="absence-calendar">
+          <div class="absence-cal-nav"><button type="button" id="absence-prev" class="btn-secondary" aria-label="Mois précédent">‹</button><div><strong id="absence-month"></strong><button type="button" id="absence-today" class="btn-secondary btn-xs">Aujourd’hui</button></div><button type="button" id="absence-next" class="btn-secondary" aria-label="Mois suivant">›</button></div>
+          <div class="multi-cal-weekdays" id="absence-weekdays"></div>
+          <div id="absence-grid" class="absence-grid" role="group" aria-label="Sélection des jours d’absence"></div>
+          <div class="absence-legend"><span><i class="absence-key selected"></i> Sélectionné</span><span><i class="absence-key existing"></i> Déjà déclaré</span></div>
+          <p class="absence-hint">Touchez les jours un par un ou glissez pour sélectionner une période.</p>
+          <button type="button" id="absence-range" class="btn-secondary btn-full" aria-pressed="false">Choisir une plage en deux touches</button>
+          <div id="absence-range-hint" class="absence-hint" aria-live="polite"></div>
         </div>
+        <div class="absence-summary"><div class="absence-summary-head"><strong id="absence-count" aria-live="polite"></strong><button type="button" id="absence-clear" class="btn-secondary btn-xs">Tout effacer</button></div><div id="absence-periods"></div></div>
         <div class="field"><label for="unavail-reason">Motif (optionnel)</label><input type="text" id="unavail-reason" maxlength="60" placeholder="Ex: Vacances, Examens, Tournée" /></div>
-        <button type="submit" class="btn-primary btn-full">Enregistrer cette période</button>
+        <div class="absence-save-footer"><button type="submit" id="absence-save" class="btn-primary btn-full" disabled>Enregistrer les absences</button></div>
       </form>
     </div>
   </div>

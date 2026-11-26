@@ -3164,3 +3164,82 @@ Object.assign(translations, {
     "You are no longer part of this ensemble."
   ]
 });
+
+Object.assign(translations, {
+  "Pop-up actives (maximum 2)": [
+    "Aktive Pop-ups (maximal 2)",
+    "Active pop-ups (maximum 2)"
+  ],
+  "Prévisualiser la séquence": [
+    "Reihenfolge ansehen",
+    "Preview sequence"
+  ],
+  "Tout désactiver": [
+    "Alle deaktivieren",
+    "Deactivate all"
+  ],
+  "Deux pop-up sont actives. Désactivez-en une pour en publier une autre.": [
+    "Zwei Pop-ups sind aktiv. Deaktivieren Sie eines, um ein weiteres zu veröffentlichen.",
+    "Two pop-ups are active. Deactivate one to publish another."
+  ],
+  "La prochaine pop-up sera affichée après la première.": [
+    "Das nächste Pop-up erscheint nach dem ersten.",
+    "The next pop-up will appear after the first."
+  ],
+  "Publiez une première pop-up, puis éventuellement une seconde.": [
+    "Veröffentlichen Sie ein erstes Pop-up und bei Bedarf ein zweites.",
+    "Publish the first pop-up, then optionally a second."
+  ],
+  "Publier en deuxième position": [
+    "An zweiter Stelle veröffentlichen",
+    "Publish second"
+  ],
+  "Information {0} sur {1}": [
+    "Information {0} von {1}",
+    "Message {0} of {1}"
+  ],
+  "Les pop-up ont été désactivées.": [
+    "Die Pop-ups wurden deaktiviert.",
+    "The pop-ups have been deactivated."
+  ],
+  "Sélection des jours d’absence": [
+    "Abwesenheitstage auswählen",
+    "Select absence days"
+  ],
+  "Sélectionné": [
+    "Ausgewählt",
+    "Selected"
+  ],
+  "Déjà déclaré": [
+    "Bereits gemeldet",
+    "Already reported"
+  ],
+  "Touchez les jours un par un ou glissez pour sélectionner une période.": [
+    "Tippen Sie einzelne Tage an oder ziehen Sie über mehrere Tage.",
+    "Tap individual days or drag to select a period."
+  ],
+  "Choisir une plage en deux touches": [
+    "Zeitraum mit zwei Berührungen wählen",
+    "Choose a range in two taps"
+  ],
+  "Choisissez la dernière date (même dans un autre mois).": [
+    "Wählen Sie das Enddatum (auch in einem anderen Monat).",
+    "Choose the last date (even in another month)."
+  ],
+  "Choisissez la première date.": [
+    "Wählen Sie das Anfangsdatum.",
+    "Choose the first date."
+  ],
+  "{0} jour(s) sélectionné(s)": [
+    "{0} Tag(e) ausgewählt",
+    "{0} day(s) selected"
+  ],
+  "Ces dates sont déjà déclarées.": [
+    "Diese Daten wurden bereits gemeldet.",
+    "These dates have already been reported."
+  ],
+  "Enregistrer les absences": [
+    "Abwesenheiten speichern",
+    "Save absences"
+  ]
+});

@@ -308,10 +308,7 @@ export function openModal(id) {
     populateConcertFields("reh", null);
     if (!$("reh-date").value) $("reh-date").value = today;
   }
-  if (id === "modal-unavailability") {
-    if (!$("unavail-start").value) $("unavail-start").value = today;
-    if (!$("unavail-end").value) $("unavail-end").value = $("unavail-start").value;
-  }
+
   if (id === "modal-invite" && state.session.activeEnsembleId) {
     $("invite-link-display").textContent = getInviteUrl(state.session.activeEnsembleId);
     $("invite-code-display").textContent = state.session.activeEnsembleId;
@@ -352,9 +349,5 @@ export function initModalGlobalListeners() {
     }
   });
 
-  $("unavail-start").addEventListener("change", () => {
-    if ($("unavail-start").value && (!$("unavail-end").value || $("unavail-end").value < $("unavail-start").value)) {
-      $("unavail-end").value = $("unavail-start").value;
-    }
-  });
+
 }

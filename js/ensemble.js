@@ -18,6 +18,93 @@ let hooks = {
   maybeDisplayLatestAnnouncement: () => {}
 };
 
+// Calendrier d'absences : dates locales, calcul des intervalles en UTC (sans décalage DST).
+const absenceISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const absenceNext = iso => new Date(Date.parse(iso+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+function absencePeriods(values) {
+  const result=[];
+  for(const iso of [...values].sort()) {
+    const last=result[result.length-1];
+    if(last && absenceNext(last.endDate)===iso) last.endDate=iso;
+    else result.push({startDate:iso,endDate:iso});
+  }
+  return result;
+}
+function initAbsenceCalendar() {
+  const grid=$('absence-grid'), rangeBtn=$('absence-range'), save=$('absence-save');
+  let month=new Date(), selected=new Set(), rangeMode=false, anchor=null, gesture=null, saving=false;
+  const currentAbsences=()=>{const myId=state.session.ensembles[state.session.activeEnsembleId]?.memberId;return Object.values(state.currentEnsembleData?.members?.[myId]?.unavailabilities||{});};
+  const already=iso=>currentAbsences().some(u=>u.startDate<=iso&&iso<=u.endDate);
+  const range=(a,b)=>{const start=a<b?a:b,end=a<b?b:a, result=[];for(let d=start;d<=end;d=absenceNext(d))result.push(d);return result;};
+  const preview=()=>gesture?.moved?new Set(range(gesture.start,gesture.end)):new Set();
+  const syncDays=()=>{
+    const visiting=preview();
+    for(const b of grid.querySelectorAll('[data-absence-date]')){
+      const d=b.dataset.absenceDate, old=already(d), picked=selected.has(d);
+      b.classList.toggle('selected',picked);b.classList.toggle('existing',old);b.classList.toggle('preview',visiting.has(d)&&!old);b.classList.toggle('anchor',d===anchor);
+      b.setAttribute('aria-pressed',String(picked));b.setAttribute('aria-disabled',String(old));
+    }
+  };
+  const sync=()=>{
+    syncDays();
+    $('absence-count').textContent=C18.t('{0} jour(s) sélectionné(s)',selected.size);
+    $('absence-periods').innerHTML=absencePeriods(selected).map(({startDate,endDate})=>`<div>${esc(formatShortDateFr(startDate))}${startDate!==endDate?' – '+esc(formatShortDateFr(endDate)):''}</div>`).join('');
+    $('absence-clear').disabled=saving||!selected.size; save.disabled=saving||!selected.size;
+    rangeBtn.setAttribute('aria-pressed',String(rangeMode));rangeBtn.classList.toggle('active',rangeMode);
+    $('absence-range-hint').textContent=rangeMode?(anchor?C18.t('Choisissez la dernière date (même dans un autre mois).'):C18.t('Choisissez la première date.')):'';
+  };
+  const render=()=>{
+    $('absence-month').textContent=month.toLocaleDateString(locale,{month:'long',year:'numeric'});
+    $('absence-weekdays').innerHTML=Array.from({length:7},(_,i)=>`<span>${esc(new Date(2024,0,1+i).toLocaleDateString(locale,{weekday:'short'}))}</span>`).join('');
+    const y=month.getFullYear(),m=month.getMonth(), offset=(new Date(y,m,1).getDay()+6)%7, count=new Date(y,m+1,0).getDate(),today=absenceISO(new Date());
+    grid.innerHTML='<span aria-hidden="true"></span>'.repeat(offset)+Array.from({length:count},(_,i)=>{const d=new Date(y,m,i+1), iso=absenceISO(d);return `<button type="button" class="absence-day${iso===today?' today':''}" data-absence-date="${iso}" aria-label="${esc(d.toLocaleDateString(locale,{dateStyle:'full'}))}">${i+1}</button>`;}).join('');sync();
+  };
+  const addRange=(a,b)=>{for(const d of range(a,b))if(!already(d))selected.add(d);};
+  const pick=iso=>{
+    if(rangeMode){if(!anchor)anchor=iso;else{addRange(anchor,iso);anchor=null;rangeMode=false;}}
+    else if(!already(iso)){selected.has(iso)?selected.delete(iso):selected.add(iso);}
+    sync();
+  };
+  $('absence-prev').addEventListener('click',()=>{month=new Date(month.getFullYear(),month.getMonth()-1,1);render();});
+  $('absence-next').addEventListener('click',()=>{month=new Date(month.getFullYear(),month.getMonth()+1,1);render();});
+  $('absence-today').addEventListener('click',()=>{month=new Date();render();});
+  $('absence-clear').addEventListener('click',()=>{selected.clear();anchor=null;sync();});
+  rangeBtn.addEventListener('click',()=>{rangeMode=!rangeMode;anchor=null;sync();});
+  grid.addEventListener('pointerdown',e=>{
+    const b=e.target.closest('[data-absence-date]');if(!b||saving||!e.isPrimary||e.button!==0)return;
+    gesture={id:e.pointerId,start:b.dataset.absenceDate,end:b.dataset.absenceDate,moved:false};grid.setPointerCapture(e.pointerId);
+  });
+  grid.addEventListener('pointermove',e=>{
+    if(!gesture||gesture.id!==e.pointerId)return;
+    const b=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-absence-date]');
+    if(b&&grid.contains(b)){gesture.end=b.dataset.absenceDate;if(gesture.end!==gesture.start)gesture.moved=true;syncDays();}
+  });
+  grid.addEventListener('pointerup',e=>{
+    if(!gesture||gesture.id!==e.pointerId)return;
+    const g=gesture;gesture=null;
+    if(g.moved){addRange(g.start,g.end);anchor=null;rangeMode=false;sync();}else pick(g.start);
+  });
+  grid.addEventListener('pointercancel',()=>{gesture=null;sync();});
+  grid.addEventListener('lostpointercapture',()=>{if(gesture){gesture=null;sync();}});
+  // Keyboard/assistive technology click (pointer interactions handled above).
+  grid.addEventListener('click',e=>{const b=e.target.closest('[data-absence-date]');if(b&&e.detail===0&&!saving)pick(b.dataset.absenceDate);});
+  $('btn-open-unavail').addEventListener('click',()=>{
+    if(saving)return;month=new Date();selected=new Set();anchor=null;rangeMode=false;gesture=null;$('form-unavailability').reset();render();openModal('modal-unavailability');$('modal-unavailability').querySelector('.modal-sheet').scrollTop=0;
+  });
+  $('form-unavailability').addEventListener('submit',async e=>{
+    e.preventDefault();if(saving||!selected.size)return;
+    const ens=state.session.activeEnsembleId,myId=state.session.ensembles[ens]?.memberId;
+    if(!ens||!myId)return;
+    const periods=absencePeriods([...selected].filter(d=>!already(d)));
+    if(!periods.length){showToast(C18.t('Ces dates sont déjà déclarées.'));return;}
+    const reason=$('unavail-reason').value.trim(),createdAt=Date.now(),writes={};
+    for(const period of periods){const id=genId('una');writes[id]={id,...period,reason,createdAt};}
+    saving=true;sync();haptic();
+    try{await update(ref(db,`ensembles/${ens}/members/${myId}/unavailabilities`),writes);selected.clear();$('form-unavailability').reset();closeModal('modal-unavailability');showToast(C18.t('Indisponibilité enregistrée.'));}
+    catch(err){handleFirebaseError(err);}finally{saving=false;sync();}
+  });
+}
+
 export function registerEnsembleHooks(h) {
   hooks = { ...hooks, ...h };
 }
@@ -486,18 +573,7 @@ export function initEnsembleListeners() {
     }
   });
 
-  $("form-unavailability").addEventListener("submit", async (e) => {
-    e.preventDefault(); haptic();
-    const startDate = $("unavail-start").value, endDate = $("unavail-end").value, reason = $("unavail-reason").value.trim();
-    const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
-    if (!startDate || !endDate || !myId) return;
-    if (endDate < startDate) return showToast(C18.t("La date de fin doit être postérieure ou égale au début."));
-    try {
-      const id = genId("una");
-      await set(ref(db, `ensembles/${state.session.activeEnsembleId}/members/${myId}/unavailabilities/${id}`), { id, startDate, endDate, reason, createdAt: Date.now() });
-      $("form-unavailability").reset(); closeModal("modal-unavailability"); showToast(C18.t("Indisponibilité enregistrée."));
-    } catch (err) { handleFirebaseError(err); }
-  });
+  initAbsenceCalendar();
 
   $("toggle-auto-remind-eve").addEventListener("change", async (e) => {
     haptic(); if (!state.session.activeEnsembleId) return;
@@ -537,7 +613,6 @@ export function initEnsembleListeners() {
     } catch (err) { handleFirebaseError(err); }
   });
 
-  $("btn-open-unavail").addEventListener("click", () => openModal("modal-unavailability"));
   $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
   $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
   $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
