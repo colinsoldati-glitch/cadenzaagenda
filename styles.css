@@ -523,3 +523,12 @@ nav.tab-bar {
 .member-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .invite-url-box { font-family: monospace; font-size: 12.5px; background: var(--subtle); border: 1px solid var(--border); padding: 10px; border-radius: 8px; word-break: break-all; margin-bottom: 12px; user-select: all; }
 .app-version-footer { text-align: center; font-size: 12px; color: var(--muted); padding: 6px 0 4px; letter-spacing: .02em; }
+
+/* Paramètre de langue */
+.language-setting { display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap; }
+.language-setting label { margin:0; color:var(--muted); }
+.language-setting select { width:auto; min-width:130px; max-width:100%; }
+.onboarding-wrap > .language-setting { margin-bottom:18px; }
+html[lang="de"] .section-title { overflow-wrap:anywhere; }
+html[lang="de"] .type-btn, html[lang="de"] .slot-mode-btn { white-space:normal; overflow-wrap:anywhere; }
+.tab-item span:not(.tab-badge) { max-width:100%; overflow-wrap:anywhere; }

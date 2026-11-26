@@ -1,3 +1,5 @@
+import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
+import * as C18 from "./i18n.js";
 import {
   db, ref, set, update, remove,
   state, $, haptic, genId, esc, getEventMeta,
@@ -22,7 +24,7 @@ export function renderAgenda() {
   const container = $("agenda-list"), rehObj = state.currentEnsembleData.rehearsals || {};
   const list = Object.values(rehObj).sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
   if (!list.length) {
-    container.innerHTML = `<div class="empty-state"><p>Aucun événement planifié pour le moment.</p><button type="button" class="btn-secondary btn-sm" data-go-avail>Proposer des disponibilités</button></div>`;
+    container.innerHTML = C18.htmlLiteral("<div class=\"empty-state\"><p>Aucun événement planifié pour le moment.</p><button type=\"button\" class=\"btn-secondary btn-sm\" data-go-avail>Proposer des disponibilités</button></div>");
     return;
   }
   const today = new Date().toISOString().split("T")[0];
@@ -32,35 +34,35 @@ export function renderAgenda() {
     const tMeta = getEventMeta(r.eventType);
     const isConcert = r.eventType === "concert";
     const concertInfos = [];
-    if (isConcert && r.soundcheckTime) concertInfos.push(`<span class="concert-detail-item"><strong>Raccord :</strong> ${esc(r.soundcheckTime)}</span>`);
-    if (isConcert && r.dressCode) concertInfos.push(`<span class="concert-detail-item"><strong>Tenue :</strong> ${esc(r.dressCode)}</span>`);
-    if (isConcert && r.concertFee) concertInfos.push(`<span class="concert-detail-item"><strong>Cachet / Tarif :</strong> ${esc(r.concertFee)}</span>`);
+    if (isConcert && r.soundcheckTime) concertInfos.push(C18.h`<span class="concert-detail-item"><strong>Raccord :</strong> ${esc(r.soundcheckTime)}</span>`);
+    if (isConcert && r.dressCode) concertInfos.push(C18.h`<span class="concert-detail-item"><strong>Tenue :</strong> ${esc(r.dressCode)}</span>`);
+    if (isConcert && r.concertFee) concertInfos.push(C18.h`<span class="concert-detail-item"><strong>Cachet / Tarif :</strong> ${esc(r.concertFee)}</span>`);
 
     const kickerHtml = isNext
       ? `<div class="card-kicker ${isConcert ? "concert" : r.eventType === "cours" ? "cours" : "emerald"}">${esc(tMeta.nextLabel)}</div>`
       : "";
 
-    return `
+    return C18.h`
     <article class="card ${isNext ? "featured" : ""} ${tMeta.cardCls}" ${isPast ? 'style="opacity:.72"' : ""}>
       ${kickerHtml}
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
         <h3 class="card-date" ${isPast ? 'style="font-size:16px"' : ""}>${esc(formatDateFr(r.date))}</h3>
         <span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span>
       </div>
-      <div class="card-meta" style="margin-top:4px">${isPast ? `${esc(r.startTime)} – ${esc(r.endTime)} • ${esc(r.location)}` : `<span class="time-pill">${esc(r.startTime)} – ${esc(r.endTime)}</span> <strong>${esc(r.location)}</strong>`}</div>
+      <div class="card-meta" style="margin-top:4px">${isPast ? `${esc(r.startTime)} – ${esc(r.endTime)} • ${esc(C18.localizeLocation(r.location))}` : `<span class="time-pill">${esc(r.startTime)} – ${esc(r.endTime)}</span> <strong>${esc(C18.localizeLocation(r.location))}</strong>`}</div>
       ${concertInfos.length ? `<div class="concert-details-grid">${concertInfos.join(" • ")}</div>` : ""}
-      ${r.program ? `<div class="${isPast ? "card-meta" : "card-program"}">${isPast ? "" : "<strong>Programme :</strong> "}${esc(r.program)}</div>` : ""}
+      ${r.program ? `<div class="${isPast ? "card-meta" : "card-program"}">${isPast ? "" : C18.htmlLiteral("<strong>Programme :</strong> ")}${esc(r.program)}</div>` : ""}
       ${!isPast && r.notes ? `<div class="card-meta" style="margin-top:6px">${esc(r.notes)}</div>` : ""}
       <div class="card-actions">
-        ${isPast ? "" : `<button type="button" class="btn-secondary btn-sm" data-ics="${esc(r.id)}">Calendrier (.ics)</button>`}
+        ${isPast ? "" : C18.h`<button type="button" class="btn-secondary btn-sm" data-ics="${esc(r.id)}">Calendrier (.ics)</button>`}
         <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-edit-reh="${esc(r.id)}">Modifier</button>
-        <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-del-reh="${esc(r.id)}">${isPast ? "Supprimer" : "Annuler"}</button>
+        <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-del-reh="${esc(r.id)}">${isPast ? C18.t("Supprimer") : C18.t("Annuler")}</button>
       </div>
     </article>`;
   };
 
   container.innerHTML = upcoming.map((r, i) => cardHtml(r, i === 0, false)).join("")
-    + (past.length ? `<div class="divider">Événements passés (${past.length})</div>${past.map((r) => cardHtml(r, false, true)).join("")}` : "");
+    + (past.length ? C18.h`<div class="divider">Événements passés (${past.length})</div>${past.map((r) => cardHtml(r, false, true)).join("")}` : "");
 }
 
 export function downloadICS(reh) {
@@ -69,15 +71,15 @@ export function downloadICS(reh) {
   const tMeta = getEventMeta(reh.eventType);
   const fmt = (d, t) => `${d.replace(/-/g, "")}T${t.replace(":", "")}00`;
   const desc = [
-    reh.soundcheckTime ? `Raccord sur place : ${reh.soundcheckTime}` : "",
-    reh.dressCode ? `Tenue de scène : ${reh.dressCode}` : "",
-    reh.concertFee ? `Cachet / Billetterie : ${reh.concertFee}` : "",
-    reh.program ? `Programme : ${reh.program}` : "",
+    reh.soundcheckTime ? C18.tt`Raccord sur place : ${reh.soundcheckTime}` : "",
+    reh.dressCode ? C18.tt`Tenue de scène : ${reh.dressCode}` : "",
+    reh.concertFee ? C18.tt`Cachet / Billetterie : ${reh.concertFee}` : "",
+    reh.program ? C18.tt`Programme : ${reh.program}` : "",
     reh.notes || ""
   ].filter(Boolean).join("\\n");
   const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cadenza//FR", "BEGIN:VEVENT", `UID:${reh.id}@cadenza.app`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`, `DTSTART:${fmt(reh.date, reh.startTime)}`, `DTEND:${fmt(reh.date, reh.endTime)}`, `SUMMARY:${tMeta.label} — ${state.currentEnsembleData.name}`, `LOCATION:${reh.location || ""}`, `DESCRIPTION:${desc}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" })), download: `cadenza-${reh.date}.ics` });
-  a.click(); URL.revokeObjectURL(a.href); showToast("Fichier calendrier (.ics) téléchargé.");
+  a.click(); URL.revokeObjectURL(a.href); showToast(C18.t("Fichier calendrier (.ics) téléchargé."));
 }
 
 export function initAgendaListeners() {
@@ -91,7 +93,7 @@ export function initAgendaListeners() {
       const r = rehObj[btn.dataset.editReh]; if (!r) return;
       const type = r.eventType || "rehearsal";
       setEventTypeValue($("edit-reh-type-holder"), type, (t) => syncConcertFieldsVisibility("edit-reh", t, "lbl-edit-reh-start", "lbl-edit-reh-end"));
-      $("modal-edit-reh-title").textContent = type === "concert" ? "Modifier le concert" : type === "cours" ? "Modifier le cours" : "Modifier la répétition";
+      $("modal-edit-reh-title").textContent = type === "concert" ? C18.t("Modifier le concert") : type === "cours" ? C18.t("Modifier le cours") : C18.t("Modifier la répétition");
       $("edit-reh-id").value = r.id; $("edit-reh-date").value = r.date || "";
       $("edit-reh-start").value = r.startTime || "14:00"; $("edit-reh-end").value = r.endTime || "17:00";
       populateConcertFields("edit-reh", r);
@@ -102,12 +104,12 @@ export function initAgendaListeners() {
       const r = rehObj[btn.dataset.delReh]; if (!r) return;
       const tMeta = getEventMeta(r.eventType);
       openConfirmationModal({
-        title: `Supprimer ce ${tMeta.label.toLowerCase()} ?`,
+        title: C18.tt`Supprimer ce ${tMeta.label.toLowerCase()} ?`,
         context: `${tMeta.label} • ${formatDateFr(r.date)} • ${r.startTime}–${r.endTime} (${r.location})`,
-        message: "Cet événement sera retiré de l'agenda de tout l'ensemble.",
-        confirmLabel: "Supprimer",
+        message: C18.t("Cet événement sera retiré de l'agenda de tout l'ensemble."),
+        confirmLabel: C18.t("Supprimer"),
         onConfirm: async () => {
-          try { await remove(ref(db, `ensembles/${state.session.activeEnsembleId}/rehearsals/${r.id}`)); showToast(`${tMeta.label} retiré(e) de l'agenda.`); }
+          try { await remove(ref(db, `ensembles/${state.session.activeEnsembleId}/rehearsals/${r.id}`)); showToast(C18.tt`${tMeta.label} retiré(e) de l'agenda.`); }
           catch (err) { handleFirebaseError(err); }
         }
       });
@@ -125,8 +127,8 @@ export function initAgendaListeners() {
       await update(ref(db, `ensembles/${state.session.activeEnsembleId}/rehearsals/${rehId}`), {
         eventType, date, startTime, endTime, ...concertData, location, program, notes, updatedAt: Date.now()
       });
-      await hooks.publishEnsembleNotification(`${getEventMeta(eventType).label} modifié(e) — ${state.currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`);
-      closeModal("modal-edit-rehearsal"); showToast("Agenda mis à jour.");
+      await hooks.publishEnsembleNotification(C18.localizedMessages(() => [C18.tt`${getEventMeta(eventType).label} modifié(e) — ${state.currentEnsembleData?.name || "Cadenza"}`, `${formatDateFr(date)} • ${startTime}–${endTime} • ${location}`]));
+      closeModal("modal-edit-rehearsal"); showToast(C18.t("Agenda mis à jour."));
     } catch (err) { handleFirebaseError(err); }
   });
 
@@ -142,8 +144,8 @@ export function initAgendaListeners() {
       await set(ref(db, `ensembles/${state.session.activeEnsembleId}/rehearsals/${id}`), {
         id, eventType, date, startTime, endTime, ...concertData, location, program, notes, createdAt: Date.now()
       });
-      await hooks.publishEnsembleNotification(`${tMeta.label} ajouté(e) — ${state.currentEnsembleData.name}`, `${formatDateFr(date)} • ${startTime}–${endTime} (${location})`);
-      $("form-rehearsal").reset(); closeModal("modal-rehearsal"); showToast(`${tMeta.label} ajouté(e) à l'agenda.`); hooks.switchTab("agenda");
+      await hooks.publishEnsembleNotification(C18.localizedMessages(() => [C18.tt`${tMeta.label} ajouté(e) — ${state.currentEnsembleData.name}`, `${formatDateFr(date)} • ${startTime}–${endTime} (${location})`]));
+      $("form-rehearsal").reset(); closeModal("modal-rehearsal"); showToast(C18.tt`${tMeta.label} ajouté(e) à l'agenda.`); hooks.switchTab("agenda");
     } catch (err) { handleFirebaseError(err); }
   });
 

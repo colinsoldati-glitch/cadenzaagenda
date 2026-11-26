@@ -1,10 +1,14 @@
-const CACHE_NAME = "cadenza-cache-v20.3";
+const CACHE_NAME = "cadenza-cache-v20.4";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./manifest.json",
+  "./manifest.de.json",
+  "./manifest.en.json",
   "./js/config.js",
+  "./js/i18n.js",
+  "./js/translations.js",
   "./js/ui.js",
   "./js/admin.js",
   "./js/polls.js",
@@ -25,7 +29,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k.startsWith("cadenza-cache-") && k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -48,31 +52,39 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+// Preference de langue locale, même lorsque la PWA est fermée.
+const LANGUAGE_CACHE = "cadenza-preferences-v1";
+const LANGUAGE_URL = new URL("./__cadenza_language", self.location.href).href;
+self.addEventListener("message", event => {
+  const lang = event.data?.language;
+  if (event.data?.type === "CADENZA_LANGUAGE" && ["fr", "de", "en"].includes(lang)) {
+    event.waitUntil(caches.open(LANGUAGE_CACHE).then(cache => cache.put(LANGUAGE_URL, new Response(lang))));
+  }
+});
+async function getLanguage() {
+  try { const response = await (await caches.open(LANGUAGE_CACHE)).match(LANGUAGE_URL); return response ? await response.text() : "fr"; }
+  catch (_) { return "fr"; }
+}
 // Réception des notifications Push serveur (FCM / Web Push) même app fermée
 self.addEventListener("push", (event) => {
-  let title = "Cadenza";
-  let body = "Nouvelle activité dans votre ensemble.";
-  let url = "./";
-
-  if (event.data) {
-    try {
-      const payload = event.data.json();
-      title = payload.notification?.title || payload.data?.title || title;
-      body = payload.notification?.body || payload.data?.body || body;
-      url = payload.data?.url || url;
-    } catch (_) {
-      body = event.data.text();
+  event.waitUntil((async () => {
+    const lang = await getLanguage();
+    let title = "Cadenza";
+    let body = ({ fr: "Nouvelle activité dans votre ensemble.", de: "Neue Aktivität in Ihrem Ensemble.", en: "New activity in your ensemble." })[lang] || "Nouvelle activité dans votre ensemble.";
+    let url = "./";
+    if (event.data) {
+      try {
+        const payload = event.data.json();
+        let variants = payload.localized || payload.data?.localized;
+        if (typeof variants === "string") { try { variants = JSON.parse(variants); } catch (_) { variants = null; } }
+        const localized = variants?.[lang];
+        title = localized?.title || payload.notification?.title || payload.data?.title || title;
+        body = localized?.body || payload.notification?.body || payload.data?.body || body;
+        url = payload.data?.url || "./";
+      } catch (_) { body = event.data.text(); }
     }
-  }
-
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      tag: "cadenza-push",
-      renotify: true,
-      data: { url }
-    })
-  );
+    await self.registration.showNotification(title, { body, tag: "cadenza-push", renotify: true, data: { url } });
+  })());
 });
 
 // Ouverture directe de l'application au clic sur la notification
