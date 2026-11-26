@@ -1,7 +1,15 @@
-const CACHE_NAME = "cadenza-cache-v21.3";
+const CACHE_NAME = "cadenza-cache-v22.0";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./app/",
+  "./app/index.html",
+  "./de/",
+  "./en/",
+  "./site/site.css",
+  "./site/site.js",
+  "./site/route.js",
+  "./site/logo.svg",
   "./styles.css",
   "./manifest.json",
   "./manifest.de.json",
@@ -48,15 +56,24 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
-  );
+  // Keep the existing root registration and push subscription. Do not cache
+  // personalized navigation URLs (invitations / profile transfers).
+  if (event.request.mode === "navigate") {
+    const root = new URL(self.registration.scope);
+    const rel = url.pathname.slice(root.pathname.length);
+    const app = /^(app)(\/|$)/.test(rel) || url.searchParams.has("ensemble") || url.searchParams.has("member");
+    const fallback = app ? "./app/" : /^de(\/|$)/.test(rel) ? "./de/" : /^en(\/|$)/.test(rel) ? "./en/" : "./";
+    if (app && !/^app(\/|$)/.test(rel)) {
+      const target = new URL("app/", root); target.search = url.search; target.hash = url.hash;
+      event.respondWith(Promise.resolve(Response.redirect(target.href, 302))); return;
+    }
+    event.respondWith(fetch(event.request).catch(async () => (await caches.match(fallback)) || Response.error()));
+    return;
+  }
+  event.respondWith(fetch(event.request).then(response => {
+    if (response.ok) { const copy = response.clone(); event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy))); }
+    return response;
+  }).catch(async () => (await caches.match(event.request)) || Response.error()));
 });
 
 // Preference de langue locale, même lorsque la PWA est fermée.
@@ -94,17 +111,24 @@ self.addEventListener("push", (event) => {
   })());
 });
 
-// Ouverture directe de l'application au clic sur la notification
+// Notification links from older releases may still target the root.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "./";
-
-  event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        if ("focus" in client) return client.focus();
-      }
-      if (clients.openWindow) return clients.openWindow(targetUrl);
-    })
-  );
+  const root = new URL(self.registration.scope);
+  const app = new URL("app/", root);
+  let target = new URL(app);
+  try {
+    const requested = new URL(event.notification.data?.url || "./", root);
+    if (requested.origin === root.origin) { target.search = requested.search; target.hash = requested.hash; }
+  } catch (_) {}
+  event.waitUntil((async () => {
+    const windows = await clients.matchAll({ type: "window", includeUncontrolled: true });
+    // Prefer a matching ensemble or app window; never focus the public landing.
+    const exact = windows.find(c => c.url === target.href);
+    if (exact) return exact.focus();
+    const existing = windows.find(c => new URL(c.url).pathname.startsWith(app.pathname));
+    if (existing && !target.search) return existing.focus();
+    if (existing && "navigate" in existing) { try { const moved = await existing.navigate(target.href); if (moved) return moved.focus(); } catch (_) {} }
+    if (clients.openWindow) return clients.openWindow(target.href);
+  })());
 });
