@@ -3053,3 +3053,114 @@ Object.assign(translations, {
     "{0} slots sent to members."
   ]
 });
+
+Object.assign(translations, {
+  "Une pièce ou un mouvement par ligne": [
+    "Ein Werk oder Satz pro Zeile",
+    "One piece or movement per line"
+  ],
+  "Retour à la ligne pour ajouter une pièce.": [
+    "Neue Zeile für ein weiteres Werk.",
+    "Start a new line to add a piece."
+  ],
+  "Progression": [
+    "Fortschritt",
+    "Progress"
+  ],
+  "Dates": [
+    "Daten",
+    "Dates"
+  ],
+  "Horaires": [
+    "Zeiten",
+    "Times"
+  ],
+  "Détails": [
+    "Details",
+    "Details"
+  ],
+  "Horaires et détails": [
+    "Zeiten und Details",
+    "Times and details"
+  ],
+  "Continuer vers les détails →": [
+    "Weiter zu den Details →",
+    "Continue to details →"
+  ],
+  "Date et horaires": [
+    "Datum und Zeiten",
+    "Date and times"
+  ],
+  "Programme et informations": [
+    "Programm und Informationen",
+    "Programme and information"
+  ],
+  "Durée : {0} h {1} min": [
+    "Dauer: {0} Std. {1} Min.",
+    "Duration: {0} h {1} min"
+  ],
+  "Indiquez une heure de fin postérieure à l’heure de début.": [
+    "Die Endzeit muss nach der Startzeit liegen.",
+    "The end time must be after the start time."
+  ],
+  "Vérifiez la date, les horaires et le lieu.": [
+    "Prüfen Sie Datum, Zeiten und Ort.",
+    "Check the date, times and location."
+  ],
+  "Me nommer responsable de l’ensemble (facultatif)": [
+    "Mich als Ensembleleitung einsetzen (optional)",
+    "Make me the ensemble manager (optional)"
+  ],
+  "Gestion des membres": [
+    "Mitgliederverwaltung",
+    "Member management"
+  ],
+  "Sans responsable, chaque membre peut gérer les autres. Avec un responsable, seul celui-ci peut modifier ou retirer les autres membres.": [
+    "Ohne Leitung können alle Mitglieder andere verwalten. Mit Leitung kann nur diese andere Mitglieder bearbeiten oder entfernen.",
+    "Without a manager, all members can manage others. With a manager, only they can edit or remove other members."
+  ],
+  "Responsable de l’ensemble": [
+    "Ensembleleitung",
+    "Ensemble manager"
+  ],
+  "Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.": [
+    "Einschränkung nur in der App. Profile sind nicht authentifiziert.",
+    "In-app restriction only. Profiles are not authenticated."
+  ],
+  "Gestion partagée": [
+    "Gemeinsame Verwaltung",
+    "Shared management"
+  ],
+  "Tous les membres peuvent gérer les profils.": [
+    "Alle Mitglieder können Profile verwalten.",
+    "All members can manage profiles."
+  ],
+  "Nommer": [
+    "Ernennen",
+    "Assign"
+  ],
+  "Responsable": [
+    "Leitung",
+    "Manager"
+  ],
+  "Aucun responsable (gestion partagée)": [
+    "Keine Leitung (gemeinsame Verwaltung)",
+    "No manager (shared management)"
+  ],
+  "Transférez ou désactivez votre rôle avant de quitter.": [
+    "Übertragen oder deaktivieren Sie Ihre Rolle, bevor Sie austreten.",
+    "Transfer or disable your role before leaving."
+  ],
+  "Action refusée : vérifiez les droits de gestion.": [
+    "Aktion abgelehnt: Verwaltungsrechte prüfen.",
+    "Action denied: check management permissions."
+  ],
+  "Gestion des membres mise à jour.": [
+    "Mitgliederverwaltung aktualisiert.",
+    "Member management updated."
+  ],
+  "Vous ne faites plus partie de cet ensemble.": [
+    "Sie gehören nicht mehr zu diesem Ensemble.",
+    "You are no longer part of this ensemble."
+  ]
+});

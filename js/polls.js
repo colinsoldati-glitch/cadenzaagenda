@@ -329,11 +329,24 @@ function proposalError(slots) {
   if(active.some(p=>keys.includes(getSlotFingerprint(p))))return C18.t('Un créneau identique existe déjà dans les disponibilités.');
   return '';
 }
+let proposalStage=1;
+function showProposalStage(stage, focus=false){
+  proposalStage=state.refiningFixedDate?3:stage;
+  const fixed=!!state.refiningFixedDate;
+  $('proposal-date-editor').classList.toggle('hidden',proposalStage!==1);
+  $('proposal-edit-dates').classList.toggle('hidden',fixed||proposalStage===1);
+  $('proposal-times-stage').classList.toggle('hidden',proposalStage!==2);
+  $('proposal-edit-times').classList.toggle('hidden',fixed||proposalStage!==3);
+  $('proposal-review-stage').classList.toggle('hidden',proposalStage!==3);
+  $('proposal-progress').innerHTML=(fixed?['Horaires et détails']:['Dates','Horaires','Détails']).map((label,i)=>`<span class="${(fixed||i+1===proposalStage)?'current':i+1<proposalStage?'done':''}">${fixed?'':i+1+'. '}${tr(label)}</span>`).join('');
+  if(proposalStage===3){$('proposal-options').open=true;$('proposal-preview').open=true;}
+  if(focus){const body=document.querySelector('#form-poll .proposal-body');body.scrollTop=0;}
+}
 function renderProposalSummary(slots,error) {
   const dates=new Set(slots.map(s=>s.date)); const count=[C18.t(dates.size===1?'{0} date':'{0} dates',dates.size),C18.t(slots.length===1?'{0} créneau':'{0} créneaux',slots.length)].join(' · ');
   $('proposal-date-count').textContent=String(state.selectedCalDates.size);$('btn-cal-clear').disabled=!state.selectedCalDates.size;$('proposal-go-times').disabled=!state.selectedCalDates.size;
-  $('proposal-preview-count').textContent=String(slots.length);$('proposal-footer-status').textContent=error || (slots.length?count+(proposalScope==='shared'&&!state.refiningFixedDate&&sharedRows().length===1?' · '+formatPollTimeLabel(slots[0]):''):C18.t('Sélectionnez au moins une date'));$('proposal-footer-status').classList.toggle('proposal-error-text',!!error);
-  $('proposal-validation').textContent=error;$('proposal-validation').classList.toggle('hidden',!error);
+  $('proposal-edit-dates').textContent='✓ '+C18.t(state.selectedCalDates.size===1?'{0} date':'{0} dates',state.selectedCalDates.size)+' · '+C18.t('Modifier');$('proposal-edit-times').textContent='✓ '+C18.t(slots.length===1?'{0} créneau':'{0} créneaux',slots.length)+' · '+C18.t('Modifier');$('proposal-go-review').disabled=!slots.length||!!error;$('proposal-preview-count').textContent=String(slots.length);$('proposal-footer-status').textContent=(proposalStage===1?'':error) || (slots.length?count+(proposalScope==='shared'&&!state.refiningFixedDate&&sharedRows().length===1?' · '+formatPollTimeLabel(slots[0]):''):C18.t('Sélectionnez au moins une date'));$('proposal-footer-status').classList.toggle('proposal-error-text',!!error);
+  $('proposal-validation').textContent=error;$('proposal-validation').classList.toggle('hidden',!error||proposalStage===1);
   $('proposal-preview-list').innerHTML=slots.length?[...dates].map(d=>`<div class="proposal-preview-row"><strong>${esc(formatCompactDateFr(d))}</strong><span>${slots.filter(s=>s.date===d).map(s=>esc(formatPollTimeLabel(s)||'—')).join(' · ')}</span></div>`).join(''):`<p class="proposal-hint">${esc(C18.t('Aucune date sélectionnée'))}</p>`;
   $('btn-submit-poll').textContent=proposalSubmitting?C18.t('Envoi en cours…'):slots.length?C18.t(slots.length===1?'Envoyer {0} créneau':'Envoyer {0} créneaux',slots.length):C18.t('Envoyer les propositions');
 }
@@ -354,7 +367,7 @@ export function updatePollConflictsWarning() {
     return C18.h`• <strong>${esc(formatDateFr(s.date))} (${esc(formatPollTimeLabel(s))})</strong> : sondage déjà effectué et archivé${abs}.`;
   }).filter(Boolean);
 
-  lockBox.classList.toggle("hidden", !lockedLines.length);
+  lockBox.classList.toggle("hidden", !lockedLines.length||proposalStage===1);
   if (lockedLines.length) {
     const restoreBtnHtml = lockedMatches.length === 1
       ? C18.h`<div style="margin-top:8px"><button type="button" class="btn-secondary btn-xs" data-unlock-archived="${esc(lockedMatches[0].id)}">↻ Récupérer ce sondage archivé</button></div>`
@@ -363,8 +376,8 @@ export function updatePollConflictsWarning() {
   } else {
     lockBox.innerHTML = "";
   }
-  subBtn.disabled = proposalSubmitting || slots.length === 0 || !!error || lockedLines.length > 0;
-  if(lockedLines.length&&!error){$("proposal-footer-status").textContent=C18.t("Créneau archivé détecté");$("proposal-footer-status").classList.add("proposal-error-text");}
+  subBtn.disabled = proposalSubmitting || proposalStage!==3 || slots.length === 0 || !!error || lockedLines.length > 0;subBtn.classList.toggle("hidden",proposalStage!==3);
+  if(lockedLines.length&&!error&&proposalStage!==1){$("proposal-footer-status").textContent=C18.t("Créneau archivé détecté");$("proposal-footer-status").classList.add("proposal-error-text");}
 
   const conflictLines = [];
   [...new Set(slots.map((s) => s.date))].forEach((d) => {
@@ -441,7 +454,7 @@ export function resetPollSlots() {
   state.calMonth = now.getMonth();
   state.selectedCalDates.clear();
   $('proposal-extra-times').innerHTML='';$('proposal-custom-area').innerHTML='';
-  $('proposal-options').open=false;$('proposal-preview').open=false;
+  $('proposal-options').open=false;$('proposal-preview').open=false;showProposalStage(1);
   $('poll-location').value='';$('poll-note').value='';
   $('poll-global-mode-holder').querySelector('.slot-start').value='14:00';$('poll-global-mode-holder').querySelector('.slot-end').value='17:00';
   enhanceTiming($('poll-global-mode-holder'));setProposalScope('shared');
@@ -468,7 +481,7 @@ export function openRefineTimeModal(poll) {
   addPollSlot(poll.date, "exact", "", s, e);
   $("poll-location").value = poll.location || "";
   $("poll-note").value = poll.note || "";
-  $("proposal-fixed-date").textContent=formatDateFr(poll.date);$("proposal-options").open=!!(poll.location||poll.note);$("proposal-preview").open=false;
+  $("proposal-fixed-date").textContent=formatDateFr(poll.date);$("proposal-options").open=!!(poll.location||poll.note);$("proposal-preview").open=false;showProposalStage(3);
   updatePollConflictsWarning();openModal("modal-poll");
 }
 
@@ -487,7 +500,7 @@ export function openCounterProposalModal(poll) {
   addPollSlot(poll.date, "exact", "", s, e);
   $("poll-location").value = poll.location || "";
   $("poll-note").value = poll.note || "";
-  $("proposal-fixed-date").textContent=formatDateFr(poll.date);$("proposal-options").open=!!(poll.location||poll.note);$("proposal-preview").open=false;
+  $("proposal-fixed-date").textContent=formatDateFr(poll.date);$("proposal-options").open=!!(poll.location||poll.note);$("proposal-preview").open=false;showProposalStage(3);
   updatePollConflictsWarning();openModal("modal-poll");
 }
 
@@ -586,7 +599,7 @@ function pollDetails(p, members, myId) {
   const note=draftValues.get(`note:${p.id}`) ?? notes[myId] ?? '';
   const loc=draftValues.get(`loc:${p.id}`) ?? p.location ?? '';
   return `<div class="smart-detail">
-    ${p.note?`<p class="smart-description">${esc(p.note)}</p>`:''}
+    ${p.note?`<div class="smart-description program-lines"><strong>${tr("Programme :")}</strong><div>${esc(p.note)}</div></div>`:''}
     ${conflicts.length?`<div class="unavail-notice">${tr('Absence :')} ${conflicts.map(c=>esc(c.memberName)+(c.reason?' ('+esc(c.reason)+')':'')).join(', ')}</div>`:''}
     <div class="smart-member-list">${members.map(member=>{const val=v[member.id], key=voteKeys[val];return `<div class="smart-member"><span class="smart-person ${key?val:'missing'}">${symbols[val]||'○'}</span><div><strong>${esc(member.name)}${member.id===myId?' · '+tr('Vous'):''}</strong><small>${esc(member.instrument)}${notes[member.id]?' · '+esc(notes[member.id]):''}</small></div><span class="smart-member-state ${key?val:'missing'}">${tr(key||'Sans réponse')}</span></div>`;}).join('')}</div>
     <div class="smart-detail-edit"><label>${tr('Votre précision')}</label><div class="vote-note-bar"><input type="text" class="vote-note-input" data-note-input="${esc(p.id)}" maxlength="90" aria-label="${tr('Votre précision')}" value="${esc(note)}" placeholder="${tr('Ex. disponible dès 15h')}"/><button type="button" class="btn-secondary btn-sm" data-save-note="${esc(p.id)}">${tr('Enregistrer')}</button></div></div>
@@ -594,10 +607,11 @@ function pollDetails(p, members, myId) {
     <div class="smart-detail-actions">${m.missing?`<button type="button" class="btn-secondary btn-sm" data-remind-poll="${esc(p.id)}">${tr('Relancer ({0})',m.missing)}</button>`:''}<button type="button" class="btn-secondary btn-sm" data-${broad?'refine':'counter'}-poll="${esc(p.id)}">${tr(broad?'Préciser les horaires':'Proposer un autre horaire')}</button><button type="button" class="btn-secondary btn-sm" data-confirm-poll="${esc(p.id)}">${tr('Valider dans l’agenda')}</button></div>
   </div>`;
 }
+function pollLocation(p){return `<div class="poll-location-prominent"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg><span>${esc(C18.localizeLocation(p.location||'Lieu à confirmer'))}</span></div>`;}
 function pollRow(p,members,myId) {
   const m=metrics(p,members), open=state.expandedMemberLists.has(p.id), broad=p.timeMode==='day'||p.timeMode==='period';
   return `<div class="smart-slot ${m.full?'smart-full':''}" data-poll-card="${esc(p.id)}">
-    <div class="smart-slot-main"><div class="smart-slot-info"><strong class="smart-time">${esc(formatPollTimeLabel(p)||'—')}</strong>${p.location?`<small>${esc(C18.localizeLocation(p.location))}</small>`:''}${consensusBar(p,members)}<small>${m.full?tr('Tous disponibles'):[m.no?tr('{0} indisponible(s)',m.no):'',m.missing?tr('{0} réponse(s) manquante(s)',m.missing):'',m.maybe?tr('{0} réponse(s) incertaine(s)',m.maybe):''].filter(Boolean).join(' · ')}</small></div>
+    <div class="smart-slot-main"><div class="smart-slot-info">${pollLocation(p)}<strong class="smart-time">${esc(formatPollTimeLabel(p)||'—')}</strong>${consensusBar(p,members)}<small>${m.full?tr('Tous disponibles'):[m.no?tr('{0} indisponible(s)',m.no):'',m.missing?tr('{0} réponse(s) manquante(s)',m.missing):'',m.maybe?tr('{0} réponse(s) incertaine(s)',m.maybe):''].filter(Boolean).join(' · ')}</small></div>
       ${selectionMode&&!p.votes?.[myId]?`<button type="button" class="btn-secondary smart-select ${selected.has(p.id)?'selected':''}" data-select-poll="${esc(p.id)}" aria-pressed="${selected.has(p.id)}" aria-label="${tr('Sélectionner ce créneau')}">${selected.has(p.id)?'✓':'○'}</button>`:''}
       <button type="button" class="smart-icon" data-toggle-members="${esc(p.id)}" aria-expanded="${open}" aria-label="${tr('Détails du créneau')}">${open?'⌃':'⌄'}</button><button type="button" class="smart-icon" data-poll-menu="${esc(p.id)}" aria-label="${tr("Plus d'options")}">⋯</button>
     </div>
@@ -612,12 +626,12 @@ function sectionHtml(key,label,items,members,myId) {
   return `<section class="smart-section" data-section="${key}"><button type="button" class="smart-section-head" data-toggle-section="${key}" aria-expanded="${!closed}"><span class="section-symbol ${key}">${{ready:'✓',todo:'●',waiting:'◷',blocked:'×'}[key]}</span><strong>${tr(label)}</strong><span class="smart-count">${items.length}</span><span aria-hidden="true">${closed?'⌄':'⌃'}</span></button>${closed?'':[...groups.values()].map(g=>`<article class="card smart-day ${getEventMeta(g[0].eventType).cardCls}"><div class="smart-day-head">${dateTile(g[0].date)}<div><strong>${esc(getEventMeta(g[0].eventType).label)}</strong><small>${esc(formatDateFr(g[0].date))}${g.length>1?' · '+tr('{0} créneaux',g.length):''}</small></div></div>${g.map(p=>pollRow(p,members,myId)).join('')}</article>`).join('')}</section>`;
 }
 function archiveHtml(archList,members) {
-  return `<div class="smart-archive-intro">${tr('Créneaux clos avec au moins une indisponibilité. Récupérez un créneau si un membre est finalement libre.')}</div>${archList.length?[...archList].sort((a,b)=>(b.archivedAt||0)-(a.archivedAt||0)).map(p=>`<article class="card smart-day archived-card"><div class="smart-day-head">${dateTile(p.date)}<div><strong>${esc(getEventMeta(p.eventType).label)} · ${esc(formatPollTimeLabel(p))}</strong><small>${esc(C18.localizeLocation(p.location||''))}</small>${consensusBar(p,members)}</div></div>${p.note?`<p>${esc(p.note)}</p>`:''}<div class="member-votes-list">${members.map(m=>{const v=p.votes?.[m.id];return `<span class="member-chip ${voteKeys[v]?v:''}">${symbols[v]||'○'} ${esc(m.name)}${p.voteNotes?.[m.id]?' · '+esc(p.voteNotes[m.id]):''}</span>`;}).join('')}</div><div class="archive-lock-banner"><span>${tr('Sondage archivé')}</span><div class="archive-actions-group"><button type="button" class="btn-secondary" data-restore-arch="${esc(p.id)}">↻ ${tr('Récupérer')}</button><button type="button" class="btn-del-subtle" data-del-arch="${esc(p.id)}">${tr('Supprimer')}</button></div></div></article>`).join(''):`<div class="empty-state">${tr('Aucun créneau archivé.')}</div>`}`;
+  return `<div class="smart-archive-intro">${tr('Créneaux clos avec au moins une indisponibilité. Récupérez un créneau si un membre est finalement libre.')}</div>${archList.length?[...archList].sort((a,b)=>(b.archivedAt||0)-(a.archivedAt||0)).map(p=>`<article class="card smart-day archived-card"><div class="smart-day-head">${dateTile(p.date)}<div><strong>${esc(getEventMeta(p.eventType).label)} · ${esc(formatPollTimeLabel(p))}</strong>${pollLocation(p)}${consensusBar(p,members)}</div></div>${p.note?`<p class="program-lines">${esc(p.note)}</p>`:''}<div class="member-votes-list">${members.map(m=>{const v=p.votes?.[m.id];return `<span class="member-chip ${voteKeys[v]?v:''}">${symbols[v]||'○'} ${esc(m.name)}${p.voteNotes?.[m.id]?' · '+esc(p.voteNotes[m.id]):''}</span>`;}).join('')}</div><div class="archive-lock-banner"><span>${tr('Sondage archivé')}</span><div class="archive-actions-group"><button type="button" class="btn-secondary" data-restore-arch="${esc(p.id)}">↻ ${tr('Récupérer')}</button><button type="button" class="btn-del-subtle" data-del-arch="${esc(p.id)}">${tr('Supprimer')}</button></div></div></article>`).join(''):`<div class="empty-state">${tr('Aucun créneau archivé.')}</div>`}`;
 }
 function tableHtml(polls,members,myId) {
   const ordered=[...members.filter(m=>m.id===myId),...members.filter(m=>m.id!==myId)];
   const rows=tableSort==='date'?[...polls].sort((a,b)=>getPollSortKey(a).localeCompare(getPollSortKey(b))):smartSortPolls(polls,members,myId);
-  return `<div class="matrix-legend"><span class="yes">✓ ${tr('Oui')}</span><span class="maybe">? ${tr('Peut-être')}</span><span class="no">× ${tr('Non')}</span><span>○ ${tr('Sans réponse')}</span></div><p class="smart-hint">${tr('Touchez un créneau pour voir ses détails. Touchez votre case pour choisir votre réponse.')}</p><div class="card matrix-card smart-matrix"><div class="matrix-scroll"><table class="avail-matrix"><thead><tr><th scope="col">${tr('Créneau')}</th>${ordered.map(m=>`<th scope="col" class="${m.id===myId?'col-me':''}">${esc(m.name)}${m.id===myId?'<br>'+tr('Vous'):''}</th>`).join('')}<th scope="col">${tr('Total')}</th></tr></thead><tbody>${rows.map(p=>{const m=metrics(p,members);return `<tr class="${m.full?'row-consensus':''}" data-poll-card="${esc(p.id)}"><td><button class="matrix-date-btn" type="button" data-detail-poll="${esc(p.id)}"><strong class="matrix-date-line"><span>${esc(formatCompactDateFr(p.date))}</span><span class="${m.full?'all-yes':''}">${m.yes}/${members.length}</span></strong><small>${esc(formatPollTimeLabel(p))}</small><small>${esc(getEventMeta(p.eventType).label)}${p.location?' · '+esc(C18.localizeLocation(p.location)):''}</small></button></td>${ordered.map(member=>{const val=p.votes?.[member.id],key=voteKeys[val],note=p.voteNotes?.[member.id],label=esc(member.name+' : '+C18.t(key||'Sans réponse')+(note?' — '+note:''));const badge=`<span class="matrix-cell-badge ${key?val:''}" title="${label}" aria-label="${label}">${symbols[val]||'○'}${note?'<i class="matrix-note-dot"></i>':''}</span>`;return `<td>${member.id===myId?`<button type="button" class="matrix-cell-btn" data-detail-poll="${esc(p.id)}" aria-label="${label}">${badge}</button>`:badge}</td>`;}).join('')}<td class="${m.full?'all-yes':''}"><strong>${m.yes}/${members.length}</strong></td></tr>`;}).join('')}</tbody></table></div></div>`;
+  return `<div class="matrix-legend"><span class="yes">✓ ${tr('Oui')}</span><span class="maybe">? ${tr('Peut-être')}</span><span class="no">× ${tr('Non')}</span><span>○ ${tr('Sans réponse')}</span></div><p class="smart-hint">${tr('Touchez un créneau pour voir ses détails. Touchez votre case pour choisir votre réponse.')}</p><div class="card matrix-card smart-matrix"><div class="matrix-scroll"><table class="avail-matrix"><thead><tr><th scope="col">${tr('Créneau')}</th>${ordered.map(m=>`<th scope="col" class="${m.id===myId?'col-me':''}">${esc(m.name)}${m.id===myId?'<br>'+tr('Vous'):''}</th>`).join('')}<th scope="col">${tr('Total')}</th></tr></thead><tbody>${rows.map(p=>{const m=metrics(p,members);return `<tr class="${m.full?'row-consensus':''}" data-poll-card="${esc(p.id)}"><td><button class="matrix-date-btn" type="button" data-detail-poll="${esc(p.id)}"><strong class="matrix-date-line"><span>${esc(formatCompactDateFr(p.date))}</span><span class="${m.full?'all-yes':''}">${m.yes}/${members.length}</span></strong><small>${esc(formatPollTimeLabel(p))}</small><small>${esc(getEventMeta(p.eventType).label)}</small>${pollLocation(p)}</button></td>${ordered.map(member=>{const val=p.votes?.[member.id],key=voteKeys[val],note=p.voteNotes?.[member.id],label=esc(member.name+' : '+C18.t(key||'Sans réponse')+(note?' — '+note:''));const badge=`<span class="matrix-cell-badge ${key?val:''}" title="${label}" aria-label="${label}">${symbols[val]||'○'}${note?'<i class="matrix-note-dot"></i>':''}</span>`;return `<td>${member.id===myId?`<button type="button" class="matrix-cell-btn" data-detail-poll="${esc(p.id)}" aria-label="${label}">${badge}</button>`:badge}</td>`;}).join('')}<td class="${m.full?'all-yes':''}"><strong>${m.yes}/${members.length}</strong></td></tr>`;}).join('')}</tbody></table></div></div>`;
 }
 function captureEditor() {
   const el=document.activeElement; if(!el?.matches?.('.vote-note-input,.loc-inline-input'))return null;
@@ -654,13 +668,13 @@ export function renderPolls() {
   if(!saved&&!state.pendingScrollToPollId){for(const anchor of anchors){const el=container.querySelector(`[data-poll-card="${CSS.escape(anchor.id)}"]`);if(el&&el.closest('[data-section]')?.dataset.section===anchor.section){const delta=el.getBoundingClientRect().top-anchor.top;if(Math.abs(delta)>2&&Math.abs(delta)<innerHeight)window.scrollBy(0,delta);break;}}}
   if(state.pendingScrollToPollId){const id=state.pendingScrollToPollId;state.pendingScrollToPollId=null;const el=container.querySelector(`[data-poll-card="${CSS.escape(id)}"]`);if(el)requestAnimationFrame(()=>el.scrollIntoView({block:'center',behavior:'smooth'}));}
 }
-function renderDetail(){const p=state.currentEnsembleData?.polls?.[detailId], members=Object.values(state.currentEnsembleData?.members||{});if(!p||isPollImpossibleAndComplete(p,members)){ $('poll-detail-content').innerHTML=`<p>${tr('Ce créneau n’est plus actif.')}</p>`;return;} $('poll-detail-content').innerHTML=`<div class="smart-day-head">${dateTile(p.date)}<div><strong>${esc(getEventMeta(p.eventType).label)}</strong><small>${esc(formatDateFr(p.date))} · ${esc(formatPollTimeLabel(p))}</small>${consensusBar(p,members)}</div></div>${voteButtons(p,currentMember())}${pollDetails(p,members,currentMember())}<button type="button" class="btn-secondary btn-full" data-poll-menu="${esc(p.id)}">${tr("Plus d'options")}</button>`;}
+function renderDetail(){const p=state.currentEnsembleData?.polls?.[detailId], members=Object.values(state.currentEnsembleData?.members||{});if(!p||isPollImpossibleAndComplete(p,members)){ $('poll-detail-content').innerHTML=`<p>${tr('Ce créneau n’est plus actif.')}</p>`;return;} $('poll-detail-content').innerHTML=`<div class="smart-day-head">${dateTile(p.date)}<div><strong>${esc(getEventMeta(p.eventType).label)}</strong><small>${esc(formatDateFr(p.date))} · ${esc(formatPollTimeLabel(p))}</small>${pollLocation(p)}${consensusBar(p,members)}</div></div>${voteButtons(p,currentMember())}${pollDetails(p,members,currentMember())}<button type="button" class="btn-secondary btn-full" data-poll-menu="${esc(p.id)}">${tr("Plus d'options")}</button>`;}
 function startQuick(){if(busy)return;quick={ids:[...state.lastRenderedUnvotedPolls].sort((a,b)=>getPollSortKey(a).localeCompare(getPollSortKey(b))).map(p=>p.id), index:0, note:'', skipped:new Set(), answered:new Set()};openModal('modal-quick-vote');renderQuick();$('quick-vote-content').querySelector('button:not([disabled])')?.focus({preventScroll:true});}
 function renderQuick(){if(!quick)return; const root=$('quick-vote-content'), myId=currentMember(), members=Object.values(state.currentEnsembleData?.members||{});while(quick.index<quick.ids.length){const p=state.currentEnsembleData?.polls?.[quick.ids[quick.index]];if(p&&!isPollImpossibleAndComplete(p,members)&&!p.votes?.[myId])break;if(p?.votes?.[myId]||quick.answered.has(quick.ids[quick.index]))quick.answered.add(quick.ids[quick.index]);else quick.skipped.add(quick.ids[quick.index]);quick.index++;quick.note='';}
   const focusedNote=document.activeElement?.id==='quick-note', notePos=focusedNote?document.activeElement.selectionStart:null;
   const total=quick.ids.length, p=state.currentEnsembleData?.polls?.[quick.ids[quick.index]];
   const undo=lastVote&&quick.ids.includes(lastVote.id)&&state.currentEnsembleData?.polls?.[lastVote.id]?.votes?.[myId]===lastVote.value&&!isPollImpossibleAndComplete(state.currentEnsembleData.polls[lastVote.id],members)&&!busy;
-  root.innerHTML=`<div class="quick-progress"><span>${tr('{0} sur {1}',Math.min(quick.index+1,total),total)}</span><span>${tr('{0} répondu(s)',quick.answered.size)}</span></div><div class="smart-personal-progress"><i style="width:${total?quick.index/total*100:100}%"></i></div>${p&&quick.index<total?`<div class="quick-date"><small>${esc(getEventMeta(p.eventType).label)}${p.location?' · '+esc(C18.localizeLocation(p.location)):''}</small><h3>${esc(formatDateFr(p.date))}</h3><strong>${esc(formatPollTimeLabel(p))}</strong><p>${tr('Êtes-vous disponible ?')}</p></div><label for="quick-note">${tr('Précision facultative')}</label><input id="quick-note" maxlength="90" value="${esc(quick.note)}" placeholder="${tr('Ex. disponible dès 15h')}"/>${voteButtons(p,myId,'quick-vote')}<div class="smart-tools"><button type="button" class="btn-secondary" data-quick-prev ${busy||!quick.ids.slice(0,quick.index).some(id=>state.currentEnsembleData?.polls?.[id]&&!state.currentEnsembleData.polls[id].votes?.[myId])?'disabled':''}>← ${tr('Précédent')}</button><button type="button" class="btn-secondary" data-quick-skip ${busy?'disabled':''}>${tr('Passer')} →</button></div>`:`<div class="quick-date"><h3>${tr('Parcours terminé')}</h3><p>${tr('{0} réponse(s) enregistrée(s)',quick.answered.size)}</p><p>${tr('{0} créneau(x) restant(s) à répondre',state.lastRenderedUnvotedPolls.length)}</p></div><button type="button" class="btn-primary btn-full" data-close="modal-quick-vote">${tr('Terminer')}</button>`}${undo?`<button type="button" class="btn-secondary btn-full" data-undo-vote>↶ ${tr('Annuler le dernier vote')}</button>`:''}`;
+  root.innerHTML=`<div class="quick-progress"><span>${tr('{0} sur {1}',Math.min(quick.index+1,total),total)}</span><span>${tr('{0} répondu(s)',quick.answered.size)}</span></div><div class="smart-personal-progress"><i style="width:${total?quick.index/total*100:100}%"></i></div>${p&&quick.index<total?`<div class="quick-date"><small>${esc(getEventMeta(p.eventType).label)}</small>${pollLocation(p)}<h3>${esc(formatDateFr(p.date))}</h3><strong>${esc(formatPollTimeLabel(p))}</strong><p>${tr('Êtes-vous disponible ?')}</p></div><label for="quick-note">${tr('Précision facultative')}</label><input id="quick-note" maxlength="90" value="${esc(quick.note)}" placeholder="${tr('Ex. disponible dès 15h')}"/>${voteButtons(p,myId,'quick-vote')}<div class="smart-tools"><button type="button" class="btn-secondary" data-quick-prev ${busy||!quick.ids.slice(0,quick.index).some(id=>state.currentEnsembleData?.polls?.[id]&&!state.currentEnsembleData.polls[id].votes?.[myId])?'disabled':''}>← ${tr('Précédent')}</button><button type="button" class="btn-secondary" data-quick-skip ${busy?'disabled':''}>${tr('Passer')} →</button></div>`:`<div class="quick-date"><h3>${tr('Parcours terminé')}</h3><p>${tr('{0} réponse(s) enregistrée(s)',quick.answered.size)}</p><p>${tr('{0} créneau(x) restant(s) à répondre',state.lastRenderedUnvotedPolls.length)}</p></div><button type="button" class="btn-primary btn-full" data-close="modal-quick-vote">${tr('Terminer')}</button>`}${undo?`<button type="button" class="btn-secondary btn-full" data-undo-vote>↶ ${tr('Annuler le dernier vote')}</button>`:''}`;
   if(busy)root.querySelectorAll('button:not([data-close])').forEach(b=>b.disabled=true);
   if(focusedNote&&$('quick-note')){$('quick-note').focus({preventScroll:true});$('quick-note').setSelectionRange(notePos,notePos);}
 }
@@ -705,7 +719,10 @@ export function initPollsListeners() {
     }
   });
 
-  $('proposal-go-times').addEventListener('click',()=>{ $('proposal-times-heading').scrollIntoView({block:'start',behavior:'auto'}); $('proposal-shared').focus({preventScroll:true}); });
+  $('proposal-go-times').addEventListener('click',()=>{if(state.selectedCalDates.size){showProposalStage(2,true);updatePollConflictsWarning();}});
+  $('proposal-edit-dates').addEventListener('click',()=>{showProposalStage(1,true);updatePollConflictsWarning();});
+  $('proposal-edit-times').addEventListener('click',()=>{showProposalStage(2,true);updatePollConflictsWarning();});
+  $('proposal-go-review').addEventListener('click',()=>{if(!proposalError(getPendingProposalSlots())&&getPendingProposalSlots().length){showProposalStage(3,true);updatePollConflictsWarning();}});
   $('proposal-shared').addEventListener('click',()=>setProposalScope('shared'));
   $('proposal-custom').addEventListener('click',()=>setProposalScope('custom'));
   $('proposal-add-shared').addEventListener('click',()=>{newTimingRow($('proposal-extra-times'),nextTiming(sharedRows()));updatePollConflictsWarning();});
@@ -769,6 +786,7 @@ export function initPollsListeners() {
     const startTime = $("confirm-poll-start").value, endTime = $("confirm-poll-end").value;
     const location = $("confirm-poll-location").value.trim() || "Lieu à confirmer", program = $("confirm-poll-program").value.trim();
     const tMeta = getEventMeta(eventType);
+    if(!startTime||!endTime||endTime<=startTime)return showToast(C18.t("Indiquez une heure de fin postérieure à l’heure de début."));
     try {
       const rehId = genId("reh");
       await update(ref(db, `ensembles/${state.session.activeEnsembleId}`), {
@@ -781,7 +799,7 @@ export function initPollsListeners() {
   });
 
   $("form-poll").addEventListener("submit", async (e) => {
-    e.preventDefault(); if(proposalSubmitting)return;haptic();
+    e.preventDefault(); if(proposalSubmitting||proposalStage!==3)return;haptic();
     const slots = getPendingProposalSlots();
     const error=proposalError(slots);if(error){updatePollConflictsWarning();return showToast(error);}
     if (!slots.length) return showToast(C18.t("Veuillez sélectionner au moins une date."));

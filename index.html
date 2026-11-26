@@ -178,7 +178,7 @@
             <div class="field"><label for="create-member-name">Votre prénom</label><input type="text" id="create-member-name" placeholder="Ex: Colin" required /></div>
             <div class="field"><label for="create-member-instrument">Instrument</label><input type="text" id="create-member-instrument" placeholder="Ex: Violoncelle" required /></div>
           </div>
-          <button type="submit" id="btn-submit-create" class="btn-secondary btn-full">Créer et inviter les membres</button>
+          <label class="toggle-row" for="create-manager"><input type="checkbox" id="create-manager"/><span>Me nommer responsable de l’ensemble (facultatif)</span></label><button type="submit" id="btn-submit-create" class="btn-secondary btn-full">Créer et inviter les membres</button>
         </form>
       </div>
     </section>
@@ -236,7 +236,7 @@
 
       <div class="card">
         <div class="card-kicker">Musiciens (<span id="members-count">0</span>)</div>
-        <div id="members-list"></div>
+        <div id="ensemble-manager-panel" class="manager-panel"></div><div id="members-list"></div>
       </div>
 
       <div class="card">
@@ -566,7 +566,7 @@
         </div>
         <div id="confirm-poll-concert-fields"></div>
         <div class="field"><label for="confirm-poll-location">Lieu</label><input type="text" id="confirm-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" required /></div>
-        <div class="field"><label for="confirm-poll-program">Programme (optionnel)</label><input type="text" id="confirm-poll-program" placeholder="Ex: Lecture du 2e mouvement" /></div>
+        <div class="field"><label for="confirm-poll-program">Programme (optionnel)</label><textarea id="confirm-poll-program" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <button type="submit" class="btn-confirm btn-full">Ajouter à l'agenda centralisé</button>
       </form>
     </div>
@@ -583,7 +583,7 @@
         <div id="edit-poll-mode-holder"></div>
         <div id="edit-poll-archive-warning" class="alert-box hidden"></div>
         <div class="field"><label for="edit-poll-location">Lieu envisagé (optionnel)</label><input type="text" id="edit-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /></div>
-        <div class="field"><label for="edit-poll-note">Programme / Détails (optionnel)</label><input type="text" id="edit-poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
+        <div class="field"><label for="edit-poll-note">Programme / Détails (optionnel)</label><textarea id="edit-poll-note" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <p style="font-size: 12.5px; color: var(--muted); margin: 0 0 14px;">Si vous modifiez la date ou l'horaire, les votes existants seront réinitialisés.</p>
         <button type="submit" id="btn-submit-edit-poll" class="btn-primary btn-full">Enregistrer les modifications</button>
       </form>
@@ -647,7 +647,7 @@
         </div>
         <div id="edit-reh-concert-fields"></div>
         <div class="field"><label for="edit-reh-location">Lieu</label><input type="text" id="edit-reh-location" required /></div>
-        <div class="field"><label for="edit-reh-program">Programme</label><input type="text" id="edit-reh-program" /></div>
+        <div class="field"><label for="edit-reh-program">Programme</label><textarea id="edit-reh-program" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <div class="field"><label for="edit-reh-notes">Notes (optionnel)</label><textarea id="edit-reh-notes" rows="2"></textarea></div>
         <button type="submit" class="btn-primary btn-full">Enregistrer les modifications</button>
       </form>
@@ -689,13 +689,12 @@
     <div class="modal-sheet proposal-sheet">
       <div class="modal-header proposal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des dates</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
       <form id="form-poll" novalidate>
-        <div class="proposal-body">
-          <div id="poll-refine-banner" class="info-banner-box hidden"></div>
-          <div class="proposal-step"><span class="proposal-number">1</span><strong>Type d'événement</strong></div>
+        <div id="proposal-progress" class="wizard-progress" aria-label="Progression"></div><div class="proposal-body">
+          <div id="poll-refine-banner" class="info-banner-box hidden"></div><div class="proposal-step proposal-type-title"><strong>Type d'événement</strong></div>
           <div id="poll-type-holder"></div>
           <div id="poll-calendar-wrapper">
-            <div class="proposal-step"><span class="proposal-number">2</span><strong>Choisir les dates</strong><span id="proposal-date-count" class="proposal-count" aria-live="polite"></span></div>
-            <div class="multi-cal-box">
+            <div class="proposal-step"><span class="proposal-number">1</span><strong>Choisir les dates</strong><span id="proposal-date-count" class="proposal-count" aria-live="polite"></span></div>
+            <div id="proposal-date-editor" class="multi-cal-box">
               <div class="multi-cal-header">
                 <button type="button" id="btn-cal-prev" class="btn-secondary" aria-label="Mois précédent">‹</button>
                 <div class="proposal-month"><span id="cal-month-label" class="multi-cal-month">—</span><button type="button" id="btn-cal-today" class="proposal-link">Aujourd'hui</button></div>
@@ -708,7 +707,7 @@
               <div id="cal-selected-pills" class="selected-dates-pills"></div>
               <button type="button" id="proposal-go-times" class="btn-secondary btn-full proposal-go-times" disabled>Configurer les horaires ↓</button>
             </div>
-            <div class="proposal-step" id="proposal-times-heading"><span class="proposal-number">3</span><strong>Choisir les horaires</strong></div>
+            <button type="button" id="proposal-edit-dates" class="wizard-summary hidden"></button><div id="proposal-times-stage" class="hidden"><div class="proposal-step" id="proposal-times-heading"><span class="proposal-number">2</span><strong>Choisir les horaires</strong></div>
             <div class="proposal-scope" role="group" aria-label="Organisation des horaires">
               <button type="button" id="proposal-shared" aria-pressed="true" class="active">Mêmes horaires</button>
               <button type="button" id="proposal-custom" aria-pressed="false">Par journée</button>
@@ -719,7 +718,7 @@
               <div id="proposal-extra-times"></div>
               <button type="button" id="proposal-add-shared" class="btn-secondary btn-full proposal-add">+ Ajouter un horaire</button>
             </div>
-            <div id="proposal-custom-area" class="hidden"></div>
+            <div id="proposal-custom-area" class="hidden"></div><button type="button" id="proposal-go-review" class="btn-primary btn-full wizard-next">Continuer vers les détails →</button></div><button type="button" id="proposal-edit-times" class="wizard-summary hidden"></button>
           </div>
           <div id="poll-slots-wrapper" class="hidden">
             <div class="proposal-step"><span class="proposal-number">2</span><strong>Choisir les horaires</strong></div>
@@ -727,16 +726,17 @@
             <div id="poll-slots-container"></div>
             <button type="button" id="btn-add-poll-slot" class="btn-secondary btn-full proposal-add">+ Ajouter un autre horaire ce jour</button>
           </div>
-          <details id="proposal-options" class="proposal-options">
+          <div id="proposal-review-stage" class="hidden"><div class="proposal-step"><span class="proposal-number">3</span><strong>Lieu et programme</strong></div><details id="proposal-options" class="proposal-options">
             <summary><strong>Lieu et programme</strong><span>Facultatif</span></summary>
             <div class="field"><label for="poll-location">Lieu envisagé / suggéré (optionnel)</label><input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /><div id="poll-location-suggestions" class="location-suggestions-row hidden"></div></div>
-            <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
+            <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><textarea id="poll-note" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
           </details>
           <div id="poll-replace-row" class="hidden"><label class="toggle-row" for="poll-replace-checkbox"><input type="checkbox" id="poll-replace-checkbox" checked /><span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span></label></div>
-          <div id="poll-archive-lock-warning" class="alert-box hidden"></div>
+                    <details id="proposal-preview" class="proposal-options proposal-preview"><summary><strong>Récapitulatif</strong><span id="proposal-preview-count"></span></summary><div id="proposal-preview-list"></div></details>
+          </div><div id="poll-archive-lock-warning" class="alert-box hidden"></div>
           <div id="poll-unavail-warning" class="alert-box hidden"></div>
           <div id="proposal-validation" class="alert-box hidden" role="status"></div>
-          <details id="proposal-preview" class="proposal-options proposal-preview"><summary><strong>Récapitulatif</strong><span id="proposal-preview-count"></span></summary><div id="proposal-preview-list"></div></details>
+
         </div>
         <div class="proposal-footer"><div id="proposal-footer-status" class="proposal-hint" aria-live="polite"></div><button type="submit" id="btn-submit-poll" class="btn-primary btn-full" disabled>Envoyer les propositions</button></div>
       </form>
@@ -745,24 +745,25 @@
 
   <!-- Modale Planification directe dans l'Agenda -->
   <div id="modal-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title" id="modal-reh-title">Planifier un événement</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button></div>
-      <form id="form-rehearsal">
-        <div id="reh-type-holder"></div>
+    <div class="modal-sheet event-sheet">
+      <div class="modal-header event-header"><h3 class="modal-title" id="modal-reh-title">Planifier un événement</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button></div>
+      <form id="form-rehearsal"><div class="event-body"><section class="event-form-group"><div class="event-step"><span>1</span><strong>Type d'événement</strong></div>
+        <div id="reh-type-holder"></div></section><section class="event-form-group"><div class="event-step"><span>2</span><strong>Date et horaires</strong></div>
         <div class="field"><label for="reh-date">Date</label><input type="date" id="reh-date" required /></div>
         <div class="row-2">
           <div class="field"><label for="reh-start" id="lbl-reh-start">Début</label><input type="time" id="reh-start" value="14:00" required /></div>
           <div class="field"><label for="reh-end" id="lbl-reh-end">Fin</label><input type="time" id="reh-end" value="17:00" required /></div>
         </div>
-        <div id="reh-concert-fields"></div>
-        <div class="field"><label for="reh-location">Lieu</label><input type="text" id="reh-location" placeholder="Ex: Sion, Temple de Lutry, Salle 103..." required /></div>
-        <div class="field"><label for="reh-program">Programme</label><input type="text" id="reh-program" placeholder="Ex: Beethoven Op. 18 n°4 — Allegro" /></div>
+        <div class="event-presets"><button type="button" data-reh-preset="09:00,12:00">09h – 12h</button><button type="button" data-reh-preset="14:00,17:00">14h – 17h</button><button type="button" data-reh-preset="18:00,21:00">18h – 21h</button></div><div id="reh-duration" class="form-hint" aria-live="polite"></div></section><section class="event-form-group"><div class="event-step"><span>3</span><strong>Lieu</strong></div>
+        <div class="field"><label for="reh-location">Lieu</label><input type="text" id="reh-location" placeholder="Ex: Sion, Temple de Lutry, Salle 103..." required /></div></section><section class="event-form-group"><div class="event-step"><span>4</span><strong>Programme et informations</strong></div><div id="reh-concert-fields"></div>
+        <div class="field"><label for="reh-program">Programme</label><textarea id="reh-program" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <div class="field"><label for="reh-notes">Notes complémentaires (optionnel)</label><textarea id="reh-notes" rows="2"></textarea></div>
-        <button type="submit" class="btn-primary btn-full">Enregistrer dans l'agenda</button>
+        </section></div><div class="event-footer"><div id="reh-form-summary" class="form-hint" aria-live="polite"></div><button type="submit" class="btn-primary btn-full">Enregistrer dans l'agenda</button></div>
       </form>
     </div>
   </div>
 
+  <div id="modal-ensemble-manager" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manager-title"><div class="modal-sheet"><div class="modal-header"><h3 class="modal-title" id="manager-title">Gestion des membres</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-ensemble-manager">Fermer</button></div><form id="form-ensemble-manager"><p class="form-hint">Sans responsable, chaque membre peut gérer les autres. Avec un responsable, seul celui-ci peut modifier ou retirer les autres membres.</p><div class="field"><label for="manager-select">Responsable de l’ensemble</label><select id="manager-select"></select></div><p class="form-hint">Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.</p><button type="submit" class="btn-primary btn-full">Enregistrer</button></form></div></div>
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>

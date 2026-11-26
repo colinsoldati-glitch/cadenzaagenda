@@ -327,6 +327,8 @@ export function openModal(id) {
   $(id).classList.add("open");
 }
 
+// Return in a single-line text field must not publish an unfinished event.
+document.addEventListener('keydown', e=>{if(e.key==='Enter'&&!e.isComposing&&e.target.matches('input[type="text"]')&&e.target.closest('#form-poll,#form-edit-poll,#form-confirm-poll,#form-rehearsal,#form-edit-rehearsal')){e.preventDefault();}});
 export function closeModal(id) {
   if (id === "modal-confirm-delete") state.pendingDeleteCallback = null;
   if (id === "modal-poll") state.refiningPollId = state.refiningFixedDate = null;

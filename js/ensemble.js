@@ -2,7 +2,7 @@ import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
 import * as C18 from "./i18n.js";
 import {
   FIREBASE_VAPID_KEY, PUSH_WORKER_URL, KEYS,
-  db, ref, set, update, remove, onValue, get,
+  db, ref, set, update, remove, onValue, get, runTransaction,
   getMessaging, getToken, onMessage, isSupported,
   state, $, saveSession, haptic, genId, esc,
   showToast, handleFirebaseError, formatShortDateFr,
@@ -221,6 +221,11 @@ export function enterEnsemble(ensembleId) {
       mySes.ensembleName = state.currentEnsembleData.name;
       const m = state.currentEnsembleData.members?.[mySes.memberId];
       if (m) { mySes.name = m.name; mySes.instrument = m.instrument; }
+      else if(leavingEnsemble!==ensembleId){
+        delete state.session.ensembles[ensembleId];state.session.activeEnsembleId=Object.keys(state.session.ensembles)[0]||null;saveSession();
+        showToast(C18.t('Vous ne faites plus partie de cet ensemble.'));
+        if(state.session.activeEnsembleId)enterEnsemble(state.session.activeEnsembleId);else{state.unsubscribeEnsemble?.();showOnboarding();}return;
+      }
       saveSession();
     }
 
@@ -269,6 +274,11 @@ export function renderAll() {
   renderEnsembleInfo();
 }
 
+// Cooperative member-management policy. Profiles are not authenticated by Firebase.
+function managerId(data){const id=data?.memberManagerId;return id&&data.members?.[id]?id:null;}
+function canManage(data,actor,target){return !!data?.members?.[actor]&&!!data?.members?.[target]&&(actor===target||!managerId(data)||managerId(data)===actor);}
+function canAssign(data,actor){return !!data?.members?.[actor]&&(!managerId(data)||managerId(data)===actor);}
+let managerContext=null, editMemberContext=null, leavingEnsemble=null;
 export function renderEnsembleInfo() {
   const membersObj = state.currentEnsembleData.members || {}, members = Object.values(membersObj);
   const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId, today = new Date().toISOString().split("T")[0];
@@ -279,12 +289,11 @@ export function renderEnsembleInfo() {
   $("members-count").textContent = members.length;
   $("toggle-auto-remind-eve").checked = state.currentEnsembleData.autoRemindEve !== false;
 
+  const manager=managerId(state.currentEnsembleData);
+  $('ensemble-manager-panel').innerHTML=`<div><strong>${esc(C18.t(manager?'Responsable de l’ensemble':'Gestion partagée'))}</strong><small>${esc(manager?membersObj[manager].name:C18.t('Tous les membres peuvent gérer les profils.'))}</small></div>${canAssign(state.currentEnsembleData,myId)?`<button type="button" class="btn-secondary" data-manager-settings>${esc(C18.t(manager?'Modifier':'Nommer'))}</button>`:''}<p>${esc(C18.t('Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.'))}</p>`;
   $("members-list").innerHTML = members.map((m) => {
     const isMe = m.id === myId, abs = Object.values(m.unavailabilities || {}).filter((u) => u.endDate >= today).length;
-    return C18.h`<div class="member-row">
-      <div style="min-width:0"><div><strong>${esc(m.name)}</strong> ${isMe ? C18.t("(Vous)") : ""}</div><div style="font-size:12.5px;color:var(--muted)">${esc(m.instrument)} • ${m.pushEnabled ? C18.t("Alertes actives") : C18.t("Sans alerte")}${abs ? C18.tt` • ${abs} absence(s)` : ""}</div></div>
-      <div class="member-row-actions"><button type="button" class="btn-secondary btn-xs" data-edit-member="${esc(m.id)}">Modifier</button><button type="button" class="btn-secondary btn-xs" data-remove-member="${esc(m.id)}">${isMe ? C18.t("Quitter") : C18.t("Retirer")}</button></div>
-    </div>`;
+    return `<div class="member-row"><div class="member-identity"><div><strong>${esc(m.name)}</strong> ${isMe ? esc(C18.t("(Vous)")) : ""}${manager===m.id?`<span class="manager-label">${esc(C18.t('Responsable'))}</span>`:''}</div><div class="member-meta">${esc(m.instrument)} • ${esc(C18.t(m.pushEnabled?"Alertes actives":"Sans alerte"))}${abs ? esc(C18.tt` • ${abs} absence(s)`) : ""}</div></div><div class="member-row-actions">${canManage(state.currentEnsembleData,myId,m.id)?`<button type="button" class="btn-secondary btn-xs" data-edit-member="${esc(m.id)}">${esc(C18.t('Modifier'))}</button><button type="button" class="btn-secondary btn-xs" data-remove-member="${esc(m.id)}">${esc(C18.t(isMe?"Quitter":"Retirer"))}</button>`:''}</div></div>`;
   }).join("");
 
   const myUnavails = Object.values(membersObj[myId]?.unavailabilities || {}).sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
@@ -357,6 +366,7 @@ export function initEnsembleListeners() {
 
       await set(ref(db, `ensembles/${ensembleId}`), {
         id: ensembleId, name: ensembleName, formation, autoRemindEve: true, createdAt: Date.now(),
+        ...($("create-manager").checked?{memberManagerId:memberId}:{}),
         members: { [memberId]: { id: memberId, name: memberName, instrument, pushEnabled, ...(fcmToken ? { fcmToken } : {}), joinedAt: Date.now() } }
       });
       $("firebase-error-banner").classList.add("hidden");
@@ -414,14 +424,23 @@ export function initEnsembleListeners() {
     if (!btn) return;
     const membersObj = state.currentEnsembleData?.members || {}, myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
 
+    if(btn.hasAttribute('data-manager-settings')){
+      if(!canAssign(state.currentEnsembleData,myId))return;
+      managerContext={ens:state.session.activeEnsembleId,actor:myId};
+      $('manager-select').innerHTML=`<option value="">${esc(C18.t('Aucun responsable (gestion partagée)'))}</option>`+Object.values(membersObj).map(m=>`<option value="${esc(m.id)}">${esc(m.name)} · ${esc(m.instrument)}</option>`).join('');
+      $('manager-select').value=managerId(state.currentEnsembleData)||'';
+      return openModal('modal-ensemble-manager');
+    }
     if (btn.dataset.editMember) {
-      const m = membersObj[btn.dataset.editMember]; if (!m) return;
+      const m = membersObj[btn.dataset.editMember]; if (!m||!canManage(state.currentEnsembleData,myId,m.id)) return;
+      editMemberContext={ens:state.session.activeEnsembleId,actor:myId};
       $("edit-member-id").value = m.id; $("edit-member-name").value = m.name || ""; $("edit-member-instrument").value = m.instrument || "";
       return openModal("modal-edit-member");
     }
     if (btn.dataset.removeMember) {
-      const tid = btn.dataset.removeMember, m = membersObj[tid]; if (!m) return;
-      const isMe = tid === myId;
+      const tid = btn.dataset.removeMember, m = membersObj[tid]; if (!m||!canManage(state.currentEnsembleData,myId,tid)) return;
+      const isMe = tid === myId, ensId=state.session.activeEnsembleId;
+      if(isMe&&managerId(state.currentEnsembleData)===tid&&Object.keys(membersObj).length>1)return showToast(C18.t('Transférez ou désactivez votre rôle avant de quitter.'));
       return openConfirmationModal({
         title: isMe ? C18.t("Quitter cet ensemble ?") : C18.tt`Retirer ${m.name} ?`,
         context: `${m.name} • ${m.instrument}`,
@@ -429,19 +448,24 @@ export function initEnsembleListeners() {
         confirmLabel: isMe ? C18.t("Quitter") : C18.t("Retirer"),
         onConfirm: async () => {
           try {
-            const ensId = state.session.activeEnsembleId;
-            await remove(ref(db, `ensembles/${ensId}/members/${tid}`));
-            await Promise.all(Object.keys(state.currentEnsembleData.polls || {}).flatMap((pid) => [
-              remove(ref(db, `ensembles/${ensId}/polls/${pid}/votes/${tid}`)),
-              remove(ref(db, `ensembles/${ensId}/polls/${pid}/voteNotes/${tid}`))
-            ]));
+            if(ensId!==state.session.activeEnsembleId)return;
+            if(isMe)leavingEnsemble=ensId;
+            const result=await runTransaction(ref(db,`ensembles/${ensId}`),data=>{
+              if(!canManage(data,myId,tid))return;
+              if(managerId(data)===tid&&Object.keys(data.members).length>1)return;
+              delete data.members[tid];
+              if(data.memberManagerId===tid)delete data.memberManagerId;
+              for(const poll of Object.values(data.polls||{})){if(poll.votes)delete poll.votes[tid];if(poll.voteNotes)delete poll.voteNotes[tid];}
+              return data;
+            },{applyLocally:false});
+            if(!result.committed)return showToast(C18.t('Action refusée : vérifiez les droits de gestion.'));
             if (isMe) {
               delete state.session.ensembles[ensId];
               state.session.activeEnsembleId = Object.keys(state.session.ensembles)[0] || null;
               saveSession(); showToast(C18.t("Vous avez quitté l'ensemble."));
               state.session.activeEnsembleId ? enterEnsemble(state.session.activeEnsembleId) : (state.unsubscribeEnsemble?.(), showOnboarding());
             } else showToast(C18.tt`${m.name} a été retiré.`);
-          } catch (err) { handleFirebaseError(err); }
+          } catch (err) { handleFirebaseError(err); } finally { leavingEnsemble=null; }
         }
       });
     }
@@ -494,12 +518,19 @@ export function initEnsembleListeners() {
     } catch (err) { handleFirebaseError(err); }
   });
 
+  $('form-ensemble-manager').addEventListener('submit',async e=>{
+    e.preventDefault();const ctx=managerContext, target=$('manager-select').value,btn=e.target.querySelector('button[type="submit"]');
+    if(!ctx||ctx.ens!==state.session.activeEnsembleId||btn.disabled)return;
+    btn.disabled=true;
+    try{const result=await runTransaction(ref(db,`ensembles/${ctx.ens}`),data=>{if(!canAssign(data,ctx.actor)||(target&&!data.members?.[target]))return;if(target)data.memberManagerId=target;else delete data.memberManagerId;return data;},{applyLocally:false});if(!result.committed)return showToast(C18.t('Action refusée : vérifiez les droits de gestion.'));closeModal('modal-ensemble-manager');showToast(C18.t('Gestion des membres mise à jour.'));}catch(err){handleFirebaseError(err);}finally{btn.disabled=false;}
+  });
   $("form-edit-member").addEventListener("submit", async (e) => {
     e.preventDefault(); haptic();
     const id = $("edit-member-id").value, name = $("edit-member-name").value.trim(), instrument = $("edit-member-instrument").value.trim();
-    if (!id || !name || !instrument || !state.session.activeEnsembleId) return;
+    if (!id || !name || !instrument || !state.session.activeEnsembleId || editMemberContext?.ens!==state.session.activeEnsembleId) return;
     try {
-      await update(ref(db, `ensembles/${state.session.activeEnsembleId}/members/${id}`), { name, instrument });
+      const result=await runTransaction(ref(db,`ensembles/${editMemberContext.ens}`),data=>{if(!canManage(data,editMemberContext.actor,id))return;Object.assign(data.members[id],{name,instrument});return data;},{applyLocally:false});
+      if(!result.committed)return showToast(C18.t('Action refusée : vérifiez les droits de gestion.'));
       const mySes = state.session.ensembles[state.session.activeEnsembleId];
       if (mySes?.memberId === id) { mySes.name = name; mySes.instrument = instrument; saveSession(); }
       closeModal("modal-edit-member"); showToast(C18.t("Profil mis à jour."));

@@ -29,7 +29,7 @@ function agendaCard(r,isNext,isPast,today){
   const meta=getEventMeta(r.eventType), expanded=agendaExpanded.has(r.id), concert=r.eventType==='concert';
   const more=expanded||isNext;
   const details=[concert&&r.soundcheckTime?`<div><strong>${tr('Raccord :')}</strong> ${esc(r.soundcheckTime)}</div>`:'',concert&&r.dressCode?`<div><strong>${tr('Tenue :')}</strong> ${esc(r.dressCode)}</div>`:'',concert&&r.concertFee?`<div><strong>${tr('Cachet / Tarif :')}</strong> ${esc(r.concertFee)}</div>`:''].filter(Boolean).join('');
-  return `<article class="card agenda-event ${meta.cardCls} ${isNext?'agenda-next':''} ${isPast?'agenda-past':''}">${isNext?`<div class="agenda-next-label"><span>● ${tr('Prochain événement')}</span><span>${esc(relativeDay(r.date,today))}</span></div>`:''}<div class="agenda-event-main">${agendaTile(r.date)}<div class="agenda-event-info"><div class="agenda-event-type ${meta.badgeCls}">${esc(meta.label)}</div><strong class="agenda-time">${esc(r.startTime)} – ${esc(r.endTime)}</strong><small>${esc(C18.localizeLocation(r.location||'Lieu à confirmer'))}</small>${!isNext&&r.program?`<small class="agenda-program-preview">${esc(r.program)}</small>`:''}</div><button type="button" class="smart-icon" data-expand-reh="${esc(r.id)}" aria-label="${tr('Détails de l’événement')}" aria-expanded="${expanded}">${expanded?'⌃':'⌄'}</button></div>${more?`<div class="agenda-event-detail">${details?`<div class="concert-details-grid">${details}</div>`:''}${r.program?`<div class="agenda-program"><strong>${tr('Programme :')}</strong> ${esc(r.program)}</div>`:''}${r.notes?`<div class="agenda-notes">${esc(r.notes)}</div>`:''}${isNext&&!expanded?`<button type="button" class="btn-secondary btn-full" data-ics="${esc(r.id)}">${tr('Ajouter à mon calendrier')}</button>`:''}</div>`:''}${expanded?`<div class="agenda-actions">${!isPast?`<button type="button" class="btn-secondary" data-ics="${esc(r.id)}">${tr('Calendrier (.ics)')}</button>`:''}<button type="button" class="btn-secondary" data-edit-reh="${esc(r.id)}">${tr('Modifier')}</button><button type="button" class="btn-del-subtle" data-del-reh="${esc(r.id)}">${tr(isPast?'Supprimer':'Annuler')}</button></div>`:''}</article>`;
+  return `<article class="card agenda-event ${meta.cardCls} ${isNext?'agenda-next':''} ${isPast?'agenda-past':''}">${isNext?`<div class="agenda-next-label"><span>● ${tr('Prochain événement')}</span><span>${esc(relativeDay(r.date,today))}</span></div>`:''}<div class="agenda-event-main">${agendaTile(r.date)}<div class="agenda-event-info"><div class="agenda-event-type ${meta.badgeCls}">${esc(meta.label)}</div><strong class="agenda-time">${esc(r.startTime)} – ${esc(r.endTime)}</strong><small>${esc(C18.localizeLocation(r.location||'Lieu à confirmer'))}</small>${!isNext&&r.program?`<small class="agenda-program-preview">${esc(r.program)}</small>`:''}</div><button type="button" class="smart-icon" data-expand-reh="${esc(r.id)}" aria-label="${tr('Détails de l’événement')}" aria-expanded="${expanded}">${expanded?'⌃':'⌄'}</button></div>${more?`<div class="agenda-event-detail">${details?`<div class="concert-details-grid">${details}</div>`:''}${r.program?`<div class="agenda-program program-lines"><strong>${tr('Programme :')}</strong><div>${esc(r.program)}</div></div>`:''}${r.notes?`<div class="agenda-notes">${esc(r.notes)}</div>`:''}${isNext&&!expanded?`<button type="button" class="btn-secondary btn-full" data-ics="${esc(r.id)}">${tr('Ajouter à mon calendrier')}</button>`:''}</div>`:''}${expanded?`<div class="agenda-actions">${!isPast?`<button type="button" class="btn-secondary" data-ics="${esc(r.id)}">${tr('Calendrier (.ics)')}</button>`:''}<button type="button" class="btn-secondary" data-edit-reh="${esc(r.id)}">${tr('Modifier')}</button><button type="button" class="btn-del-subtle" data-del-reh="${esc(r.id)}">${tr(isPast?'Supprimer':'Annuler')}</button></div>`:''}</article>`;
 }
 function monthGroups(list,isPast,today){const groups=new Map();list.forEach(r=>{const key=r.date.slice(0,7);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);});return [...groups.entries()].map(([key,rs])=>`<section class="agenda-month"><h3>${esc(new Date(key+'-01T12:00:00').toLocaleDateString(locale,{month:'long',year:'numeric'}))}</h3>${rs.map(r=>agendaCard(r,false,isPast,today)).join('')}</section>`).join('');}
 export function renderAgenda(){
@@ -51,14 +51,15 @@ export function downloadICS(reh) {
   haptic();
   const tMeta = getEventMeta(reh.eventType);
   const fmt = (d, t) => `${d.replace(/-/g, "")}T${t.replace(":", "")}00`;
+  const icsEscape = value=>String(value??'').replace(/\\/g,"\\\\").replace(/\r\n|\r|\n/g,"\\n").replace(/;/g,"\\;").replace(/,/g,"\\,");
   const desc = [
     reh.soundcheckTime ? C18.tt`Raccord sur place : ${reh.soundcheckTime}` : "",
     reh.dressCode ? C18.tt`Tenue de scène : ${reh.dressCode}` : "",
     reh.concertFee ? C18.tt`Cachet / Billetterie : ${reh.concertFee}` : "",
     reh.program ? C18.tt`Programme : ${reh.program}` : "",
     reh.notes || ""
-  ].filter(Boolean).join("\\n");
-  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cadenza//FR", "BEGIN:VEVENT", `UID:${reh.id}@cadenza.app`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`, `DTSTART:${fmt(reh.date, reh.startTime)}`, `DTEND:${fmt(reh.date, reh.endTime)}`, `SUMMARY:${tMeta.label} — ${state.currentEnsembleData.name}`, `LOCATION:${reh.location || ""}`, `DESCRIPTION:${desc}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  ].filter(Boolean).join("\n");
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cadenza//FR", "BEGIN:VEVENT", `UID:${reh.id}@cadenza.app`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`, `DTSTART:${fmt(reh.date, reh.startTime)}`, `DTEND:${fmt(reh.date, reh.endTime)}`, `SUMMARY:${icsEscape(tMeta.label+" — "+state.currentEnsembleData.name)}`, `LOCATION:${icsEscape(reh.location)}`, `DESCRIPTION:${icsEscape(desc)}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" })), download: `cadenza-${reh.date}.ics` });
   a.click(); URL.revokeObjectURL(a.href); showToast(C18.t("Fichier calendrier (.ics) téléchargé."));
 }
@@ -107,6 +108,7 @@ export function initAgendaListeners() {
     const concertData = readConcertFields("edit-reh", eventType);
     const location = $("edit-reh-location").value.trim(), program = $("edit-reh-program").value.trim(), notes = $("edit-reh-notes").value.trim();
     if (!rehId || !state.session.activeEnsembleId) return;
+    if(!date||!startTime||!endTime||endTime<=startTime||!location)return showToast(C18.t("Vérifiez la date, les horaires et le lieu."));
     try {
       await update(ref(db, `ensembles/${state.session.activeEnsembleId}/rehearsals/${rehId}`), {
         eventType, date, startTime, endTime, ...concertData, location, program, notes, updatedAt: Date.now()
@@ -123,6 +125,7 @@ export function initAgendaListeners() {
     const date = $("reh-date").value, startTime = $("reh-start").value, endTime = $("reh-end").value;
     const location = $("reh-location").value.trim(), program = $("reh-program").value.trim(), notes = $("reh-notes").value.trim();
     const tMeta = getEventMeta(eventType);
+    if(!date||!startTime||!endTime||endTime<=startTime||!location)return showToast(C18.t("Vérifiez la date, les horaires et le lieu."));
     try {
       const id = genId("reh");
       await set(ref(db, `ensembles/${state.session.activeEnsembleId}/rehearsals/${id}`), {
@@ -133,5 +136,16 @@ export function initAgendaListeners() {
     } catch (err) { handleFirebaseError(err); }
   });
 
-  $("btn-open-rehearsal").addEventListener("click", () => openModal("modal-rehearsal"));
+  const renderFormSummary=()=>{
+    const a=$('reh-start').value,b=$('reh-end').value,d=$('reh-date').value;
+    const mins=t=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
+    const valid=!!(a&&b&&b>a), duration=valid?mins(b)-mins(a):0;
+    $('reh-duration').textContent=valid?C18.t('Durée : {0} h {1} min',Math.floor(duration/60),duration%60):C18.t('Indiquez une heure de fin postérieure à l’heure de début.');
+    $('reh-end').setCustomValidity(valid?'':C18.t('Indiquez une heure de fin postérieure à l’heure de début.'));
+    $('reh-form-summary').textContent=d&&valid?formatDateFr(d)+' · '+a+' – '+b:'';
+  };
+  $('form-rehearsal').addEventListener('input',renderFormSummary);
+  $('form-rehearsal').addEventListener('change',renderFormSummary);
+  $('form-rehearsal').addEventListener('click',e=>{const btn=e.target.closest('[data-reh-preset]');if(btn){const [a,b]=btn.dataset.rehPreset.split(',');$('reh-start').value=a;$('reh-end').value=b;renderFormSummary();}});
+  $("btn-open-rehearsal").addEventListener("click", () => {openModal("modal-rehearsal");renderFormSummary();});
 }
