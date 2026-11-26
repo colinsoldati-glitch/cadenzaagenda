@@ -1,7 +1,7 @@
 import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
 import * as C18 from "./i18n.js";
 import {
-  db, ref, set, update, remove,
+  db, ref, set, update, remove, runTransaction,
   state, $, haptic, genId, esc, getEventMeta,
   showToast, handleFirebaseError,
   parseIso, formatDateFr, formatCompactDateFr, formatShortDateFr,
@@ -111,6 +111,7 @@ export async function restoreArchivedPoll(archivedPoll) {
     state.availFilterMode = "all";
     document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === "all"));
     state.pendingScrollToPollId = restoredPoll.id;
+    collapsed.delete("todo"); collapsed.delete("waiting"); collapsed.delete("blocked"); renderPolls();
     showToast(C18.t("Créneau récupéré et remis en sondage actif."));
   } catch (err) { handleFirebaseError(err); }
 }
@@ -450,28 +451,15 @@ export function openEditPollModal(poll) {
 
 // Suggestions de lieu, notes de vote & validation vers Agenda
 export async function savePollLocationSuggestion(pollId, rawVal) {
-  if (!state.session.activeEnsembleId || !pollId) return;
-  const val = String(rawVal || "").trim();
-  const me = state.session.ensembles[state.session.activeEnsembleId];
-  try {
-    await update(ref(db, `ensembles/${state.session.activeEnsembleId}/polls/${pollId}`), {
-      location: val,
-      locationSuggestedBy: val ? (me?.name || "") : null,
-      updatedAt: Date.now()
-    });
-    state.openLocationEditors.delete(pollId);
-    showToast(val ? C18.tt`Lieu suggéré : ${val}` : C18.t("Lieu retiré."));
-  } catch (err) { handleFirebaseError(err); }
+  const ens=state.session.activeEnsembleId;if(!ens||!state.currentEnsembleData?.polls?.[pollId])return false;
+  const val=String(rawVal||'').trim(),me=state.session.ensembles[ens];
+  try{const result=await runTransaction(ref(db,`ensembles/${ens}/polls/${pollId}`),p=>{if(!p)return;p.location=val;if(val)p.locationSuggestedBy=me?.name||'';else delete p.locationSuggestedBy;p.updatedAt=Date.now();return p;},{applyLocally:false});if(!result.committed){showToast(C18.t('Ce créneau n’est plus actif.'));return false;}state.openLocationEditors.delete(pollId);showToast(val?C18.tt`Lieu suggéré : ${val}`:C18.t('Lieu retiré.'));return true;}catch(err){handleFirebaseError(err);return false;}
 }
 
 export async function saveVoteNote(pollId, rawVal) {
-  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
-  if (!myId) return;
-  const val = String(rawVal || "").trim(), r = ref(db, `ensembles/${state.session.activeEnsembleId}/polls/${pollId}/voteNotes/${myId}`);
-  try {
-    if (val) { await set(r, val); state.openNoteEditors.add(pollId); showToast(C18.t("Note enregistrée.")); }
-    else { await remove(r); state.openNoteEditors.delete(pollId); showToast(C18.t("Note retirée.")); }
-  } catch (err) { handleFirebaseError(err); }
+  const ens=state.session.activeEnsembleId,myId=state.session.ensembles[ens]?.memberId;if(!myId||!state.currentEnsembleData?.polls?.[pollId])return false;
+  const val=String(rawVal||'').trim();
+  try{const result=await runTransaction(ref(db,`ensembles/${ens}/polls/${pollId}`),p=>{if(!p)return;p.voteNotes={...(p.voteNotes||{})};if(val)p.voteNotes[myId]=val;else delete p.voteNotes[myId];return p;},{applyLocally:false});if(!result.committed){showToast(C18.t('Ce créneau n’est plus actif.'));return false;}showToast(C18.t(val?'Note enregistrée.':'Note retirée.'));return true;}catch(err){handleFirebaseError(err);return false;}
 }
 
 export function openConfirmPollModal(poll) {
@@ -481,7 +469,8 @@ export function openConfirmPollModal(poll) {
   setEventTypeValue($("confirm-poll-type-holder"), type, (t) => syncConcertFieldsVisibility("confirm-poll", t, "lbl-confirm-poll-start", "lbl-confirm-poll-end"));
   populateConcertFields("confirm-poll", null);
   const t = formatPollTimeLabel(poll), tMeta = getEventMeta(type);
-  $("confirm-poll-summary").textContent = `${tMeta.label} • ${formatDateFr(poll.date)}${t ? ` • ${t}` : ""}`;
+  const members=Object.values(state.currentEnsembleData?.members||{}),yes=members.filter(m=>poll.votes?.[m.id]==='yes').length;
+  $("confirm-poll-summary").textContent = `${tMeta.label} • ${formatDateFr(poll.date)}${t ? ` • ${t}` : ""} · ${C18.t('{0} disponible(s) sur {1}',yes,members.length)}`;
   const [s, e] = poll.timeMode === "period"
     ? ({ "Matin": ["09:00", "12:00"], "Soir": ["19:30", "22:00"] }[poll.period] || ["14:00", "17:00"])
     : poll.timeMode === "day" ? (type === "concert" ? ["20:00", "22:00"] : ["14:00", "17:00"]) : [poll.startTime || "14:00", poll.endTime || "17:00"];
@@ -491,365 +480,148 @@ export function openConfirmPollModal(poll) {
   openModal("modal-confirm-poll");
 }
 
-export async function castPollVote(pollId, voteVal, sortedPolls, autoAdvance = false) {
-  haptic();
-  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
-  if (!myId) return;
-  if (voteVal === "maybe") state.openNoteEditors.add(pollId);
-  if (autoAdvance) {
-    const idx = sortedPolls.findIndex((p) => p.id === pollId);
-    let nextId = null;
-    for (let o = 1; o < sortedPolls.length; o++) {
-      const cand = sortedPolls[(idx + o) % sortedPolls.length];
-      if (!cand.votes?.[myId]) { nextId = cand.id; break; }
-    }
-    state.pendingScrollToPollId = nextId;
-    if (!nextId) showToast(C18.t("Toutes les disponibilités sont complétées !"));
-  }
-  try { await set(ref(db, `ensembles/${state.session.activeEnsembleId}/polls/${pollId}/votes/${myId}`), voteVal); }
-  catch (err) { state.pendingScrollToPollId = null; handleFirebaseError(err); }
+// Interface intelligente : les écritures Firebase et les actions existantes restent partagées.
+const tr = (key, ...args) => esc(C18.t(key, ...args));
+const symbols = { yes: '✓', maybe: '?', no: '×' };
+const voteKeys = { yes: 'Oui', maybe: 'Peut-être', no: 'Non' };
+let uiEnsemble = null, selectionMode = false, selected = new Set(), collapsed = new Set(['waiting', 'blocked']);
+let detailId = null, lastVote = null, quick = null, busy = false, tableSort = 'score';
+const draftValues = new Map();
+const currentMember = () => state.session.ensembles[state.session.activeEnsembleId]?.memberId;
+const metrics = (p, members) => {
+  const counts = {yes:0, maybe:0, no:0, missing:0};
+  members.forEach(m => { const v = p.votes?.[m.id]; counts[voteKeys[v] ? v : 'missing']++; });
+  return {...counts, full: members.length > 0 && counts.yes === members.length};
+};
+function resetSmartScope() {
+  if (uiEnsemble === state.session.activeEnsembleId) return;
+  uiEnsemble = state.session.activeEnsembleId; selectionMode = false; selected.clear();
+  collapsed = new Set(['waiting', 'blocked']); detailId = null; quick = null; lastVote = null; draftValues.clear();
+  state.expandedMemberLists.clear(); state.openNoteEditors.clear(); state.openLocationEditors.clear();
+  state.availFilterMode = 'all'; closeModal('modal-poll-detail'); closeModal('modal-quick-vote');
 }
-
-export async function voteAllUnvotedYes(unvotedPolls) {
-  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
-  if (!myId || !unvotedPolls.length) return;
-  haptic();
-  const updates = {};
-  unvotedPolls.forEach((p) => { updates[`${p.id}/votes/${myId}`] = "yes"; });
-  try {
-    await update(ref(db, `ensembles/${state.session.activeEnsembleId}/polls`), updates);
-    showToast(C18.tt`${unvotedPolls.length} date(s) acceptée(s) d'un clic !`);
-  } catch (err) { handleFirebaseError(err); }
+function dateTile(date) {
+  const d = parseIso(date);
+  return `<div class="smart-date"><span>${esc(d.toLocaleDateString(locale,{weekday:'short'}))}</span><strong>${d.getDate()}</strong><span>${esc(d.toLocaleDateString(locale,{month:'short'}))}</span></div>`;
 }
-
-// Rendu Disponibilités (Cartes, Express & Tableau)
+function voteButtons(p, myId, prefix = 'vote') {
+  return `<div class="smart-vote-group" role="group" aria-label="${tr('Votre réponse')}">${Object.keys(voteKeys).map(v => `<button type="button" class="smart-vote ${v} ${p.votes?.[myId] === v ? 'chosen' : ''}" data-${prefix}="${esc(p.id)}" data-val="${v}" aria-pressed="${p.votes?.[myId] === v}"><span aria-hidden="true">${symbols[v]}</span> ${tr(voteKeys[v])}</button>`).join('')}</div>`;
+}
+function consensusBar(p, members) {
+  const m = metrics(p,members);
+  const colors = ['yes','maybe','no','missing'];
+  const desc = `${m.yes} ${C18.t('Disponibles')} · ${m.maybe} ${C18.t('Incertains')} · ${m.no} ${C18.t('Indisponibles')} · ${m.missing} ${C18.t('Sans réponse')}`;
+  return `<div class="smart-score"><div class="smart-meter" role="img" aria-label="${esc(desc)}" title="${esc(desc)}">${members.length <= 12 ? members.map(member=>{const v=p.votes?.[member.id];return `<i class="${voteKeys[v]?v:'missing'}" style="flex:1"></i>`;}).join('') : colors.filter(v=>m[v]).map(v=>`<i class="${v}" style="flex:${m[v]}"></i>`).join('')}</div><strong class="${m.full?'all-yes':''}">${m.yes}/${members.length}</strong></div>`;
+}
+function pollDetails(p, members, myId) {
+  const v=p.votes||{}, notes=p.voteNotes||{}, m=metrics(p,members), broad=p.timeMode==='day'||p.timeMode==='period';
+  const conflicts=getUnavailabilityConflictsForDate(p.date).filter(c=>v[c.memberId]!=='yes');
+  const note=draftValues.get(`note:${p.id}`) ?? notes[myId] ?? '';
+  const loc=draftValues.get(`loc:${p.id}`) ?? p.location ?? '';
+  return `<div class="smart-detail">
+    ${p.note?`<p class="smart-description">${esc(p.note)}</p>`:''}
+    ${conflicts.length?`<div class="unavail-notice">${tr('Absence :')} ${conflicts.map(c=>esc(c.memberName)+(c.reason?' ('+esc(c.reason)+')':'')).join(', ')}</div>`:''}
+    <div class="smart-member-list">${members.map(member=>{const val=v[member.id], key=voteKeys[val];return `<div class="smart-member"><span class="smart-person ${key?val:'missing'}">${symbols[val]||'○'}</span><div><strong>${esc(member.name)}${member.id===myId?' · '+tr('Vous'):''}</strong><small>${esc(member.instrument)}${notes[member.id]?' · '+esc(notes[member.id]):''}</small></div><span class="smart-member-state ${key?val:'missing'}">${tr(key||'Sans réponse')}</span></div>`;}).join('')}</div>
+    <div class="smart-detail-edit"><label>${tr('Votre précision')}</label><div class="vote-note-bar"><input type="text" class="vote-note-input" data-note-input="${esc(p.id)}" maxlength="90" aria-label="${tr('Votre précision')}" value="${esc(note)}" placeholder="${tr('Ex. disponible dès 15h')}"/><button type="button" class="btn-secondary btn-sm" data-save-note="${esc(p.id)}">${tr('Enregistrer')}</button></div></div>
+    <div class="smart-detail-edit"><label>${tr('Lieu envisagé')}</label><div class="loc-inline-bar"><input type="text" class="loc-inline-input" data-loc-input="${esc(p.id)}" maxlength="70" aria-label="${tr('Lieu envisagé')}" value="${esc(loc)}"/><button type="button" class="btn-secondary btn-sm" data-save-loc="${esc(p.id)}">${tr('Enregistrer')}</button></div>${p.locationSuggestedBy?`<small>${tr('Lieu suggéré par {0}',p.locationSuggestedBy)}</small>`:''}</div>
+    <div class="smart-detail-actions">${m.missing?`<button type="button" class="btn-secondary btn-sm" data-remind-poll="${esc(p.id)}">${tr('Relancer ({0})',m.missing)}</button>`:''}<button type="button" class="btn-secondary btn-sm" data-${broad?'refine':'counter'}-poll="${esc(p.id)}">${tr(broad?'Préciser les horaires':'Proposer un autre horaire')}</button><button type="button" class="btn-secondary btn-sm" data-confirm-poll="${esc(p.id)}">${tr('Valider dans l’agenda')}</button></div>
+  </div>`;
+}
+function pollRow(p,members,myId) {
+  const m=metrics(p,members), open=state.expandedMemberLists.has(p.id), broad=p.timeMode==='day'||p.timeMode==='period';
+  return `<div class="smart-slot ${m.full?'smart-full':''}" data-poll-card="${esc(p.id)}">
+    <div class="smart-slot-main"><div class="smart-slot-info"><strong class="smart-time">${esc(formatPollTimeLabel(p)||'—')}</strong>${p.location?`<small>${esc(C18.localizeLocation(p.location))}</small>`:''}${consensusBar(p,members)}<small>${m.full?tr('Tous disponibles'):[m.no?tr('{0} indisponible(s)',m.no):'',m.missing?tr('{0} réponse(s) manquante(s)',m.missing):'',m.maybe?tr('{0} réponse(s) incertaine(s)',m.maybe):''].filter(Boolean).join(' · ')}</small></div>
+      ${selectionMode&&!p.votes?.[myId]?`<button type="button" class="btn-secondary smart-select ${selected.has(p.id)?'selected':''}" data-select-poll="${esc(p.id)}" aria-pressed="${selected.has(p.id)}" aria-label="${tr('Sélectionner ce créneau')}">${selected.has(p.id)?'✓':'○'}</button>`:''}
+      <button type="button" class="smart-icon" data-toggle-members="${esc(p.id)}" aria-expanded="${open}" aria-label="${tr('Détails du créneau')}">${open?'⌃':'⌄'}</button><button type="button" class="smart-icon" data-poll-menu="${esc(p.id)}" aria-label="${tr("Plus d'options")}">⋯</button>
+    </div>
+    ${!p.votes?.[myId]||open?voteButtons(p,myId):`<button type="button" class="smart-my-vote ${p.votes[myId]}" data-toggle-members="${esc(p.id)}" aria-label="${tr('Modifier mon vote')}"><span>${symbols[p.votes[myId]]||'○'} ${tr(voteKeys[p.votes[myId]]||'Sans réponse')}</span><small>${tr('Modifier mon vote')}</small></button>`}
+    ${m.full?`<div class="smart-ready-actions"><button type="button" class="btn-confirm btn-full" data-confirm-poll="${esc(p.id)}">${tr(broad?'Planifier (choisir l’heure)':'Ajouter à l’agenda')}</button>${broad?`<button type="button" class="btn-secondary" data-refine-poll="${esc(p.id)}">${tr('Préciser les horaires')}</button>`:''}</div>`:''}
+    ${open?pollDetails(p,members,myId):''}</div>`;
+}
+function sectionHtml(key,label,items,members,myId) {
+  if (!items.length) return '';
+  const closed=collapsed.has(key), groups=new Map();
+  [...items].sort((a,b)=>getPollSortKey(a).localeCompare(getPollSortKey(b))).forEach(p=>{const k=p.date+'|'+(p.eventType||'rehearsal');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);});
+  return `<section class="smart-section" data-section="${key}"><button type="button" class="smart-section-head" data-toggle-section="${key}" aria-expanded="${!closed}"><span class="section-symbol ${key}">${{ready:'✓',todo:'●',waiting:'◷',blocked:'×'}[key]}</span><strong>${tr(label)}</strong><span class="smart-count">${items.length}</span><span aria-hidden="true">${closed?'⌄':'⌃'}</span></button>${closed?'':[...groups.values()].map(g=>`<article class="card smart-day ${getEventMeta(g[0].eventType).cardCls}"><div class="smart-day-head">${dateTile(g[0].date)}<div><strong>${esc(getEventMeta(g[0].eventType).label)}</strong><small>${esc(formatDateFr(g[0].date))}${g.length>1?' · '+tr('{0} créneaux',g.length):''}</small></div></div>${g.map(p=>pollRow(p,members,myId)).join('')}</article>`).join('')}</section>`;
+}
+function archiveHtml(archList,members) {
+  return `<div class="smart-archive-intro">${tr('Créneaux clos avec au moins une indisponibilité. Récupérez un créneau si un membre est finalement libre.')}</div>${archList.length?[...archList].sort((a,b)=>(b.archivedAt||0)-(a.archivedAt||0)).map(p=>`<article class="card smart-day archived-card"><div class="smart-day-head">${dateTile(p.date)}<div><strong>${esc(getEventMeta(p.eventType).label)} · ${esc(formatPollTimeLabel(p))}</strong><small>${esc(C18.localizeLocation(p.location||''))}</small>${consensusBar(p,members)}</div></div>${p.note?`<p>${esc(p.note)}</p>`:''}<div class="member-votes-list">${members.map(m=>{const v=p.votes?.[m.id];return `<span class="member-chip ${voteKeys[v]?v:''}">${symbols[v]||'○'} ${esc(m.name)}${p.voteNotes?.[m.id]?' · '+esc(p.voteNotes[m.id]):''}</span>`;}).join('')}</div><div class="archive-lock-banner"><span>${tr('Sondage archivé')}</span><div class="archive-actions-group"><button type="button" class="btn-secondary" data-restore-arch="${esc(p.id)}">↻ ${tr('Récupérer')}</button><button type="button" class="btn-del-subtle" data-del-arch="${esc(p.id)}">${tr('Supprimer')}</button></div></div></article>`).join(''):`<div class="empty-state">${tr('Aucun créneau archivé.')}</div>`}`;
+}
+function tableHtml(polls,members,myId) {
+  const ordered=[...members.filter(m=>m.id===myId),...members.filter(m=>m.id!==myId)];
+  const rows=tableSort==='date'?[...polls].sort((a,b)=>getPollSortKey(a).localeCompare(getPollSortKey(b))):smartSortPolls(polls,members,myId);
+  return `<div class="matrix-legend"><span class="yes">✓ ${tr('Oui')}</span><span class="maybe">? ${tr('Peut-être')}</span><span class="no">× ${tr('Non')}</span><span>○ ${tr('Sans réponse')}</span></div><p class="smart-hint">${tr('Touchez un créneau pour voir ses détails. Touchez votre case pour choisir votre réponse.')}</p><div class="card matrix-card smart-matrix"><div class="matrix-scroll"><table class="avail-matrix"><thead><tr><th scope="col">${tr('Créneau')}</th>${ordered.map(m=>`<th scope="col" class="${m.id===myId?'col-me':''}">${esc(m.name)}${m.id===myId?'<br>'+tr('Vous'):''}</th>`).join('')}<th scope="col">${tr('Total')}</th></tr></thead><tbody>${rows.map(p=>{const m=metrics(p,members);return `<tr class="${m.full?'row-consensus':''}" data-poll-card="${esc(p.id)}"><td><button class="matrix-date-btn" type="button" data-detail-poll="${esc(p.id)}"><strong class="matrix-date-line"><span>${esc(formatCompactDateFr(p.date))}</span><span class="${m.full?'all-yes':''}">${m.yes}/${members.length}</span></strong><small>${esc(formatPollTimeLabel(p))}</small><small>${esc(getEventMeta(p.eventType).label)}${p.location?' · '+esc(C18.localizeLocation(p.location)):''}</small></button></td>${ordered.map(member=>{const val=p.votes?.[member.id],key=voteKeys[val],note=p.voteNotes?.[member.id],label=esc(member.name+' : '+C18.t(key||'Sans réponse')+(note?' — '+note:''));const badge=`<span class="matrix-cell-badge ${key?val:''}" title="${label}" aria-label="${label}">${symbols[val]||'○'}${note?'<i class="matrix-note-dot"></i>':''}</span>`;return `<td>${member.id===myId?`<button type="button" class="matrix-cell-btn" data-detail-poll="${esc(p.id)}" aria-label="${label}">${badge}</button>`:badge}</td>`;}).join('')}<td class="${m.full?'all-yes':''}"><strong>${m.yes}/${members.length}</strong></td></tr>`;}).join('')}</tbody></table></div></div>`;
+}
+function captureEditor() {
+  const el=document.activeElement; if(!el?.matches?.('.vote-note-input,.loc-inline-input'))return null;
+  const key=el.dataset.noteInput?'note':'loc', id=el.dataset.noteInput||el.dataset.locInput;
+  draftValues.set(`${key}:${id}`,el.value);return {key,id,start:el.selectionStart,end:el.selectionEnd,modal:!!el.closest('#modal-poll-detail')};
+}
+function restoreEditor(saved) { if(!saved)return; const root=saved.modal?$('poll-detail-content'):$('polls-list');const el=root.querySelector(`[data-${saved.key}-input="${CSS.escape(saved.id)}"]`);if(el){el.focus({preventScroll:true});el.setSelectionRange(saved.start,saved.end);} }
 export function renderPolls() {
-  const container = $("polls-list"), toolbar = $("avail-toolbar"), navBadge = $("nav-avail-badge");
-  const pollsObj = state.currentEnsembleData.polls || {}, archList = Object.values(state.currentEnsembleData.archivedPolls || {});
-  const members = Object.values(state.currentEnsembleData.members || {}), total = members.length;
-  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
-
-  const activeEl = document.activeElement;
-  const activeNote = activeEl?.classList?.contains("vote-note-input") ? { pollId: activeEl.dataset.noteInput, value: activeEl.value, selStart: activeEl.selectionStart } : null;
-
-  const allPolls = smartSortPolls(Object.values(pollsObj).filter((p) => !isPollImpossibleAndComplete(p, members)), members, myId);
-  const unvotedPolls = allPolls.filter((p) => !p.votes?.[myId]);
-  const unvotedCount = unvotedPolls.length;
-  state.lastRenderedUnvotedPolls = unvotedPolls;
-
-  navBadge.textContent = String(unvotedCount);
-  navBadge.classList.toggle("hidden", !unvotedCount);
-  $("pill-filter-unvoted").textContent = unvotedCount ? C18.tt`À voter (${unvotedCount})` : C18.t("À voter");
-  $("pill-filter-archived").textContent = archList.length ? C18.tt`Archives (${archList.length})` : C18.t("Archives");
-
-  if (!allPolls.length && !archList.length) {
-    toolbar.classList.add("hidden");
-    container.innerHTML = C18.htmlLiteral("<div class=\"empty-state\"><p>Aucune date en cours de sondage.</p><button type=\"button\" class=\"btn-primary btn-sm\" data-empty-add-poll>Proposer des dates aux membres</button></div>");
-    return;
-  }
-  toolbar.classList.remove("hidden");
-
-  const chipHtml = (m, votes, notes) => {
-    const v = votes[m.id], n = notes[m.id] || "";
-    const sym = { yes: "✓", maybe: "?", no: "✕" }[v] || "○";
-    return `<span class="member-chip ${v || ""}">${sym} <span class="chip-name">${esc(m.name)}</span>${n ? ` <span class="chip-note">« ${esc(n)} »</span>` : ""}</span>`;
-  };
-
-  if (state.availFilterMode === "archived") {
-    if (!archList.length) {
-      container.innerHTML = C18.htmlLiteral("<div class=\"empty-state\"><p>Aucun créneau archivé.</p><button type=\"button\" class=\"btn-secondary btn-sm\" data-reset-filter>Retour aux créneaux actifs</button></div>");
-      return;
-    }
-    const sortedArch = [...archList].sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
-    container.innerHTML = C18.htmlLiteral("<div style=\"font-size:12.5px;color:var(--muted);margin-bottom:10px\">Créneaux clos avec au moins une indisponibilité. Récupérez un créneau si un membre est finalement libre.</div>") + sortedArch.map((p) => {
-      const v = p.votes || {}, yes = members.filter((m) => v[m.id] === "yes").length, tMeta = getEventMeta(p.eventType);
-      return C18.h`<article class="card archived-card">
-        <div class="poll-head-row"><h3 class="card-date">${esc(formatDateFr(p.date))}</h3><span class="consensus-badge archived">✕ ${yes}/${total}</span></div>
-        <div class="poll-subline"><span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span><span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>${p.location ? `<strong>${esc(C18.localizeLocation(p.location))}</strong>` : ""}</div>
-        ${p.note ? `<div class="card-meta">${esc(p.note)}</div>` : ""}
-        <div class="member-votes-list">${members.map((m) => chipHtml(m, v, p.voteNotes || {})).join("")}</div>
-        <div class="archive-lock-banner">
-          <span>🔒 Sondage archivé</span>
-          <div class="archive-actions-group">
-            <button type="button" class="btn-primary btn-xs" data-restore-arch="${esc(p.id)}">↻ Récupérer</button>
-            <button type="button" class="btn-del-subtle btn-xs" data-del-arch="${esc(p.id)}" aria-label="Supprimer définitivement">✕</button>
-          </div>
-        </div>
-      </article>`;
-    }).join("");
-    return;
-  }
-
-  if (!allPolls.length) {
-    container.innerHTML = C18.h`<div class="empty-state"><p>Aucune date active (${archList.length} archivée(s)).</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button type="button" class="btn-primary btn-sm" data-empty-add-poll>Proposer de nouvelles dates</button><button type="button" class="btn-secondary btn-sm" data-go-arch>Voir les archives (${archList.length})</button></div></div>`;
-    return;
-  }
-
-  // Bandeau Vote Express dès qu'il y a au moins 2 dates non votées
-  let expressBannerHtml = "";
-  if (unvotedCount >= 2) {
-    const nextP = unvotedPolls[0], tMeta = getEventMeta(nextP.eventType);
-    expressBannerHtml = C18.h`
-      <div class="express-vote-banner">
-        <div class="express-top-row">
-          <span class="express-badge">⚡ Vote Express • ${unvotedCount} à voter</span>
-          <button type="button" class="btn-confirm btn-xs" data-vote-all-yes>✓ Tout Oui (${unvotedCount})</button>
-        </div>
-        <div class="express-date-title">${esc(formatDateFr(nextP.date))}</div>
-        <div class="poll-subline" style="margin-bottom:4px">
-          <span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span>
-          <span class="time-pill ${nextP.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(nextP))}</span>
-          ${nextP.location ? `<strong>${esc(C18.localizeLocation(nextP.location))}</strong>` : ""}
-        </div>
-        <div class="express-vote-btns">
-          <button type="button" class="vote-btn active-yes" data-express-vote="${esc(nextP.id)}" data-val="yes">✓ Oui</button>
-          <button type="button" class="vote-btn active-maybe" data-express-vote="${esc(nextP.id)}" data-val="maybe">? Peut-être</button>
-          <button type="button" class="vote-btn active-no" data-express-vote="${esc(nextP.id)}" data-val="no">✕ Non</button>
-        </div>
-      </div>`;
-  }
-
-  const filtered = allPolls.filter((p) => {
-    const v = p.votes || {};
-    if (state.availFilterMode === "unvoted") return !v[myId];
-    if (state.availFilterMode === "consensus") return total > 0 && members.filter((m) => v[m.id] === "yes").length === total;
-    return true;
-  });
-  state.lastRenderedFilteredPolls = filtered;
-
-  if (!filtered.length) {
-    container.innerHTML = expressBannerHtml + C18.h`<div class="empty-state"><p>${state.availFilterMode === "unvoted" ? C18.t("Vous avez voté sur toutes les dates proposées.") : C18.t("Aucun créneau ne réunit encore l'unanimité.")}</p><button type="button" class="btn-secondary btn-sm" data-reset-filter>Afficher toutes les dates actives (${allPolls.length})</button></div>`;
-    return;
-  }
-
-  if (state.availViewMode === "express") return renderPollsExpressList(container, expressBannerHtml, filtered, members, myId);
-  if (state.availViewMode === "table") return renderPollsTable(container, expressBannerHtml, filtered, members, myId);
-
-  // Regroupement par date des créneaux proposés le même jour
-  const dayGroups = [], groupsByDate = new Map();
-  filtered.forEach((p) => {
-    if (!groupsByDate.has(p.date)) {
-      const grp = { date: p.date, slots: [] };
-      groupsByDate.set(p.date, grp);
-      dayGroups.push(grp);
-    }
-    groupsByDate.get(p.date).slots.push(p);
-  });
-
-  // Mode Cartes (1 carte par journée, avec sélecteur d'horaire si plusieurs créneaux le même jour)
-  container.innerHTML = expressBannerHtml + dayGroups.map((grp) => {
-    const sortedSlots = [...grp.slots].sort((a, b) => getPollSortKey(a).localeCompare(getPollSortKey(b)));
-    const isMultiSlot = sortedSlots.length > 1;
-
-    let selectedId = state.activeSlotByDate.get(grp.date);
-    if (!selectedId || !sortedSlots.some((s) => s.id === selectedId)) {
-      const defaultSlot = sortedSlots.find((s) => !s.votes?.[myId])
-        || sortedSlots.find((s) => total > 0 && members.filter((m) => s.votes?.[m.id] === "yes").length === total)
-        || sortedSlots[0];
-      selectedId = defaultSlot.id;
-      state.activeSlotByDate.set(grp.date, selectedId);
-    }
-    const p = sortedSlots.find((s) => s.id === selectedId) || sortedSlots[0];
-
-    const v = p.votes || {}, notes = p.voteNotes || {}, myVote = v[myId] || "", myNote = notes[myId] || "";
-    const yes = members.filter((m) => v[m.id] === "yes").length, missing = members.filter((m) => !v[m.id]);
-    const full = total > 0 && yes === total, majority = !full && total > 0 && yes >= Math.ceil(total * 0.75);
-    const broad = p.timeMode === "day" || p.timeMode === "period";
-    const tMeta = getEventMeta(p.eventType);
-    const rank = { yes: 1, maybe: 2, no: 3 };
-    const topBar = members.map((m) => v[m.id] || "pending").sort((a, b) => (rank[a] || 4) - (rank[b] || 4)).map((st) => `<span class="poll-top-seg ${st}"></span>`).join("");
-
-    const anyUnvotedInGroup = sortedSlots.some((s) => !s.votes?.[myId]);
-    const anyFullInGroup = sortedSlots.some((s) => total > 0 && members.filter((m) => s.votes?.[m.id] === "yes").length === total);
-
-    const daySlotsTabsHtml = isMultiSlot ? C18.h`
-      <div class="day-slots-tabs" role="tablist" aria-label="Créneaux horaires proposés ce jour">
-        ${sortedSlots.map((s) => {
-          const sv = s.votes || {};
-          const syes = members.filter((m) => sv[m.id] === "yes").length;
-          const sfull = total > 0 && syes === total;
-          const smy = sv[myId] || "";
-          const sym = { yes: "✓", maybe: "?", no: "✕" }[smy] || "○";
-          const isAct = s.id === p.id;
-          return `<button type="button" class="day-slot-tab ${isAct ? "active" : ""} ${sfull ? "consensus" : ""}" data-select-day-slot="${esc(grp.date)}" data-slot-id="${esc(s.id)}">
-            <span>${esc(formatPollTimeLabel(s))}</span>
-            <span style="display:inline-flex;align-items:center;gap:4px">
-              <span style="font-size:11px;opacity:.85">${sfull ? "★" : `${syes}/${total}`}</span>
-              <span class="slot-tab-vote-dot ${smy}">${sym}</span>
-            </span>
-          </button>`;
-        }).join("")}
-      </div>` : "";
-
-    const conflicts = getUnavailabilityConflictsForDate(p.date).filter((c) => v[c.memberId] !== "yes");
-    const unavailHtml = conflicts.length ? C18.h`<div class="unavail-notice">Absence : ${conflicts.map((c) => `<strong>${esc(c.memberName)}</strong>${c.reason ? ` (${esc(c.reason)})` : ""}`).join(", ")}</div>` : "";
-
-    const collapse = total > 6 && !state.expandedMemberLists.has(p.id);
-    let chips = "";
-    if (collapse) {
-      const plainYes = members.filter((m) => v[m.id] === "yes" && !notes[m.id]);
-      const notable = members.filter((m) => v[m.id] !== "yes" || Boolean(notes[m.id]));
-      if (plainYes.length) chips += C18.h`<button type="button" class="member-chip yes summary-toggle" data-toggle-members="${esc(p.id)}">✓ ${plainYes.length} dispo ▾</button>`;
-      chips += notable.map((m) => chipHtml(m, v, notes)).join("");
-    } else {
-      chips = members.map((m) => chipHtml(m, v, notes)).join("") + (total > 6 ? C18.h`<button type="button" class="member-chip summary-toggle" data-toggle-members="${esc(p.id)}">Réduire ▴</button>` : "");
-    }
-
-    const showNote = Boolean(myNote) || state.openNoteEditors.has(p.id) || activeNote?.pollId === p.id;
-    const noteHtml = showNote
-      ? C18.h`<div class="vote-note-bar"><input type="text" class="vote-note-input" data-note-input="${esc(p.id)}" maxlength="90" placeholder="Votre précision libre (ex: dispo dès 15h)..." value="${esc(myNote)}" /><button type="button" class="btn-secondary btn-xs" data-save-note="${esc(p.id)}">OK</button></div>`
-      : C18.h`<div class="note-trigger-row"><button type="button" class="btn-add-note-link" data-open-note="${esc(p.id)}">+ Note</button></div>`;
-
-    const showLocBar = state.openLocationEditors.has(p.id);
-    const locHtml = showLocBar
-      ? C18.h`<div class="loc-inline-bar"><input type="text" class="loc-inline-input" data-loc-input="${esc(p.id)}" maxlength="70" placeholder="Suggérer un lieu (ex: Sion, Salle 103)..." value="${esc(p.location || "")}" /><button type="button" class="btn-secondary btn-xs" data-save-loc="${esc(p.id)}">OK</button><button type="button" class="btn-secondary btn-xs" data-cancel-loc="${esc(p.id)}">✕</button></div>`
-      : "";
-
-    const locBadgeHtml = p.location
-      ? C18.h`<button type="button" class="btn-suggest-loc" data-open-loc="${esc(p.id)}" title="Modifier ou suggérer un autre lieu">📍 ${esc(C18.localizeLocation(p.location))}${p.locationSuggestedBy ? ` (${esc(p.locationSuggestedBy)})` : ""}</button>`
-      : C18.h`<button type="button" class="btn-suggest-loc" data-open-loc="${esc(p.id)}">+ Suggérer un lieu</button>`;
-
-    const mainBtn = full && broad
-      ? C18.h`<button type="button" class="btn-confirm btn-sm" data-confirm-poll="${esc(p.id)}">Valider (choisir l'heure)</button><button type="button" class="btn-secondary btn-sm" data-refine-poll="${esc(p.id)}">Sonder l'heure</button>`
-      : full ? C18.h`<button type="button" class="btn-confirm btn-sm" data-confirm-poll="${esc(p.id)}">Valider ce créneau</button>`
-      : missing.length ? C18.h`<button type="button" class="btn-secondary btn-sm" data-remind-poll="${esc(p.id)}">Relancer (${missing.length})</button>`
-      : C18.h`<button type="button" class="btn-secondary btn-sm" data-confirm-poll="${esc(p.id)}">Valider</button>`;
-
-    return C18.h`<article class="card poll-card ${anyFullInGroup ? "consensus-ready" : ""} ${anyUnvotedInGroup ? "unvoted-highlight" : ""}" data-poll-card="${esc(p.id)}" data-day-card="${esc(grp.date)}">
-      <div class="poll-top-bar" aria-hidden="true">${topBar}</div>
-      <div class="poll-head-row">
-        <h3 class="card-date">${esc(formatDateFr(p.date))}</h3>
-        <span class="consensus-badge ${full ? "full" : majority ? "partial-good" : ""}">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</span>
-      </div>
-      ${daySlotsTabsHtml}
-      <div class="poll-subline">
-        <span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span>
-        ${!isMultiSlot ? `<span class="time-pill ${p.timeMode === "day" ? "day-mode" : ""}">${esc(formatPollTimeLabel(p))}</span>` : ""}
-        ${locBadgeHtml}
-        ${p.note ? `<span>• ${esc(p.note)}</span>` : ""}
-      </div>
-      ${locHtml}
-      ${unavailHtml}
-      <div class="vote-group">
-        <button type="button" class="vote-btn ${myVote === "yes" ? "active-yes" : ""}" data-vote="${esc(p.id)}" data-val="yes">✓ Oui</button>
-        <button type="button" class="vote-btn ${myVote === "maybe" ? "active-maybe" : ""}" data-vote="${esc(p.id)}" data-val="maybe">? Peut-être</button>
-        <button type="button" class="vote-btn ${myVote === "no" ? "active-no" : ""}" data-vote="${esc(p.id)}" data-val="no">✕ Non</button>
-      </div>
-      ${noteHtml}
-      <div class="member-votes-list">${chips}</div>
-      <div class="poll-footer"><div class="poll-footer-main">${mainBtn}</div><button type="button" class="btn-secondary btn-more-dots" data-poll-menu="${esc(p.id)}" aria-label="Plus d'options">•••</button></div>
-    </article>`;
-  }).join("");
-
-  if (activeNote) {
-    const inp = container.querySelector(`.vote-note-input[data-note-input="${CSS.escape(activeNote.pollId)}"]`);
-    if (inp) { inp.value = activeNote.value; inp.focus(); if (typeof activeNote.selStart === "number") inp.setSelectionRange(activeNote.selStart, activeNote.selStart); }
-  }
-  if (state.pendingScrollToPollId) {
-    const targetPoll = filtered.find((x) => x.id === state.pendingScrollToPollId);
-    const card = container.querySelector(`[data-poll-card="${CSS.escape(state.pendingScrollToPollId)}"]`)
-      || (targetPoll ? container.querySelector(`[data-day-card="${CSS.escape(targetPoll.date)}"]`) : null);
-    state.pendingScrollToPollId = null;
-    if (card) requestAnimationFrame(() => { card.scrollIntoView({ behavior: "smooth", block: "center" }); card.classList.add("just-focused"); setTimeout(() => card.classList.remove("just-focused"), 1200); });
-  }
+  if(!state.currentEnsembleData)return;
+  resetSmartScope(); const saved=captureEditor(), container=$('polls-list'), toolbar=$('avail-toolbar'), myId=currentMember(), members=Object.values(state.currentEnsembleData.members||{});
+  const anchors = !$('view-avail').classList.contains('hidden') ? [...container.querySelectorAll('[data-poll-card]')].map(el=>({id:el.dataset.pollCard,section:el.closest('[data-section]')?.dataset.section,top:el.getBoundingClientRect().top})).filter(x=>x.top>=55&&x.top<innerHeight-75) : [];
+  const oldScroll=container.querySelector('.matrix-scroll')?.scrollLeft||0;
+  const active=Object.values(state.currentEnsembleData.polls||{}).filter(p=>!isPollImpossibleAndComplete(p,members));
+  const arch=Object.values(state.currentEnsembleData.archivedPolls||{}), todo=active.filter(p=>!p.votes?.[myId]), ready=active.filter(p=>metrics(p,members).full), waiting=active.filter(p=>p.votes?.[myId]&&!metrics(p,members).full&&!metrics(p,members).no), blocked=active.filter(p=>p.votes?.[myId]&&metrics(p,members).no);
+  state.lastRenderedUnvotedPolls=todo;state.lastRenderedFilteredPolls=active;
+  selected=new Set([...selected].filter(id=>todo.some(p=>p.id===id)));
+  const archived=state.availFilterMode==='archived', comparing=state.availViewMode==='table';
+  $('nav-avail-badge').textContent=todo.length;$('nav-avail-badge').classList.toggle('hidden',!todo.length);
+  toolbar.classList.remove('hidden');
+  document.querySelectorAll('[data-avail-view]').forEach(b=>{const on=!archived&&b.dataset.availView===state.availViewMode;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on);});
+  $('btn-avail-archives').textContent=archived?C18.t('Retour aux dates'):C18.t('Archives')+(arch.length?` (${arch.length})`:'');$('btn-avail-archives').setAttribute('aria-pressed',archived);
+  const done=active.length-todo.length;
+  $('avail-overview').innerHTML=`<div class="smart-overview"><div class="smart-progress-head"><strong>${tr('Mes réponses')}</strong><span>${done}/${active.length}</span></div><div class="smart-personal-progress" role="progressbar" aria-label="${tr('Mes réponses')}" aria-valuemin="0" aria-valuemax="${Math.max(1,active.length)}" aria-valuenow="${done}"><i style="width:${active.length?done/active.length*100:0}%"></i></div><div class="smart-overview-stats"><div><strong>${todo.length}</strong><small>${tr('À répondre')}</small></div><div><strong class="all-yes">${ready.length}</strong><small>${tr('À planifier')}</small></div><div><strong>${waiting.length+blocked.length}</strong><small>${tr('En attente')}</small></div></div>${todo.length&&!archived?`<button type="button" class="btn-primary btn-full" data-start-quick>⚡ ${tr('Vote rapide')} · ${todo.length}</button>`:`<small class="smart-hint">${archived?'':tr(active.length?'Toutes vos réponses sont à jour.':'Aucun vote en attente.')}</small>`}</div>`;
+  const canUndo=lastVote&&active.some(p=>p.id===lastVote.id&&p.votes?.[myId]===lastVote.value)&&!busy;
+  $('avail-tools').innerHTML=archived?'':`<div class="smart-tools">${comparing?`<button type="button" class="btn-secondary" data-sort-table>${tr(tableSort==='score'?'Tri : meilleurs créneaux':'Tri : chronologique')} ↕</button>`:todo.length?`<button type="button" class="btn-secondary" data-bulk-toggle>${tr(selectionMode?'Quitter la sélection':'Sélection multiple')}</button>`:''}${canUndo?`<button type="button" class="btn-secondary" data-undo-vote>↶ ${tr('Annuler le dernier vote')}</button>`:''}</div>${selectionMode&&!comparing?`<div class="smart-bulk"><div class="smart-tools"><strong>${tr('{0} sélectionné(s)',selected.size)}</strong><button type="button" class="btn-secondary" data-select-all>${tr(selected.size===todo.length?'Tout désélectionner':'Tout sélectionner')}</button></div><div class="smart-vote-group">${Object.keys(voteKeys).map(v=>`<button type="button" class="smart-vote ${v}" data-bulk-vote="${v}" ${selected.size&&!busy?'':'disabled'}>${symbols[v]} ${tr(voteKeys[v])}</button>`).join('')}</div></div>`:''}`;
+  if(archived)container.innerHTML=archiveHtml(arch,members);
+  else if(!active.length)container.innerHTML=`<div class="empty-state"><p>${tr('Aucune date en cours de sondage.')}</p><button type="button" class="btn-primary" data-empty-add-poll>${tr('Proposer des dates aux membres')}</button></div>`;
+  else if(comparing)container.innerHTML=tableHtml(active,members,myId);
+  else container.innerHTML=sectionHtml('ready','Prêtes à planifier',ready,members,myId)+sectionHtml('todo','À vous de répondre',todo,members,myId)+sectionHtml('waiting','En attente des autres',waiting,members,myId)+sectionHtml('blocked','Créneaux avec indisponibilité',blocked,members,myId);
+  const scroll=container.querySelector('.matrix-scroll');if(scroll){const first=scroll.querySelector('th:first-child');if(first.getBoundingClientRect().width>0)scroll.style.setProperty('--matrix-date-width',`${first.getBoundingClientRect().width}px`);scroll.scrollLeft=oldScroll;}
+  if(detailId&&$('modal-poll-detail').classList.contains('open'))renderDetail();
+  if(quick&&!busy&&$('modal-quick-vote').classList.contains('open'))renderQuick();
+  restoreEditor(saved);
+  if(!saved&&!state.pendingScrollToPollId){for(const anchor of anchors){const el=container.querySelector(`[data-poll-card="${CSS.escape(anchor.id)}"]`);if(el&&el.closest('[data-section]')?.dataset.section===anchor.section){const delta=el.getBoundingClientRect().top-anchor.top;if(Math.abs(delta)>2&&Math.abs(delta)<innerHeight)window.scrollBy(0,delta);break;}}}
+  if(state.pendingScrollToPollId){const id=state.pendingScrollToPollId;state.pendingScrollToPollId=null;const el=container.querySelector(`[data-poll-card="${CSS.escape(id)}"]`);if(el)requestAnimationFrame(()=>el.scrollIntoView({block:'center',behavior:'smooth'}));}
 }
-
-export function renderPollsExpressList(container, expressBannerHtml, filtered, members, myId) {
-  const total = members.length;
-  const rows = filtered.map((p) => {
-    const v = p.votes || {}, myVote = v[myId] || "";
-    const yes = members.filter((m) => v[m.id] === "yes").length;
-    const full = total > 0 && yes === total;
-    const tMeta = getEventMeta(p.eventType);
-    return C18.h`
-      <div class="express-list-row ${full ? "consensus" : ""} ${!myVote ? "unvoted" : ""}">
-        <div class="express-row-info">
-          <div class="express-row-date">
-            <span>${esc(formatCompactDateFr(p.date))}</span>
-            <span class="event-type-badge ${tMeta.badgeCls}" style="font-size:10px;padding:1px 5px">${esc(tMeta.label)}</span>
-            <span class="consensus-badge ${full ? "full" : ""}" style="font-size:10.5px;padding:1px 6px">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</span>
-          </div>
-          <div class="express-row-meta">
-            <span>${esc(formatPollTimeLabel(p))}</span>
-            ${p.location ? `<span>• ${esc(C18.localizeLocation(p.location))}</span>` : ""}
-          </div>
-        </div>
-        <div class="express-row-btns">
-          <button type="button" class="mini-vbtn ${myVote === "yes" ? "active-yes" : ""}" data-express-vote="${esc(p.id)}" data-val="yes" aria-label="Oui">✓</button>
-          <button type="button" class="mini-vbtn ${myVote === "maybe" ? "active-maybe" : ""}" data-express-vote="${esc(p.id)}" data-val="maybe" aria-label="Peut-être">?</button>
-          <button type="button" class="mini-vbtn ${myVote === "no" ? "active-no" : ""}" data-express-vote="${esc(p.id)}" data-val="no" aria-label="Non">✕</button>
-          <button type="button" class="btn-secondary btn-more-dots" style="height:34px" data-poll-menu="${esc(p.id)}" aria-label="Options">•••</button>
-        </div>
-      </div>`;
-  }).join("");
-
-  container.innerHTML = expressBannerHtml + `<div class="card express-list-card">${rows}</div>`;
+function renderDetail(){const p=state.currentEnsembleData?.polls?.[detailId], members=Object.values(state.currentEnsembleData?.members||{});if(!p||isPollImpossibleAndComplete(p,members)){ $('poll-detail-content').innerHTML=`<p>${tr('Ce créneau n’est plus actif.')}</p>`;return;} $('poll-detail-content').innerHTML=`<div class="smart-day-head">${dateTile(p.date)}<div><strong>${esc(getEventMeta(p.eventType).label)}</strong><small>${esc(formatDateFr(p.date))} · ${esc(formatPollTimeLabel(p))}</small>${consensusBar(p,members)}</div></div>${voteButtons(p,currentMember())}${pollDetails(p,members,currentMember())}<button type="button" class="btn-secondary btn-full" data-poll-menu="${esc(p.id)}">${tr("Plus d'options")}</button>`;}
+function startQuick(){if(busy)return;quick={ids:[...state.lastRenderedUnvotedPolls].sort((a,b)=>getPollSortKey(a).localeCompare(getPollSortKey(b))).map(p=>p.id), index:0, note:'', skipped:new Set(), answered:new Set()};openModal('modal-quick-vote');renderQuick();$('quick-vote-content').querySelector('button:not([disabled])')?.focus({preventScroll:true});}
+function renderQuick(){if(!quick)return; const root=$('quick-vote-content'), myId=currentMember(), members=Object.values(state.currentEnsembleData?.members||{});while(quick.index<quick.ids.length){const p=state.currentEnsembleData?.polls?.[quick.ids[quick.index]];if(p&&!isPollImpossibleAndComplete(p,members)&&!p.votes?.[myId])break;if(p?.votes?.[myId]||quick.answered.has(quick.ids[quick.index]))quick.answered.add(quick.ids[quick.index]);else quick.skipped.add(quick.ids[quick.index]);quick.index++;quick.note='';}
+  const focusedNote=document.activeElement?.id==='quick-note', notePos=focusedNote?document.activeElement.selectionStart:null;
+  const total=quick.ids.length, p=state.currentEnsembleData?.polls?.[quick.ids[quick.index]];
+  const undo=lastVote&&quick.ids.includes(lastVote.id)&&state.currentEnsembleData?.polls?.[lastVote.id]?.votes?.[myId]===lastVote.value&&!isPollImpossibleAndComplete(state.currentEnsembleData.polls[lastVote.id],members)&&!busy;
+  root.innerHTML=`<div class="quick-progress"><span>${tr('{0} sur {1}',Math.min(quick.index+1,total),total)}</span><span>${tr('{0} répondu(s)',quick.answered.size)}</span></div><div class="smart-personal-progress"><i style="width:${total?quick.index/total*100:100}%"></i></div>${p&&quick.index<total?`<div class="quick-date"><small>${esc(getEventMeta(p.eventType).label)}${p.location?' · '+esc(C18.localizeLocation(p.location)):''}</small><h3>${esc(formatDateFr(p.date))}</h3><strong>${esc(formatPollTimeLabel(p))}</strong><p>${tr('Êtes-vous disponible ?')}</p></div><label for="quick-note">${tr('Précision facultative')}</label><input id="quick-note" maxlength="90" value="${esc(quick.note)}" placeholder="${tr('Ex. disponible dès 15h')}"/>${voteButtons(p,myId,'quick-vote')}<div class="smart-tools"><button type="button" class="btn-secondary" data-quick-prev ${busy||!quick.ids.slice(0,quick.index).some(id=>state.currentEnsembleData?.polls?.[id]&&!state.currentEnsembleData.polls[id].votes?.[myId])?'disabled':''}>← ${tr('Précédent')}</button><button type="button" class="btn-secondary" data-quick-skip ${busy?'disabled':''}>${tr('Passer')} →</button></div>`:`<div class="quick-date"><h3>${tr('Parcours terminé')}</h3><p>${tr('{0} réponse(s) enregistrée(s)',quick.answered.size)}</p><p>${tr('{0} créneau(x) restant(s) à répondre',state.lastRenderedUnvotedPolls.length)}</p></div><button type="button" class="btn-primary btn-full" data-close="modal-quick-vote">${tr('Terminer')}</button>`}${undo?`<button type="button" class="btn-secondary btn-full" data-undo-vote>↶ ${tr('Annuler le dernier vote')}</button>`:''}`;
+  if(busy)root.querySelectorAll('button:not([data-close])').forEach(b=>b.disabled=true);
+  if(focusedNote&&$('quick-note')){$('quick-note').focus({preventScroll:true});$('quick-note').setSelectionRange(notePos,notePos);}
 }
-
-export function renderPollsTable(container, expressBannerHtml, filtered, members, myId) {
-  const total = members.length;
-  const ordered = [...members.filter((m) => m.id === myId), ...members.filter((m) => m.id !== myId)];
-  const notesList = [];
-
-  const rows = filtered.map((p) => {
-    const v = p.votes || {}, notes = p.voteNotes || {}, yes = members.filter((m) => v[m.id] === "yes").length;
-    const full = total > 0 && yes === total, broad = p.timeMode === "day" || p.timeMode === "period", t = formatPollTimeLabel(p);
-    const tMeta = getEventMeta(p.eventType);
-    members.forEach((m) => notes[m.id] && notesList.push({ date: formatCompactDateFr(p.date), time: t, member: m.name, note: notes[m.id] }));
-    const conflicts = getUnavailabilityConflictsForDate(p.date).filter((c) => v[c.memberId] !== "yes");
-
-    const cells = ordered.map((m) => {
-      const val = v[m.id] || "", sym = { yes: "✓", maybe: "?", no: "✕" }[val] || "○";
-      const dot = notes[m.id] ? `<span class="matrix-note-dot" title="${esc(notes[m.id])}"></span>` : "";
-      const badge = `<span class="matrix-cell-badge ${val}">${sym}${dot}</span>`;
-      return `<td>${m.id === myId ? `<button type="button" class="matrix-cell-btn" data-matrix-vote="${esc(p.id)}" data-cur="${esc(val)}">${badge}</button>` : badge}</td>`;
-    }).join("");
-
-    const altBtn = broad
-      ? C18.h`<button type="button" class="${full ? "btn-confirm" : "btn-secondary"} btn-xs" data-refine-poll="${esc(p.id)}">Horaires</button>`
-      : C18.h`<button type="button" class="btn-secondary btn-xs" data-counter-poll="${esc(p.id)}">+ Horaire</button>`;
-
-    return C18.h`<tr class="${full ? "row-consensus" : ""}">
-      <td>
-        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-          <span style="font-weight:600;text-transform:capitalize">${esc(formatCompactDateFr(p.date))}</span>
-          <span class="event-type-badge ${tMeta.badgeCls}" style="font-size:10px;padding:1px 5px">${esc(tMeta.label)}</span>
-        </div>
-        <div style="font-size:11.5px;color:${p.timeMode === "day" ? "var(--muted)" : "var(--accent-fg)"};font-weight:500">${esc(t)}${p.location ? ` • ${esc(C18.localizeLocation(p.location))}` : ""}</div>
-        ${conflicts.length ? C18.h`<div style="font-size:11px;color:var(--no-fg);font-weight:600">Absence : ${esc(conflicts.map((c) => c.memberName).join(", "))}</div>` : ""}
-      </td>
-      <td style="font-weight:700;color:${full ? "var(--yes-fg)" : "var(--fg)"};white-space:nowrap">${full ? `★ ${yes}/${total}` : `${yes}/${total}`}</td>
-      ${cells}
-      <td style="white-space:nowrap;text-align:right;padding-right:12px">
-        <button type="button" class="btn-secondary btn-xs" data-edit-poll="${esc(p.id)}">Modif.</button> ${altBtn}
-        <button type="button" class="${full && !broad ? "btn-confirm" : "btn-primary"} btn-xs" data-confirm-poll="${esc(p.id)}">Valider</button>
-        <button type="button" class="btn-del-subtle btn-xs" data-del-poll="${esc(p.id)}">Suppr.</button>
-      </td>
-    </tr>`;
-  }).join("");
-
-  container.innerHTML = expressBannerHtml + C18.h`
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Touchez votre case dans la colonne <strong>(Vous)</strong> pour alterner ✓ / ? / ✕.</div>
-    <div class="card matrix-card"><div class="matrix-scroll"><table class="avail-matrix">
-      <thead><tr><th>Date &amp; type</th><th>Score</th>${ordered.map((m) => `<th class="${m.id === myId ? "col-me" : ""}"><div>${esc(m.name)}${m.id === myId ? C18.t(" (Vous)") : ""}</div><div style="font-weight:400;font-size:10.5px;color:var(--muted)">${esc(m.instrument)}</div></th>`).join("")}<th style="text-align:right;padding-right:12px">Actions</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div></div>
-    ${notesList.length ? C18.h`<div class="card" style="padding:12px 14px"><div class="card-kicker" style="margin-bottom:6px">Précisions des musiciens</div>${notesList.map((n) => `<div style="font-size:13px;padding:3px 0"><strong>${esc(n.member)}</strong> (${esc(n.date)}, ${esc(n.time)}) : <em>« ${esc(n.note)} »</em></div>`).join("")}</div>` : ""}`;
+async function writeVote(id,value,note=undefined){
+  if(busy)return false;const ens=state.session.activeEnsembleId,myId=currentMember(),p=state.currentEnsembleData?.polls?.[id];if(!p||!myId||!voteKeys[value]||p.votes?.[myId]===value)return false;
+  busy=true;const old=p.votes?.[myId]||null,oldNote=p.voteNotes?.[myId]||null;
+  if($('modal-quick-vote').classList.contains('open'))$('quick-vote-content').querySelectorAll('button:not([data-close])').forEach(b=>b.disabled=true);
+  try{haptic();const result=await runTransaction(ref(db,`ensembles/${ens}/polls/${id}`),current=>{
+    if(!current||(current.votes?.[myId]||null)!==old)return;
+    current.votes={...(current.votes||{}),[myId]:value};
+    if(note!==undefined){current.voteNotes={...(current.voteNotes||{})};if(note.trim())current.voteNotes[myId]=note.trim();else delete current.voteNotes[myId];}
+    return current;
+  },{applyLocally:false});if(!result.committed){showToast(C18.t('Ce créneau n’est plus actif.'));return false;}
+  if(ens===state.session.activeEnsembleId){lastVote={id,value,old,oldNote,newNote:note===undefined?undefined:note.trim()||null,noteChanged:note!==undefined};if(value==='maybe'&&note===undefined){state.expandedMemberLists.add(id);collapsed.delete('waiting');collapsed.delete('blocked');}if(isPollImpossibleAndComplete(result.snapshot.val(),Object.values(state.currentEnsembleData?.members||{})))showToast(C18.t('Ce vote a entraîné l’archivage du créneau. Il peut être récupéré dans les archives.'));}return true;
+  }catch(err){handleFirebaseError(err);return false;}finally{busy=false;renderPolls();}
 }
+async function undoVote(){if(busy||!lastVote)return;const ens=state.session.activeEnsembleId,myId=currentMember(),v=lastVote,p=state.currentEnsembleData?.polls?.[v.id];if(!p||p.votes?.[myId]!==v.value||isPollImpossibleAndComplete(p,Object.values(state.currentEnsembleData.members||{})))return showToast(C18.t('Ce créneau n’est plus actif.'));busy=true;
+  try{const result=await runTransaction(ref(db,`ensembles/${ens}/polls/${v.id}`),current=>{if(!current||current.votes?.[myId]!==v.value)return;current.votes={...current.votes};if(v.old)current.votes[myId]=v.old;else delete current.votes[myId];if(v.noteChanged&&(current.voteNotes?.[myId]||null)===v.newNote){current.voteNotes={...(current.voteNotes||{})};if(v.oldNote)current.voteNotes[myId]=v.oldNote;else delete current.voteNotes[myId];}return current;},{applyLocally:false});if(!result.committed)return showToast(C18.t('Ce créneau n’est plus actif.'));if(ens===state.session.activeEnsembleId){lastVote=null;if(quick){quick.answered.delete(v.id);const i=quick.ids.indexOf(v.id);if(i>=0){quick.index=i;quick.note='';}}}showToast(C18.t('Dernier vote annulé.'));}catch(err){handleFirebaseError(err);}finally{busy=false;renderPolls();}}
+function bulkVote(value){const ids=[...selected],ens=state.session.activeEnsembleId,myId=currentMember();if(!ids.length||busy||!voteKeys[value])return;openConfirmationModal({title:C18.t('Confirmer le vote groupé ?'),context:C18.t('{0} créneaux',ids.length)+' · '+C18.t(voteKeys[value]),message:C18.t('Cette réponse sera appliquée aux créneaux sélectionnés qui attendent encore votre vote.'),confirmLabel:C18.t('Confirmer'),danger:false,onConfirm:async()=>{if(ens!==state.session.activeEnsembleId||busy)return;const updates={};ids.forEach(id=>{const p=state.currentEnsembleData?.polls?.[id];if(p&&!p.votes?.[myId])updates[`${id}/votes/${myId}`]=value;});if(!Object.keys(updates).length)return;busy=true;try{const result=await runTransaction(ref(db,`ensembles/${ens}/polls`),current=>{if(!current)return;let changed=false;ids.forEach(id=>{const p=current[id];if(p&&!p.votes?.[myId]){p.votes={...(p.votes||{}),[myId]:value};changed=true;}});return changed?current:undefined;},{applyLocally:false});if(!result.committed)return;selected.clear();selectionMode=false;lastVote=null;showToast(C18.t('Votes groupés enregistrés.'));}catch(err){handleFirebaseError(err);}finally{busy=false;renderPolls();}}});}
 
 export function initPollsListeners() {
-  document.querySelectorAll("[data-avail-view]").forEach((btn) => btn.addEventListener("click", () => {
-    haptic(); state.availViewMode = btn.dataset.availView;
-    document.querySelectorAll("[data-avail-view]").forEach((b) => b.classList.toggle("active", b.dataset.availView === state.availViewMode));
-    renderPolls();
-  }));
-
-  document.querySelectorAll("[data-avail-filter]").forEach((btn) => btn.addEventListener("click", () => {
-    haptic(); state.availFilterMode = btn.dataset.availFilter;
-    document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === state.availFilterMode));
-    renderPolls();
-  }));
-
+  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{const sc=$('polls-list').querySelector('.matrix-scroll'),w=sc?.querySelector('th:first-child')?.getBoundingClientRect().width;if(w>0)sc.style.setProperty('--matrix-date-width',`${w}px`);}).observe($('polls-list'));
+  document.querySelectorAll("[data-avail-view]").forEach(btn=>btn.addEventListener('click',()=>{haptic();state.availViewMode=btn.dataset.availView;state.availFilterMode='all';try{localStorage.setItem('cadenza_avail_view_v1',state.availViewMode);}catch(_){}renderPolls();}));
+  $('btn-avail-archives').addEventListener('click',()=>{state.availFilterMode=state.availFilterMode==='archived'?'all':'archived';renderPolls();});
+  $('avail-toolbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-start-quick'))return startQuick();if(b.hasAttribute('data-sort-table')){tableSort=tableSort==='score'?'date':'score';return renderPolls();}if(b.hasAttribute('data-undo-vote'))return undoVote();if(b.hasAttribute('data-bulk-toggle')){selectionMode=!selectionMode;selected.clear();if(selectionMode)collapsed.delete('todo');return renderPolls();}if(b.hasAttribute('data-select-all')){selected=selected.size===state.lastRenderedUnvotedPolls.length?new Set():new Set(state.lastRenderedUnvotedPolls.map(p=>p.id));return renderPolls();}if(b.dataset.bulkVote)return bulkVote(b.dataset.bulkVote);});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){for(const id of ['modal-poll-detail','modal-quick-vote'])if($(id).classList.contains('open')){closeModal(id);break;}}});
+  $('quick-vote-content').addEventListener('input',e=>{if(e.target.id==='quick-note'&&quick)quick.note=e.target.value;});
+  $('quick-vote-content').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||!quick||busy)return;if(b.hasAttribute('data-undo-vote'))return undoVote();if(b.hasAttribute('data-quick-skip')){quick.skipped.add(quick.ids[quick.index]);quick.index++;quick.note='';return renderQuick();}if(b.hasAttribute('data-quick-prev')){let i=quick.index-1;while(i>=0&&(!state.currentEnsembleData?.polls?.[quick.ids[i]]||state.currentEnsembleData.polls[quick.ids[i]].votes?.[currentMember()]))i--;if(i>=0){quick.index=i;quick.note='';}return renderQuick();}if(b.dataset.quickVote){const q=quick,id=b.dataset.quickVote;const note=q.note;const ok=await writeVote(id,b.dataset.val,note||undefined);if(ok&&q===quick){q.answered.add(id);q.skipped.delete(id);q.index=Math.max(q.index,q.ids.indexOf(id)+1);q.note='';renderQuick();}}});
   $("poll-archive-lock-warning").addEventListener("click", (e) => {
     const unlockBtn = e.target.closest("[data-unlock-archived]");
     if (unlockBtn) {
@@ -926,10 +698,10 @@ export function initPollsListeners() {
     const tMeta = getEventMeta(eventType);
     try {
       const rehId = genId("reh");
-      await set(ref(db, `ensembles/${state.session.activeEnsembleId}/rehearsals/${rehId}`), {
-        id: rehId, eventType, date: poll.date, startTime, endTime, ...concertData, location, program, notes: "", createdAt: Date.now()
+      await update(ref(db, `ensembles/${state.session.activeEnsembleId}`), {
+        [`rehearsals/${rehId}`]: { id: rehId, eventType, date: poll.date, startTime, endTime, ...concertData, location, program, notes: "", createdAt: Date.now() },
+        [`polls/${pollId}`]: null
       });
-      await remove(ref(db, `ensembles/${state.session.activeEnsembleId}/polls/${pollId}`));
       await hooks.publishEnsembleNotification(C18.localizedMessages(() => [C18.tt`${tMeta.label} confirmé(e) — ${state.currentEnsembleData.name}`, `${formatDateFr(poll.date)} • ${startTime}–${endTime} (${location})`]));
       closeModal("modal-confirm-poll"); showToast(C18.tt`${tMeta.label} ajouté(e) à l'agenda.`); hooks.switchTab("agenda");
     } catch (err) { handleFirebaseError(err); }
@@ -963,88 +735,25 @@ export function initPollsListeners() {
       );
       $("form-poll").reset(); resetPollSlots(); closeModal("modal-poll");
       showToast(wasRefining ? C18.t("Horaires envoyés aux membres.") : slots.length > 1 ? C18.tt`${slots.length} dates envoyées aux membres.` : C18.t("Date envoyée aux membres."));
-      hooks.switchTab("avail");
+      state.availFilterMode = "all"; renderPolls(); hooks.switchTab("avail");
     } catch (err) { handleFirebaseError(err); }
   });
 
-  $("polls-list").addEventListener("click", (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    const pollsObj = state.currentEnsembleData?.polls || {}, archObj = state.currentEnsembleData?.archivedPolls || {};
-    const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId;
-
-    if (btn.hasAttribute("data-empty-add-poll")) { resetPollSlots(); return openModal("modal-poll"); }
-    if (btn.hasAttribute("data-vote-all-yes")) return voteAllUnvotedYes(state.lastRenderedUnvotedPolls);
-    if (btn.dataset.selectDaySlot) {
-      haptic();
-      state.activeSlotByDate.set(btn.dataset.selectDaySlot, btn.dataset.slotId);
-      return renderPolls();
-    }
-    if (btn.hasAttribute("data-reset-filter") || btn.hasAttribute("data-go-arch")) {
-      state.availFilterMode = btn.hasAttribute("data-go-arch") ? "archived" : "all";
-      document.querySelectorAll("[data-avail-filter]").forEach((b) => b.classList.toggle("active", b.dataset.availFilter === state.availFilterMode));
-      return renderPolls();
-    }
-    if (btn.dataset.restoreArch) return promptRestoreArchivedPoll(archObj[btn.dataset.restoreArch]);
-    if (btn.dataset.delArch) return promptDeleteArchivedPoll(archObj[btn.dataset.delArch]);
-    if (btn.dataset.expressVote) {
-      const p = pollsObj[btn.dataset.expressVote];
-      return p?.votes?.[myId] === btn.dataset.val
-        ? promptClearMyVote(p)
-        : castPollVote(btn.dataset.expressVote, btn.dataset.val, state.lastRenderedFilteredPolls, false);
-    }
-    if (btn.dataset.openLoc) {
-      haptic(); const id = btn.dataset.openLoc; state.openLocationEditors.add(id); renderPolls();
-      return requestAnimationFrame(() => $("polls-list").querySelector(`.loc-inline-input[data-loc-input="${CSS.escape(id)}"]`)?.focus());
-    }
-    if (btn.dataset.cancelLoc) {
-      haptic(); state.openLocationEditors.delete(btn.dataset.cancelLoc); return renderPolls();
-    }
-    if (btn.dataset.saveLoc) {
-      haptic(); const id = btn.dataset.saveLoc;
-      return savePollLocationSuggestion(id, $("polls-list").querySelector(`.loc-inline-input[data-loc-input="${CSS.escape(id)}"]`)?.value || "");
-    }
-    if (btn.dataset.vote) {
-      const p = pollsObj[btn.dataset.vote];
-      return p?.votes?.[myId] === btn.dataset.val ? promptClearMyVote(p) : castPollVote(btn.dataset.vote, btn.dataset.val, state.lastRenderedFilteredPolls, true);
-    }
-    if (btn.dataset.matrixVote) {
-      const next = { yes: "maybe", maybe: "no" }[btn.dataset.cur] || "yes";
-      return castPollVote(btn.dataset.matrixVote, next, state.lastRenderedFilteredPolls, false);
-    }
-    if (btn.dataset.openNote) {
-      haptic(); const id = btn.dataset.openNote; state.openNoteEditors.add(id); renderPolls();
-      return requestAnimationFrame(() => $("polls-list").querySelector(`.vote-note-input[data-note-input="${CSS.escape(id)}"]`)?.focus());
-    }
-    if (btn.dataset.saveNote) {
-      haptic(); const id = btn.dataset.saveNote;
-      return saveVoteNote(id, $("polls-list").querySelector(`.vote-note-input[data-note-input="${CSS.escape(id)}"]`)?.value || "");
-    }
-    if (btn.dataset.toggleMembers) {
-      haptic(); const id = btn.dataset.toggleMembers;
-      state.expandedMemberLists.has(id) ? state.expandedMemberLists.delete(id) : state.expandedMemberLists.add(id);
-      return renderPolls();
-    }
-    if (btn.dataset.pollMenu) return openPollActionsMenu(pollsObj[btn.dataset.pollMenu]);
-    if (btn.dataset.refinePoll) return openRefineTimeModal(pollsObj[btn.dataset.refinePoll]);
-    if (btn.dataset.counterPoll) return openCounterProposalModal(pollsObj[btn.dataset.counterPoll]);
-    if (btn.dataset.editPoll) return openEditPollModal(pollsObj[btn.dataset.editPoll]);
-    if (btn.dataset.confirmPoll) return openConfirmPollModal(pollsObj[btn.dataset.confirmPoll]);
-    if (btn.dataset.delPoll) return promptDeletePoll(pollsObj[btn.dataset.delPoll]);
-    if (btn.dataset.remindPoll) {
-      const p = pollsObj[btn.dataset.remindPoll];
-      if (p) sendPollReminder(p, Object.values(state.currentEnsembleData?.members || {}).filter((m) => !p.votes?.[m.id]));
-    }
-  });
-
-  $("polls-list").addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target.classList?.contains("vote-note-input")) {
-      e.preventDefault(); haptic(); e.target.blur(); saveVoteNote(e.target.dataset.noteInput, e.target.value);
-    }
-    if (e.key === "Enter" && e.target.classList?.contains("loc-inline-input")) {
-      e.preventDefault(); haptic(); e.target.blur(); savePollLocationSuggestion(e.target.dataset.locInput, e.target.value);
-    }
-  });
+  const handlePollClick=async e=>{
+    const btn=e.target.closest('button');if(!btn)return;const d=btn.dataset,polls=state.currentEnsembleData?.polls||{},arch=state.currentEnsembleData?.archivedPolls||{};
+    if(btn.hasAttribute('data-empty-add-poll')){resetPollSlots();return openModal('modal-poll');}
+    if(d.toggleSection){collapsed.has(d.toggleSection)?collapsed.delete(d.toggleSection):collapsed.add(d.toggleSection);return renderPolls();}
+    if(d.selectPoll){selected.has(d.selectPoll)?selected.delete(d.selectPoll):selected.add(d.selectPoll);return renderPolls();}
+    if(d.detailPoll){detailId=d.detailPoll;openModal('modal-poll-detail');renderDetail();$('poll-detail-content').querySelector('button')?.focus({preventScroll:true});return;}
+    if(d.restoreArch)return promptRestoreArchivedPoll(arch[d.restoreArch]);if(d.delArch)return promptDeleteArchivedPoll(arch[d.delArch]);
+    if(d.vote){const p=polls[d.vote];if(p?.votes?.[currentMember()]===d.val){if(btn.closest('#poll-detail-content'))closeModal('modal-poll-detail');return promptClearMyVote(p);}return writeVote(d.vote,d.val);}
+    if(d.toggleMembers){state.expandedMemberLists.has(d.toggleMembers)?state.expandedMemberLists.delete(d.toggleMembers):state.expandedMemberLists.add(d.toggleMembers);return renderPolls();}
+    const root=btn.closest('#poll-detail-content')||$('polls-list');
+    if(d.saveNote||d.saveLoc){const key=d.saveNote?'note':'loc',id=d.saveNote||d.saveLoc,el=root.querySelector(`[data-${key}-input="${CSS.escape(id)}"]`);if(!el)return;const val=el.value;el.blur();const ok=key==='note'?await saveVoteNote(id,val):await savePollLocationSuggestion(id,val);if(ok&&draftValues.get(`${key}:${id}`)===val)draftValues.delete(`${key}:${id}`);return renderPolls();}
+    if(d.pollMenu||d.refinePoll||d.counterPoll||d.confirmPoll||d.editPoll){if(btn.closest('#poll-detail-content'))closeModal('modal-poll-detail');if(d.pollMenu)return openPollActionsMenu(polls[d.pollMenu]);if(d.refinePoll)return openRefineTimeModal(polls[d.refinePoll]);if(d.counterPoll)return openCounterProposalModal(polls[d.counterPoll]);if(d.confirmPoll)return openConfirmPollModal(polls[d.confirmPoll]);if(d.editPoll)return openEditPollModal(polls[d.editPoll]);}
+    if(d.remindPoll){const p=polls[d.remindPoll];if(p)return sendPollReminder(p,Object.values(state.currentEnsembleData.members||{}).filter(m=>!p.votes?.[m.id]));}
+  };
+  for(const root of [$('polls-list'),$('poll-detail-content')]){root.addEventListener('click',handlePollClick);root.addEventListener('input',e=>{const el=e.target;if(el.dataset.noteInput)draftValues.set(`note:${el.dataset.noteInput}`,el.value);if(el.dataset.locInput)draftValues.set(`loc:${el.dataset.locInput}`,el.value);});root.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.vote-note-input,.loc-inline-input')){e.preventDefault();e.target.parentElement.querySelector('button')?.click();}});}
 
   $("btn-open-poll").addEventListener("click", () => { resetPollSlots(); openModal("modal-poll"); });
 }

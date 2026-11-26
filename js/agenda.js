@@ -19,50 +19,31 @@ export function registerAgendaHooks(h) {
   hooks = { ...hooks, ...h };
 }
 
-// Rendu Agenda (Répétitions, Cours & Concerts)
-export function renderAgenda() {
-  const container = $("agenda-list"), rehObj = state.currentEnsembleData.rehearsals || {};
-  const list = Object.values(rehObj).sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
-  if (!list.length) {
-    container.innerHTML = C18.htmlLiteral("<div class=\"empty-state\"><p>Aucun événement planifié pour le moment.</p><button type=\"button\" class=\"btn-secondary btn-sm\" data-go-avail>Proposer des disponibilités</button></div>");
-    return;
-  }
-  const today = new Date().toISOString().split("T")[0];
-  const upcoming = list.filter((r) => r.date >= today), past = list.filter((r) => r.date < today).reverse();
-
-  const cardHtml = (r, isNext, isPast) => {
-    const tMeta = getEventMeta(r.eventType);
-    const isConcert = r.eventType === "concert";
-    const concertInfos = [];
-    if (isConcert && r.soundcheckTime) concertInfos.push(C18.h`<span class="concert-detail-item"><strong>Raccord :</strong> ${esc(r.soundcheckTime)}</span>`);
-    if (isConcert && r.dressCode) concertInfos.push(C18.h`<span class="concert-detail-item"><strong>Tenue :</strong> ${esc(r.dressCode)}</span>`);
-    if (isConcert && r.concertFee) concertInfos.push(C18.h`<span class="concert-detail-item"><strong>Cachet / Tarif :</strong> ${esc(r.concertFee)}</span>`);
-
-    const kickerHtml = isNext
-      ? `<div class="card-kicker ${isConcert ? "concert" : r.eventType === "cours" ? "cours" : "emerald"}">${esc(tMeta.nextLabel)}</div>`
-      : "";
-
-    return C18.h`
-    <article class="card ${isNext ? "featured" : ""} ${tMeta.cardCls}" ${isPast ? 'style="opacity:.72"' : ""}>
-      ${kickerHtml}
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-        <h3 class="card-date" ${isPast ? 'style="font-size:16px"' : ""}>${esc(formatDateFr(r.date))}</h3>
-        <span class="event-type-badge ${tMeta.badgeCls}">${esc(tMeta.label)}</span>
-      </div>
-      <div class="card-meta" style="margin-top:4px">${isPast ? `${esc(r.startTime)} – ${esc(r.endTime)} • ${esc(C18.localizeLocation(r.location))}` : `<span class="time-pill">${esc(r.startTime)} – ${esc(r.endTime)}</span> <strong>${esc(C18.localizeLocation(r.location))}</strong>`}</div>
-      ${concertInfos.length ? `<div class="concert-details-grid">${concertInfos.join(" • ")}</div>` : ""}
-      ${r.program ? `<div class="${isPast ? "card-meta" : "card-program"}">${isPast ? "" : C18.htmlLiteral("<strong>Programme :</strong> ")}${esc(r.program)}</div>` : ""}
-      ${!isPast && r.notes ? `<div class="card-meta" style="margin-top:6px">${esc(r.notes)}</div>` : ""}
-      <div class="card-actions">
-        ${isPast ? "" : C18.h`<button type="button" class="btn-secondary btn-sm" data-ics="${esc(r.id)}">Calendrier (.ics)</button>`}
-        <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-edit-reh="${esc(r.id)}">Modifier</button>
-        <button type="button" class="btn-secondary ${isPast ? "btn-xs" : "btn-sm"}" data-del-reh="${esc(r.id)}">${isPast ? C18.t("Supprimer") : C18.t("Annuler")}</button>
-      </div>
-    </article>`;
-  };
-
-  container.innerHTML = upcoming.map((r, i) => cardHtml(r, i === 0, false)).join("")
-    + (past.length ? C18.h`<div class="divider">Événements passés (${past.length})</div>${past.map((r) => cardHtml(r, false, true)).join("")}` : "");
+// Agenda : prochain événement, chronologie par mois, filtres et détails dépliables.
+const tr = (key,...args)=>esc(C18.t(key,...args));
+let agendaScope=null, agendaFilter='all', agendaPast=false, agendaExpanded=new Set();
+const localDate = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function agendaTile(iso){const d=new Date(iso+'T12:00:00');return `<div class="smart-date"><span>${esc(d.toLocaleDateString(locale,{weekday:'short'}))}</span><strong>${d.getDate()}</strong><span>${esc(d.toLocaleDateString(locale,{month:'short'}))}</span></div>`;}
+function relativeDay(iso,today){const days=Math.round((Date.parse(iso+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000);return days===0?C18.t('Aujourd’hui'):days===1?C18.t('Demain'):days>1?C18.t('Dans {0} jours',days):'';}
+function agendaCard(r,isNext,isPast,today){
+  const meta=getEventMeta(r.eventType), expanded=agendaExpanded.has(r.id), concert=r.eventType==='concert';
+  const more=expanded||isNext;
+  const details=[concert&&r.soundcheckTime?`<div><strong>${tr('Raccord :')}</strong> ${esc(r.soundcheckTime)}</div>`:'',concert&&r.dressCode?`<div><strong>${tr('Tenue :')}</strong> ${esc(r.dressCode)}</div>`:'',concert&&r.concertFee?`<div><strong>${tr('Cachet / Tarif :')}</strong> ${esc(r.concertFee)}</div>`:''].filter(Boolean).join('');
+  return `<article class="card agenda-event ${meta.cardCls} ${isNext?'agenda-next':''} ${isPast?'agenda-past':''}">${isNext?`<div class="agenda-next-label"><span>● ${tr('Prochain événement')}</span><span>${esc(relativeDay(r.date,today))}</span></div>`:''}<div class="agenda-event-main">${agendaTile(r.date)}<div class="agenda-event-info"><div class="agenda-event-type ${meta.badgeCls}">${esc(meta.label)}</div><strong class="agenda-time">${esc(r.startTime)} – ${esc(r.endTime)}</strong><small>${esc(C18.localizeLocation(r.location||'Lieu à confirmer'))}</small>${!isNext&&r.program?`<small class="agenda-program-preview">${esc(r.program)}</small>`:''}</div><button type="button" class="smart-icon" data-expand-reh="${esc(r.id)}" aria-label="${tr('Détails de l’événement')}" aria-expanded="${expanded}">${expanded?'⌃':'⌄'}</button></div>${more?`<div class="agenda-event-detail">${details?`<div class="concert-details-grid">${details}</div>`:''}${r.program?`<div class="agenda-program"><strong>${tr('Programme :')}</strong> ${esc(r.program)}</div>`:''}${r.notes?`<div class="agenda-notes">${esc(r.notes)}</div>`:''}${isNext&&!expanded?`<button type="button" class="btn-secondary btn-full" data-ics="${esc(r.id)}">${tr('Ajouter à mon calendrier')}</button>`:''}</div>`:''}${expanded?`<div class="agenda-actions">${!isPast?`<button type="button" class="btn-secondary" data-ics="${esc(r.id)}">${tr('Calendrier (.ics)')}</button>`:''}<button type="button" class="btn-secondary" data-edit-reh="${esc(r.id)}">${tr('Modifier')}</button><button type="button" class="btn-del-subtle" data-del-reh="${esc(r.id)}">${tr(isPast?'Supprimer':'Annuler')}</button></div>`:''}</article>`;
+}
+function monthGroups(list,isPast,today){const groups=new Map();list.forEach(r=>{const key=r.date.slice(0,7);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);});return [...groups.entries()].map(([key,rs])=>`<section class="agenda-month"><h3>${esc(new Date(key+'-01T12:00:00').toLocaleDateString(locale,{month:'long',year:'numeric'}))}</h3>${rs.map(r=>agendaCard(r,false,isPast,today)).join('')}</section>`).join('');}
+export function renderAgenda(){
+  if(!state.currentEnsembleData)return;
+  if(agendaScope!==state.session.activeEnsembleId){agendaScope=state.session.activeEnsembleId;agendaFilter='all';agendaPast=false;agendaExpanded.clear();}
+  const container=$('agenda-list'), controls=$('agenda-controls'), today=localDate(), now=new Date(), time=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const list=Object.values(state.currentEnsembleData.rehearsals||{}).sort((a,b)=>`${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
+  const upcoming=list.filter(r=>r.date>today||(r.date===today&&(!r.endTime||r.endTime>=time))), past=list.filter(r=>!upcoming.includes(r)).reverse();
+  const type=r=>r.eventType||'rehearsal', matches=r=>agendaFilter==='all'||type(r)===agendaFilter;
+  const filtered=upcoming.filter(matches), old=past.filter(matches);
+  const count=upcoming.length;
+  controls.innerHTML=`<div class="agenda-summary"><div><strong>${count}</strong><small>${tr('Événements à venir')}</small></div><div><strong>${upcoming.filter(r=>r.date.slice(0,7)===today.slice(0,7)).length}</strong><small>${tr('Ce mois-ci')}</small></div><button type="button" class="btn-secondary" data-go-avail>${tr('Disponibilités')} →</button></div><div class="agenda-filters" role="group" aria-label="${tr('Type d’événement')}">${[['all','Tous'],['rehearsal','Répétitions'],['cours','Cours'],['concert','Concerts']].map(([k,label])=>`<button type="button" class="filter-pill ${agendaFilter===k?'active':''}" data-agenda-filter="${k}" aria-pressed="${agendaFilter===k}">${tr(label)}</button>`).join('')}</div>`;
+  const hero=filtered[0];
+  container.innerHTML=(hero?agendaCard(hero,true,false,today)+monthGroups(filtered.slice(1),false,today):`<div class="empty-state"><p>${tr(agendaFilter==='all'?'Aucun événement à venir.':'Aucun événement de ce type à venir.')}</p><button type="button" class="btn-primary" data-go-avail>${tr('Proposer des disponibilités')}</button></div>`)+(old.length?`<section class="agenda-history"><button type="button" class="smart-section-head" data-toggle-past aria-expanded="${agendaPast}"><span>◷</span><strong>${tr('Événements passés')}</strong><span class="smart-count">${old.length}</span><span>${agendaPast?'⌃':'⌄'}</span></button>${agendaPast?monthGroups(old,true,today):''}</section>`:'');
 }
 
 export function downloadICS(reh) {
@@ -83,9 +64,12 @@ export function downloadICS(reh) {
 }
 
 export function initAgendaListeners() {
+  $("agenda-controls").addEventListener("click",e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-go-avail'))return hooks.switchTab('avail');if(b.dataset.agendaFilter){agendaFilter=b.dataset.agendaFilter;return renderAgenda();}});
   $("agenda-list").addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
+    if(btn.hasAttribute('data-toggle-past')){agendaPast=!agendaPast;return renderAgenda();}
+    if(btn.dataset.expandReh){const id=btn.dataset.expandReh;agendaExpanded.has(id)?agendaExpanded.delete(id):agendaExpanded.add(id);return renderAgenda();}
     if (btn.hasAttribute("data-go-avail")) return hooks.switchTab("avail");
     const rehObj = state.currentEnsembleData?.rehearsals || {};
     if (btn.dataset.ics) return downloadICS(rehObj[btn.dataset.ics]);

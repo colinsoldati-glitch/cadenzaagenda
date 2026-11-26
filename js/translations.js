@@ -2538,3 +2538,367 @@ export const htmlPatterns = {
     "<span style=\"font-size:12px;color:var(--muted)\">No dates selected</span>"
   ]
 };
+
+// Libellés de la refonte v21 (FR / DE / EN).
+Object.assign(translations, {
+  "Liste": [
+    "Liste",
+    "List"
+  ],
+  "Comparer": [
+    "Vergleichen",
+    "Compare"
+  ],
+  "+ Proposer": [
+    "+ Vorschlagen",
+    "+ Propose"
+  ],
+  "Mode d’affichage": [
+    "Ansicht",
+    "View mode"
+  ],
+  "Vote rapide": [
+    "Schnell abstimmen",
+    "Quick vote"
+  ],
+  "Détails du créneau": [
+    "Termindetails",
+    "Slot details"
+  ],
+  "Mes réponses": [
+    "Meine Antworten",
+    "My responses"
+  ],
+  "À répondre": [
+    "Offen",
+    "To answer"
+  ],
+  "À planifier": [
+    "Zu planen",
+    "Ready to schedule"
+  ],
+  "En attente": [
+    "Ausstehend",
+    "Pending"
+  ],
+  "Toutes vos réponses sont à jour.": [
+    "Alle Antworten sind aktuell.",
+    "All your responses are up to date."
+  ],
+  "Aucun vote en attente.": [
+    "Keine offene Abstimmung.",
+    "No votes pending."
+  ],
+  "Retour aux dates": [
+    "Zurück zu den Terminen",
+    "Back to dates"
+  ],
+  "Tri : meilleurs créneaux": [
+    "Sortierung: beste Termine",
+    "Sort: best slots"
+  ],
+  "Tri : chronologique": [
+    "Sortierung: chronologisch",
+    "Sort: chronological"
+  ],
+  "Quitter la sélection": [
+    "Auswahl verlassen",
+    "Exit selection"
+  ],
+  "Sélection multiple": [
+    "Mehrfachauswahl",
+    "Select multiple"
+  ],
+  "Annuler le dernier vote": [
+    "Letzte Stimme rückgängig",
+    "Undo last vote"
+  ],
+  "{0} sélectionné(s)": [
+    "{0} ausgewählt",
+    "{0} selected"
+  ],
+  "Tout désélectionner": [
+    "Alle abwählen",
+    "Deselect all"
+  ],
+  "Tout sélectionner": [
+    "Alle auswählen",
+    "Select all"
+  ],
+  "Prêtes à planifier": [
+    "Bereit zur Planung",
+    "Ready to schedule"
+  ],
+  "À vous de répondre": [
+    "Sie sind an der Reihe",
+    "Your response needed"
+  ],
+  "En attente des autres": [
+    "Antworten anderer ausstehend",
+    "Waiting for others"
+  ],
+  "Créneaux avec indisponibilité": [
+    "Termine mit Abwesenheiten",
+    "Slots with unavailability"
+  ],
+  "{0} créneaux": [
+    "{0} Termine",
+    "{0} slots"
+  ],
+  "Disponibles": [
+    "verfügbar",
+    "available"
+  ],
+  "Incertains": [
+    "unsicher",
+    "uncertain"
+  ],
+  "Indisponibles": [
+    "nicht verfügbar",
+    "unavailable"
+  ],
+  "Sans réponse": [
+    "Keine Antwort",
+    "No response"
+  ],
+  "Tous disponibles": [
+    "Alle verfügbar",
+    "Everyone available"
+  ],
+  "{0} indisponible(s)": [
+    "{0} nicht verfügbar",
+    "{0} unavailable"
+  ],
+  "{0} réponse(s) manquante(s)": [
+    "{0} offene Antwort(en)",
+    "{0} response(s) missing"
+  ],
+  "{0} réponse(s) incertaine(s)": [
+    "{0} unsichere Antwort(en)",
+    "{0} uncertain response(s)"
+  ],
+  "Sélectionner ce créneau": [
+    "Diesen Termin auswählen",
+    "Select this slot"
+  ],
+  "Planifier (choisir l’heure)": [
+    "Planen (Uhrzeit wählen)",
+    "Schedule (choose time)"
+  ],
+  "Ajouter à l’agenda": [
+    "Zum Ensemblekalender hinzufügen",
+    "Add to ensemble calendar"
+  ],
+  "Préciser les horaires": [
+    "Uhrzeiten festlegen",
+    "Refine times"
+  ],
+  "Proposer un autre horaire": [
+    "Andere Uhrzeit vorschlagen",
+    "Suggest another time"
+  ],
+  "Votre réponse": [
+    "Ihre Antwort",
+    "Your response"
+  ],
+  "Votre précision": [
+    "Ihre Anmerkung",
+    "Your note"
+  ],
+  "Ex. disponible dès 15h": [
+    "Z. B. ab 15 Uhr verfügbar",
+    "E.g. available from 3 pm"
+  ],
+  "Lieu envisagé": [
+    "Vorgesehener Ort",
+    "Proposed location"
+  ],
+  "Lieu suggéré par {0}": [
+    "Ort vorgeschlagen von {0}",
+    "Location suggested by {0}"
+  ],
+  "Relancer ({0})": [
+    "Erinnern ({0})",
+    "Remind ({0})"
+  ],
+  "Valider dans l’agenda": [
+    "Im Kalender bestätigen",
+    "Confirm in calendar"
+  ],
+  "Absence :": [
+    "Abwesenheit:",
+    "Absence:"
+  ],
+  "Vous": [
+    "Sie",
+    "You"
+  ],
+  "Sondage archivé": [
+    "Abstimmung archiviert",
+    "Archived poll"
+  ],
+  "Récupérer": [
+    "Wiederherstellen",
+    "Restore"
+  ],
+  "Créneau": [
+    "Termin",
+    "Time slot"
+  ],
+  "Total": [
+    "Gesamt",
+    "Total"
+  ],
+  "Touchez un créneau pour voir ses détails. Touchez votre case pour choisir votre réponse.": [
+    "Tippen Sie auf einen Termin für Details oder auf Ihr Feld, um zu antworten.",
+    "Tap a slot for details or your cell to choose a response."
+  ],
+  "Ce créneau n’est plus actif.": [
+    "Dieser Termin ist nicht mehr aktiv.",
+    "This slot is no longer active."
+  ],
+  "{0} sur {1}": [
+    "{0} von {1}",
+    "{0} of {1}"
+  ],
+  "{0} répondu(s)": [
+    "{0} beantwortet",
+    "{0} answered"
+  ],
+  "Êtes-vous disponible ?": [
+    "Sind Sie verfügbar?",
+    "Are you available?"
+  ],
+  "Précision facultative": [
+    "Optionale Anmerkung",
+    "Optional note"
+  ],
+  "Précédent": [
+    "Zurück",
+    "Previous"
+  ],
+  "Passer": [
+    "Überspringen",
+    "Skip"
+  ],
+  "Parcours terminé": [
+    "Abstimmung beendet",
+    "Voting session complete"
+  ],
+  "{0} réponse(s) enregistrée(s)": [
+    "{0} Antwort(en) gespeichert",
+    "{0} response(s) saved"
+  ],
+  "{0} créneau(x) restant(s) à répondre": [
+    "{0} Termin(e) noch offen",
+    "{0} slot(s) still to answer"
+  ],
+  "Terminer": [
+    "Fertig",
+    "Done"
+  ],
+  "Dernier vote annulé.": [
+    "Letzte Stimme rückgängig gemacht.",
+    "Last vote undone."
+  ],
+  "Confirmer le vote groupé ?": [
+    "Mehrfachabstimmung bestätigen?",
+    "Confirm bulk vote?"
+  ],
+  "Cette réponse sera appliquée aux créneaux sélectionnés qui attendent encore votre vote.": [
+    "Diese Antwort gilt für die ausgewählten Termine, bei denen Ihre Stimme noch fehlt.",
+    "This response will apply to the selected slots still awaiting your vote."
+  ],
+  "Votes groupés enregistrés.": [
+    "Mehrfachabstimmung gespeichert.",
+    "Bulk votes saved."
+  ],
+  "Aujourd’hui": [
+    "Heute",
+    "Today"
+  ],
+  "Demain": [
+    "Morgen",
+    "Tomorrow"
+  ],
+  "Dans {0} jours": [
+    "In {0} Tagen",
+    "In {0} days"
+  ],
+  "Prochain événement": [
+    "Nächster Termin",
+    "Next event"
+  ],
+  "Détails de l’événement": [
+    "Termindetails",
+    "Event details"
+  ],
+  "Ajouter à mon calendrier": [
+    "Zu meinem Kalender hinzufügen",
+    "Add to my calendar"
+  ],
+  "Événements à venir": [
+    "Bevorstehende Termine",
+    "Upcoming events"
+  ],
+  "Ce mois-ci": [
+    "Diesen Monat",
+    "This month"
+  ],
+  "Type d’événement": [
+    "Veranstaltungstyp",
+    "Event type"
+  ],
+  "Tous": [
+    "Alle",
+    "All"
+  ],
+  "Répétitions": [
+    "Proben",
+    "Rehearsals"
+  ],
+  "Concerts": [
+    "Konzerte",
+    "Concerts"
+  ],
+  "Aucun événement à venir.": [
+    "Keine bevorstehenden Termine.",
+    "No upcoming events."
+  ],
+  "Aucun événement de ce type à venir.": [
+    "Keine bevorstehenden Termine dieses Typs.",
+    "No upcoming events of this type."
+  ],
+  "Événements passés": [
+    "Vergangene Termine",
+    "Past events"
+  ],
+  "Raccord :": [
+    "Anspielprobe:",
+    "Soundcheck:"
+  ],
+  "Tenue :": [
+    "Kleidung:",
+    "Dress code:"
+  ],
+  "Cachet / Tarif :": [
+    "Gage / Preis:",
+    "Fee / price:"
+  ],
+  "Programme :": [
+    "Programm:",
+    "Programme:"
+  ],
+  "Modifier mon vote": [
+    "Meine Stimme ändern",
+    "Change my vote"
+  ],
+  "{0} disponible(s) sur {1}": [
+    "{0} von {1} verfügbar",
+    "{0} of {1} available"
+  ],
+  "Ce vote a entraîné l’archivage du créneau. Il peut être récupéré dans les archives.": [
+    "Diese Stimme führte zur Archivierung des Termins. Er kann im Archiv wiederhergestellt werden.",
+    "This vote archived the slot. It can be restored from the archive."
+  ]
+});

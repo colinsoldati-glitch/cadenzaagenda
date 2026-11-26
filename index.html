@@ -184,6 +184,7 @@
         <h2 class="section-title">Agenda de l'ensemble</h2>
         <button type="button" id="btn-open-rehearsal" class="btn-primary btn-sm">+ Événement</button>
       </div>
+      <div id="agenda-controls"></div>
       <div id="agenda-list"></div>
     </section>
 
@@ -191,20 +192,18 @@
     <section id="view-avail" class="hidden">
       <div class="section-head">
         <h2 class="section-title">Disponibilités</h2>
-        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer des dates</button>
+        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer</button>
       </div>
       <div id="avail-toolbar" class="avail-toolbar hidden">
-        <div class="segmented-control" role="tablist">
-          <button type="button" class="seg-btn active" data-avail-view="cards">Cartes</button>
-          <button type="button" class="seg-btn" data-avail-view="express">Express</button>
-          <button type="button" class="seg-btn" data-avail-view="table">Tableau</button>
+        <div id="avail-overview"></div>
+        <div class="view-switch-row">
+          <div class="segmented-control smart-switch" role="group" aria-label="Mode d’affichage">
+            <button type="button" class="seg-btn active" data-avail-view="cards" aria-pressed="true">Liste</button>
+            <button type="button" class="seg-btn" data-avail-view="table" aria-pressed="false">Comparer</button>
+          </div>
+          <button type="button" id="btn-avail-archives" class="btn-secondary smart-archive" data-avail-filter="archived">Archives</button>
         </div>
-        <div class="filter-pills" role="group">
-          <button type="button" class="filter-pill active" data-avail-filter="all">Actives</button>
-          <button type="button" class="filter-pill" data-avail-filter="unvoted" id="pill-filter-unvoted">À voter</button>
-          <button type="button" class="filter-pill" data-avail-filter="consensus">Unanimité</button>
-          <button type="button" class="filter-pill" data-avail-filter="archived" id="pill-filter-archived">Archives</button>
-        </div>
+        <div id="avail-tools"></div>
       </div>
       <div id="polls-list"></div>
     </section>
@@ -294,6 +293,19 @@
   </nav>
 
   <!-- MODALES -->
+  <div id="modal-quick-vote" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="quick-vote-title">
+    <div class="modal-sheet quick-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="quick-vote-title">Vote rapide</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-quick-vote">Fermer</button></div>
+      <div id="quick-vote-content"></div>
+    </div>
+  </div>
+  <div id="modal-poll-detail" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="poll-detail-title">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="poll-detail-title">Détails du créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll-detail">Fermer</button></div>
+      <div id="poll-detail-content"></div>
+    </div>
+  </div>
+
   <div id="modal-poll-actions" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title" id="poll-actions-title">Options du créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll-actions">Fermer</button></div>
