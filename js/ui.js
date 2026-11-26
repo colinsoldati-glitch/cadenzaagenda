@@ -124,7 +124,8 @@ export function applyModeState(host, mode, period, onChange) {
     if (!eInp.value) eInp.value = "17:00";
   }
   host.querySelectorAll(".slot-mode-btn").forEach((b) => {
-    b.classList.toggle("active", b.dataset.mode === mode && (mode !== "period" || b.dataset.period === period));
+    const active = b.dataset.mode === mode && (mode !== "period" || b.dataset.period === period);
+    b.classList.toggle("active", active); b.setAttribute("aria-pressed", String(active));
   });
   if (onChange) onChange();
 }
@@ -183,7 +184,7 @@ export function renderMultiCalendar() {
   const startOffset = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(state.calYear, state.calMonth + 1, 0).getDate();
   const prevMonthDays = new Date(state.calYear, state.calMonth, 0).getDate();
-  const todayIso = new Date().toISOString().split("T")[0];
+  const now = new Date(); const todayIso = toIsoDate(now.getFullYear(), now.getMonth(), now.getDate());
 
   const cells = [];
   for (let i = startOffset - 1; i >= 0; i--) {
@@ -204,7 +205,7 @@ export function renderMultiCalendar() {
     const isSel = state.selectedCalDates.has(c.iso);
     const hasAbs = getUnavailabilityConflictsForDate(c.iso).length > 0;
     const cls = ["cal-day-btn", c.other ? "other-month" : "", c.iso === todayIso ? "today" : "", hasAbs ? "has-absence" : "", isSel ? "selected" : ""].filter(Boolean).join(" ");
-    return `<button type="button" class="${cls}" data-cal-iso="${c.iso}"><span>${c.day}</span>${hasAbs ? '<span class="cal-day-dot"></span>' : ""}</button>`;
+    return `<button type="button" class="${cls}" data-cal-iso="${c.iso}" aria-pressed="${isSel}" aria-label="${esc(new Date(c.iso+"T12:00:00").toLocaleDateString(locale,{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + (hasAbs ? " · " + C18.t("Absence signalée") : ""))}" ${c.iso < todayIso ? "disabled" : ""}><span>${c.day}</span>${hasAbs ? '<span class="cal-day-dot"></span>' : ""}</button>`;
   }).join("");
 
   const sorted = [...state.selectedCalDates].sort();
@@ -215,6 +216,9 @@ export function renderMultiCalendar() {
 }
 
 export function initCalendarControls() {
+  const gridFocus = iso => $("multi-cal-grid").querySelector(`[data-cal-iso="${iso}"]`)?.focus({preventScroll:true});
+  $("btn-cal-today").addEventListener("click", () => { const now=new Date(); state.calYear=now.getFullYear();state.calMonth=now.getMonth();renderMultiCalendar(); });
+  $("btn-cal-clear").addEventListener("click", () => { state.selectedCalDates.clear();renderMultiCalendar(); });
   $("multi-cal-grid").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-cal-iso]");
     if (!btn) return;
@@ -222,6 +226,7 @@ export function initCalendarControls() {
     const iso = btn.dataset.calIso;
     state.selectedCalDates.has(iso) ? state.selectedCalDates.delete(iso) : state.selectedCalDates.add(iso);
     renderMultiCalendar();
+    gridFocus(iso);
   });
 
   $("cal-selected-pills").addEventListener("click", (e) => {
@@ -303,10 +308,7 @@ export function openModal(id) {
     populateConcertFields("reh", null);
     if (!$("reh-date").value) $("reh-date").value = today;
   }
-  if (id === "modal-unavailability") {
-    if (!$("unavail-start").value) $("unavail-start").value = today;
-    if (!$("unavail-end").value) $("unavail-end").value = $("unavail-start").value;
-  }
+
   if (id === "modal-invite" && state.session.activeEnsembleId) {
     $("invite-link-display").textContent = getInviteUrl(state.session.activeEnsembleId);
     $("invite-code-display").textContent = state.session.activeEnsembleId;
@@ -322,6 +324,8 @@ export function openModal(id) {
   $(id).classList.add("open");
 }
 
+// Return in a single-line text field must not publish an unfinished event.
+document.addEventListener('keydown', e=>{if(e.key==='Enter'&&!e.isComposing&&e.target.matches('input[type="text"]')&&e.target.closest('#form-poll,#form-edit-poll,#form-confirm-poll,#form-rehearsal,#form-edit-rehearsal')){e.preventDefault();}});
 export function closeModal(id) {
   if (id === "modal-confirm-delete") state.pendingDeleteCallback = null;
   if (id === "modal-poll") state.refiningPollId = state.refiningFixedDate = null;
@@ -345,9 +349,5 @@ export function initModalGlobalListeners() {
     }
   });
 
-  $("unavail-start").addEventListener("change", () => {
-    if ($("unavail-start").value && (!$("unavail-end").value || $("unavail-end").value < $("unavail-start").value)) {
-      $("unavail-end").value = $("unavail-start").value;
-    }
-  });
+
 }

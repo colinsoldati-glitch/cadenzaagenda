@@ -1,4 +1,4 @@
-const CACHE_NAME = "cadenza-cache-v20.4";
+const CACHE_NAME = "cadenza-cache-v21.3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,13 @@ const APP_SHELL = [
   "./manifest.json",
   "./manifest.de.json",
   "./manifest.en.json",
+  "./manifest.dev.fr.json",
+  "./manifest.dev.de.json",
+  "./manifest.dev.en.json",
+  "./icons/dev.svg",
+  "./icons/dev-180.png",
+  "./icons/dev-192.png",
+  "./icons/dev-512.png",
   "./js/config.js",
   "./js/i18n.js",
   "./js/translations.js",

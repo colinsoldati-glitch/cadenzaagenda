@@ -2,10 +2,10 @@ import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
 import * as C18 from "./i18n.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
-import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
+import { getDatabase, ref, set, update, remove, onValue, get, runTransaction } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
 import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-export const APP_VERSION = "v20.4";
+export const APP_VERSION = "v21.3";
 export const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
 export const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
 
@@ -38,7 +38,7 @@ const app = initializeApp({
 try { getAnalytics(app); } catch (_) {}
 
 export const db = getDatabase(app);
-export { ref, set, update, remove, onValue, get, getMessaging, getToken, onMessage, isSupported };
+export { ref, set, update, remove, onValue, get, runTransaction, getMessaging, getToken, onMessage, isSupported };
 
 // État partagé de l'application
 export const state = {
@@ -49,7 +49,7 @@ export const state = {
   messagingInstance: null,
   lastNotifiedTimestamp: Number(localStorage.getItem(KEYS.evtTs) || Date.now()),
   deferredInstallPrompt: null,
-  availViewMode: "cards",
+  availViewMode: localStorage.getItem("cadenza_avail_view_v1") === "table" ? "table" : "cards",
   availFilterMode: "all",
   pendingScrollToPollId: null,
   pendingDeleteCallback: null,

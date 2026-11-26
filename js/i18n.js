@@ -67,7 +67,7 @@ function translateWhitespace(value) {
 export function initLanguage() {
   document.documentElement.lang = language;
   const manifest = document.querySelector('link[rel="manifest"]');
-  if (manifest) manifest.setAttribute('href', language === 'fr' ? './manifest.json' : `./manifest.${language}.json`);
+  if (manifest) manifest.setAttribute('href', window.CADENZA_DEV ? `./manifest.dev.${language}.json` : language === 'fr' ? './manifest.json' : `./manifest.${language}.json`);
   // This runs once, before the app renders or receives any Firebase data.
   document.querySelectorAll('option').forEach(el => {
     if (!el.hasAttribute('value')) el.setAttribute('value', el.value);

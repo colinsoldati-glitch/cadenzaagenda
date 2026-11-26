@@ -17,7 +17,17 @@
 
   <!-- Génération de l'icône Apple Touch 180x180 -->
   <script>
-    try {
+    // Netlify previews and dev.* use separate branding; production remains unchanged.
+    const devHost = /\.netlify\.app$/i.test(location.hostname) || /^dev\./i.test(location.hostname) || ["localhost", "127.0.0.1"].includes(location.hostname);
+    window.CADENZA_DEV = devHost;
+    if (devHost) {
+      document.documentElement.dataset.environment = "dev";
+      document.title = "Cadenza DEV";
+      document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "Cadenza DEV";
+      document.querySelector('link[rel="manifest"]').href = "./manifest.dev.fr.json";
+      document.querySelector('link[rel="icon"]').href = "./icons/dev.svg";
+      const l = document.createElement("link"); l.rel = "apple-touch-icon"; l.href = "./icons/dev-180.png"; document.head.appendChild(l);
+    } else try {
       const c = document.createElement("canvas");
       c.width = c.height = 180;
       const ctx = c.getContext("2d"), s = 1.8;
@@ -47,7 +57,7 @@
           <circle cx="50" cy="57" r="6.5" fill="#111827"/>
         </svg>
         <div class="brand-titles">
-          <h1 class="brand-name">Cadenza</h1>
+          <h1 class="brand-name">Cadenza <span class="dev-label" data-no-translate>DEV</span></h1>
           <div id="header-ensemble-name" class="ensemble-subtitle">Synchronisation...</div>
         </div>
       </div>
@@ -168,7 +178,7 @@
             <div class="field"><label for="create-member-name">Votre prénom</label><input type="text" id="create-member-name" placeholder="Ex: Colin" required /></div>
             <div class="field"><label for="create-member-instrument">Instrument</label><input type="text" id="create-member-instrument" placeholder="Ex: Violoncelle" required /></div>
           </div>
-          <button type="submit" id="btn-submit-create" class="btn-secondary btn-full">Créer et inviter les membres</button>
+          <label class="toggle-row" for="create-manager"><input type="checkbox" id="create-manager"/><span>Me nommer responsable de l’ensemble (facultatif)</span></label><button type="submit" id="btn-submit-create" class="btn-secondary btn-full">Créer et inviter les membres</button>
         </form>
       </div>
     </section>
@@ -184,6 +194,7 @@
         <h2 class="section-title">Agenda de l'ensemble</h2>
         <button type="button" id="btn-open-rehearsal" class="btn-primary btn-sm">+ Événement</button>
       </div>
+      <div id="agenda-controls"></div>
       <div id="agenda-list"></div>
     </section>
 
@@ -191,20 +202,18 @@
     <section id="view-avail" class="hidden">
       <div class="section-head">
         <h2 class="section-title">Disponibilités</h2>
-        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer des dates</button>
+        <button type="button" id="btn-open-poll" class="btn-primary btn-sm">+ Proposer</button>
       </div>
       <div id="avail-toolbar" class="avail-toolbar hidden">
-        <div class="segmented-control" role="tablist">
-          <button type="button" class="seg-btn active" data-avail-view="cards">Cartes</button>
-          <button type="button" class="seg-btn" data-avail-view="express">Express</button>
-          <button type="button" class="seg-btn" data-avail-view="table">Tableau</button>
+        <div id="avail-overview"></div>
+        <div class="view-switch-row">
+          <div class="segmented-control smart-switch" role="group" aria-label="Mode d’affichage">
+            <button type="button" class="seg-btn active" data-avail-view="cards" aria-pressed="true">Liste</button>
+            <button type="button" class="seg-btn" data-avail-view="table" aria-pressed="false">Comparer</button>
+          </div>
+          <button type="button" id="btn-avail-archives" class="btn-secondary smart-archive" data-avail-filter="archived">Archives</button>
         </div>
-        <div class="filter-pills" role="group">
-          <button type="button" class="filter-pill active" data-avail-filter="all">Actives</button>
-          <button type="button" class="filter-pill" data-avail-filter="unvoted" id="pill-filter-unvoted">À voter</button>
-          <button type="button" class="filter-pill" data-avail-filter="consensus">Unanimité</button>
-          <button type="button" class="filter-pill" data-avail-filter="archived" id="pill-filter-archived">Archives</button>
-        </div>
+        <div id="avail-tools"></div>
       </div>
       <div id="polls-list"></div>
     </section>
@@ -227,7 +236,7 @@
 
       <div class="card">
         <div class="card-kicker">Musiciens (<span id="members-count">0</span>)</div>
-        <div id="members-list"></div>
+        <div id="ensemble-manager-panel" class="manager-panel"></div><div id="members-list"></div>
       </div>
 
       <div class="card">
@@ -294,6 +303,19 @@
   </nav>
 
   <!-- MODALES -->
+  <div id="modal-quick-vote" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="quick-vote-title">
+    <div class="modal-sheet quick-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="quick-vote-title">Vote rapide</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-quick-vote">Fermer</button></div>
+      <div id="quick-vote-content"></div>
+    </div>
+  </div>
+  <div id="modal-poll-detail" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="poll-detail-title">
+    <div class="modal-sheet">
+      <div class="modal-header"><h3 class="modal-title" id="poll-detail-title">Détails du créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll-detail">Fermer</button></div>
+      <div id="poll-detail-content"></div>
+    </div>
+  </div>
+
   <div id="modal-poll-actions" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title" id="poll-actions-title">Options du créneau</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll-actions">Fermer</button></div>
@@ -330,11 +352,11 @@
       <!-- ONGLET 1 : DIFFUSER UNE POP-UP -->
       <div id="admin-panel-publish">
         <div class="card" style="padding: 12px 14px; margin-bottom: 16px;">
-          <div class="card-kicker">Pop-up actuellement active</div>
+          <div class="card-kicker">Pop-up actives (maximum 2)</div>
           <div id="admin-current-announcement" style="font-size: 13.5px; color: var(--muted); margin-top: 4px;">Aucune pop-up publiée.</div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
-            <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Revoir la pop-up</button>
-            <button type="button" id="btn-admin-clear-announcement" class="btn-del-subtle btn-xs hidden">Désactiver</button>
+            <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Prévisualiser la séquence</button>
+            <button type="button" id="btn-admin-clear-announcement" class="btn-del-subtle btn-xs hidden">Tout désactiver</button>
           </div>
         </div>
 
@@ -407,7 +429,7 @@
 
           <div style="display: grid; gap: 8px;">
             <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser la pop-up</button>
-            <button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
+            <p id="admin-queue-help" class="admin-queue-help" aria-live="polite"></p><button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
           </div>
         </form>
       </div>
@@ -511,6 +533,7 @@
       <div class="whats-new-hero">
         <span class="whats-new-badge" id="whats-new-version-badge">Mise à jour</span>
         <div id="whats-new-subtitle" style="font-size: 14.5px; font-weight: 600; color: var(--fg);">Découvrez les dernières améliorations :</div>
+        <div id="whats-new-progress" class="popup-progress hidden" aria-live="polite"></div>
         <div id="whats-new-date" style="font-size: 12px; color: var(--muted); margin-top: 3px;"></div>
       </div>
       <div id="whats-new-dynamic-body"></div>
@@ -544,7 +567,7 @@
         </div>
         <div id="confirm-poll-concert-fields"></div>
         <div class="field"><label for="confirm-poll-location">Lieu</label><input type="text" id="confirm-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" required /></div>
-        <div class="field"><label for="confirm-poll-program">Programme (optionnel)</label><input type="text" id="confirm-poll-program" placeholder="Ex: Lecture du 2e mouvement" /></div>
+        <div class="field"><label for="confirm-poll-program">Programme (optionnel)</label><textarea id="confirm-poll-program" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <button type="submit" class="btn-confirm btn-full">Ajouter à l'agenda centralisé</button>
       </form>
     </div>
@@ -561,7 +584,7 @@
         <div id="edit-poll-mode-holder"></div>
         <div id="edit-poll-archive-warning" class="alert-box hidden"></div>
         <div class="field"><label for="edit-poll-location">Lieu envisagé (optionnel)</label><input type="text" id="edit-poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /></div>
-        <div class="field"><label for="edit-poll-note">Programme / Détails (optionnel)</label><input type="text" id="edit-poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
+        <div class="field"><label for="edit-poll-note">Programme / Détails (optionnel)</label><textarea id="edit-poll-note" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <p style="font-size: 12.5px; color: var(--muted); margin: 0 0 14px;">Si vous modifiez la date ou l'horaire, les votes existants seront réinitialisés.</p>
         <button type="submit" id="btn-submit-edit-poll" class="btn-primary btn-full">Enregistrer les modifications</button>
       </form>
@@ -572,12 +595,18 @@
     <div class="modal-sheet">
       <div class="modal-header"><h3 class="modal-title">Déclarer une indisponibilité</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-unavailability">Fermer</button></div>
       <form id="form-unavailability">
-        <div class="row-2">
-          <div class="field"><label for="unavail-start">Du</label><input type="date" id="unavail-start" required /></div>
-          <div class="field"><label for="unavail-end">Au (inclus)</label><input type="date" id="unavail-end" required /></div>
+        <div class="absence-calendar">
+          <div class="absence-cal-nav"><button type="button" id="absence-prev" class="btn-secondary" aria-label="Mois précédent">‹</button><div><strong id="absence-month"></strong><button type="button" id="absence-today" class="btn-secondary btn-xs">Aujourd’hui</button></div><button type="button" id="absence-next" class="btn-secondary" aria-label="Mois suivant">›</button></div>
+          <div class="multi-cal-weekdays" id="absence-weekdays"></div>
+          <div id="absence-grid" class="absence-grid" role="group" aria-label="Sélection des jours d’absence"></div>
+          <div class="absence-legend"><span><i class="absence-key selected"></i> Sélectionné</span><span><i class="absence-key existing"></i> Déjà déclaré</span></div>
+          <p class="absence-hint">Touchez les jours un par un ou glissez pour sélectionner une période.</p>
+          <button type="button" id="absence-range" class="btn-secondary btn-full" aria-pressed="false">Choisir une plage en deux touches</button>
+          <div id="absence-range-hint" class="absence-hint" aria-live="polite"></div>
         </div>
+        <div class="absence-summary"><div class="absence-summary-head"><strong id="absence-count" aria-live="polite"></strong><button type="button" id="absence-clear" class="btn-secondary btn-xs">Tout effacer</button></div><div id="absence-periods"></div></div>
         <div class="field"><label for="unavail-reason">Motif (optionnel)</label><input type="text" id="unavail-reason" maxlength="60" placeholder="Ex: Vacances, Examens, Tournée" /></div>
-        <button type="submit" class="btn-primary btn-full">Enregistrer cette période</button>
+        <div class="absence-save-footer"><button type="submit" id="absence-save" class="btn-primary btn-full" disabled>Enregistrer les absences</button></div>
       </form>
     </div>
   </div>
@@ -625,7 +654,7 @@
         </div>
         <div id="edit-reh-concert-fields"></div>
         <div class="field"><label for="edit-reh-location">Lieu</label><input type="text" id="edit-reh-location" required /></div>
-        <div class="field"><label for="edit-reh-program">Programme</label><input type="text" id="edit-reh-program" /></div>
+        <div class="field"><label for="edit-reh-program">Programme</label><textarea id="edit-reh-program" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <div class="field"><label for="edit-reh-notes">Notes (optionnel)</label><textarea id="edit-reh-notes" rows="2"></textarea></div>
         <button type="submit" class="btn-primary btn-full">Enregistrer les modifications</button>
       </form>
@@ -662,78 +691,86 @@
     </div>
   </div>
 
-  <!-- Modale Proposition de dates (Multi-Sélection Calendrier + Mode Précision) -->
-  <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des dates</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
-      <div id="poll-refine-banner" class="info-banner-box hidden"></div>
+  <!-- Proposition de dates et horaires -->
+  <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-poll-title">
+    <div class="modal-sheet proposal-sheet">
+      <div class="modal-header proposal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des dates</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
       <form id="form-poll" novalidate>
-        <div id="poll-type-holder"></div>
-
-        <!-- Mode Multi-Dates Tap-Tap-Tap (Calendrier) -->
-        <div id="poll-calendar-wrapper">
-          <div class="multi-cal-box">
-            <div class="multi-cal-header">
-              <button type="button" id="btn-cal-prev" class="btn-secondary btn-xs" aria-label="Mois précédent">←</button>
-              <span id="cal-month-label" class="multi-cal-month">—</span>
-              <button type="button" id="btn-cal-next" class="btn-secondary btn-xs" aria-label="Mois suivant">→</button>
+        <div id="proposal-progress" class="wizard-progress" aria-label="Progression"></div><div class="proposal-body">
+          <div id="poll-refine-banner" class="info-banner-box hidden"></div><div class="proposal-step proposal-type-title"><strong>Type d'événement</strong></div>
+          <div id="poll-type-holder"></div>
+          <div id="poll-calendar-wrapper">
+            <div class="proposal-step"><span class="proposal-number">1</span><strong>Choisir les dates</strong><span id="proposal-date-count" class="proposal-count" aria-live="polite"></span></div>
+            <div id="proposal-date-editor" class="multi-cal-box">
+              <div class="multi-cal-header">
+                <button type="button" id="btn-cal-prev" class="btn-secondary" aria-label="Mois précédent">‹</button>
+                <div class="proposal-month"><span id="cal-month-label" class="multi-cal-month">—</span><button type="button" id="btn-cal-today" class="proposal-link">Aujourd'hui</button></div>
+                <button type="button" id="btn-cal-next" class="btn-secondary" aria-label="Mois suivant">›</button>
+              </div>
+              <div class="multi-cal-weekdays"><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span></div>
+              <div id="multi-cal-grid" class="multi-cal-grid"></div>
+              <div class="proposal-calendar-legend"><span>Touchez les jours souhaités</span><span><span class="cal-day-dot"></span> Absence signalée</span></div>
+              <div class="proposal-selection-head"><strong>Dates sélectionnées</strong><button type="button" class="proposal-link" id="btn-cal-clear">Tout effacer</button></div>
+              <div id="cal-selected-pills" class="selected-dates-pills"></div>
+              <button type="button" id="proposal-go-times" class="btn-secondary btn-full proposal-go-times" disabled>Configurer les horaires ↓</button>
             </div>
-            <div class="multi-cal-weekdays"><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span></div>
-            <div id="multi-cal-grid" class="multi-cal-grid"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:11.5px;color:var(--muted);">
-              <span>Touchez plusieurs jours pour les sélectionner</span>
-              <span style="display:inline-flex;align-items:center;gap:4px;color:var(--no-fg);"><span class="cal-day-dot"></span> Absence signalée</span>
+            <button type="button" id="proposal-edit-dates" class="wizard-summary hidden"></button><div id="proposal-times-stage" class="hidden"><div class="proposal-step" id="proposal-times-heading"><span class="proposal-number">2</span><strong>Choisir les horaires</strong></div>
+            <div class="proposal-scope" role="group" aria-label="Organisation des horaires">
+              <button type="button" id="proposal-shared" aria-pressed="true" class="active">Mêmes horaires</button>
+              <button type="button" id="proposal-custom" aria-pressed="false">Par journée</button>
             </div>
-            <div id="cal-selected-pills" class="selected-dates-pills"></div>
+            <p id="proposal-scope-hint" class="proposal-hint"></p>
+            <div id="proposal-shared-area">
+              <div id="poll-global-mode-holder" class="poll-slot-row proposal-timing"></div>
+              <div id="proposal-extra-times"></div>
+              <button type="button" id="proposal-add-shared" class="btn-secondary btn-full proposal-add">+ Ajouter un horaire</button>
+            </div>
+            <div id="proposal-custom-area" class="hidden"></div><button type="button" id="proposal-go-review" class="btn-primary btn-full wizard-next">Continuer vers les détails →</button></div><button type="button" id="proposal-edit-times" class="wizard-summary hidden"></button>
           </div>
-          <div id="poll-global-mode-holder" class="poll-slot-row"></div>
-        </div>
+          <div id="poll-slots-wrapper" class="hidden">
+            <div class="proposal-step"><span class="proposal-number">2</span><strong>Choisir les horaires</strong></div>
+            <div id="proposal-fixed-date" class="proposal-fixed-date"></div>
+            <div id="poll-slots-container"></div>
+            <button type="button" id="btn-add-poll-slot" class="btn-secondary btn-full proposal-add">+ Ajouter un autre horaire ce jour</button>
+          </div>
+          <div id="proposal-review-stage" class="hidden"><div class="proposal-step"><span class="proposal-number">3</span><strong>Lieu et programme</strong></div><details id="proposal-options" class="proposal-options">
+            <summary><strong>Lieu et programme</strong><span>Facultatif</span></summary>
+            <div class="field"><label for="poll-location">Lieu envisagé / suggéré (optionnel)</label><input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /><div id="poll-location-suggestions" class="location-suggestions-row hidden"></div></div>
+            <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><textarea id="poll-note" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
+          </details>
+          <div id="poll-replace-row" class="hidden"><label class="toggle-row" for="poll-replace-checkbox"><input type="checkbox" id="poll-replace-checkbox" checked /><span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span></label></div>
+                    <details id="proposal-preview" class="proposal-options proposal-preview"><summary><strong>Récapitulatif</strong><span id="proposal-preview-count"></span></summary><div id="proposal-preview-list"></div></details>
+          </div><div id="poll-archive-lock-warning" class="alert-box hidden"></div>
+          <div id="poll-unavail-warning" class="alert-box hidden"></div>
+          <div id="proposal-validation" class="alert-box hidden" role="status"></div>
 
-        <!-- Mode Multi-Horaires (pour préciser une journée) -->
-        <div id="poll-slots-wrapper" class="hidden">
-          <div id="poll-slots-container"></div>
-          <div style="margin-bottom: 16px;"><button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter un autre horaire ce jour</button></div>
         </div>
-
-        <div id="poll-archive-lock-warning" class="alert-box hidden"></div>
-        <div id="poll-unavail-warning" class="alert-box hidden"></div>
-        <div class="field">
-          <label for="poll-location">Lieu envisagé / suggéré (optionnel)</label>
-          <input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" />
-          <div id="poll-location-suggestions" class="location-suggestions-row hidden"></div>
-        </div>
-        <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
-        <div id="poll-replace-row" class="hidden" style="margin-bottom: 14px;">
-          <label class="toggle-row" for="poll-replace-checkbox" style="margin-top: 0;">
-            <input type="checkbox" id="poll-replace-checkbox" checked />
-            <span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span>
-          </label>
-        </div>
-        <button type="submit" id="btn-submit-poll" class="btn-primary btn-full">Soumettre les dates aux membres</button>
+        <div class="proposal-footer"><div id="proposal-footer-status" class="proposal-hint" aria-live="polite"></div><button type="submit" id="btn-submit-poll" class="btn-primary btn-full" disabled>Envoyer les propositions</button></div>
       </form>
     </div>
   </div>
 
   <!-- Modale Planification directe dans l'Agenda -->
   <div id="modal-rehearsal" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title" id="modal-reh-title">Planifier un événement</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button></div>
-      <form id="form-rehearsal">
-        <div id="reh-type-holder"></div>
+    <div class="modal-sheet event-sheet">
+      <div class="modal-header event-header"><h3 class="modal-title" id="modal-reh-title">Planifier un événement</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-rehearsal">Fermer</button></div>
+      <form id="form-rehearsal"><div class="event-body"><section class="event-form-group"><div class="event-step"><span>1</span><strong>Type d'événement</strong></div>
+        <div id="reh-type-holder"></div></section><section class="event-form-group"><div class="event-step"><span>2</span><strong>Date et horaires</strong></div>
         <div class="field"><label for="reh-date">Date</label><input type="date" id="reh-date" required /></div>
         <div class="row-2">
           <div class="field"><label for="reh-start" id="lbl-reh-start">Début</label><input type="time" id="reh-start" value="14:00" required /></div>
           <div class="field"><label for="reh-end" id="lbl-reh-end">Fin</label><input type="time" id="reh-end" value="17:00" required /></div>
         </div>
-        <div id="reh-concert-fields"></div>
-        <div class="field"><label for="reh-location">Lieu</label><input type="text" id="reh-location" placeholder="Ex: Sion, Temple de Lutry, Salle 103..." required /></div>
-        <div class="field"><label for="reh-program">Programme</label><input type="text" id="reh-program" placeholder="Ex: Beethoven Op. 18 n°4 — Allegro" /></div>
+        <div class="event-presets"><button type="button" data-reh-preset="09:00,12:00">09h – 12h</button><button type="button" data-reh-preset="14:00,17:00">14h – 17h</button><button type="button" data-reh-preset="18:00,21:00">18h – 21h</button></div><div id="reh-duration" class="form-hint" aria-live="polite"></div></section><section class="event-form-group"><div class="event-step"><span>3</span><strong>Lieu</strong></div>
+        <div class="field"><label for="reh-location">Lieu</label><input type="text" id="reh-location" placeholder="Ex: Sion, Temple de Lutry, Salle 103..." required /></div></section><section class="event-form-group"><div class="event-step"><span>4</span><strong>Programme et informations</strong></div><div id="reh-concert-fields"></div>
+        <div class="field"><label for="reh-program">Programme</label><textarea id="reh-program" class="program-input" rows="3" placeholder="Une pièce ou un mouvement par ligne"></textarea><small class="form-hint">Retour à la ligne pour ajouter une pièce.</small></div>
         <div class="field"><label for="reh-notes">Notes complémentaires (optionnel)</label><textarea id="reh-notes" rows="2"></textarea></div>
-        <button type="submit" class="btn-primary btn-full">Enregistrer dans l'agenda</button>
+        </section></div><div class="event-footer"><div id="reh-form-summary" class="form-hint" aria-live="polite"></div><button type="submit" class="btn-primary btn-full">Enregistrer dans l'agenda</button></div>
       </form>
     </div>
   </div>
 
+  <div id="modal-ensemble-manager" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manager-title"><div class="modal-sheet"><div class="modal-header"><h3 class="modal-title" id="manager-title">Gestion des membres</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-ensemble-manager">Fermer</button></div><form id="form-ensemble-manager"><p class="form-hint">Sans responsable, chaque membre peut gérer les autres. Avec un responsable, seul celui-ci peut modifier ou retirer les autres membres.</p><div class="field"><label for="manager-select">Responsable de l’ensemble</label><select id="manager-select"></select></div><p class="form-hint">Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.</p><button type="submit" class="btn-primary btn-full">Enregistrer</button></form></div></div>
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>

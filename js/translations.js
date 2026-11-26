@@ -2538,3 +2538,708 @@ export const htmlPatterns = {
     "<span style=\"font-size:12px;color:var(--muted)\">No dates selected</span>"
   ]
 };
+
+// Libellés de la refonte v21 (FR / DE / EN).
+Object.assign(translations, {
+  "Liste": [
+    "Liste",
+    "List"
+  ],
+  "Comparer": [
+    "Vergleichen",
+    "Compare"
+  ],
+  "+ Proposer": [
+    "+ Vorschlagen",
+    "+ Propose"
+  ],
+  "Mode d’affichage": [
+    "Ansicht",
+    "View mode"
+  ],
+  "Vote rapide": [
+    "Schnell abstimmen",
+    "Quick vote"
+  ],
+  "Détails du créneau": [
+    "Termindetails",
+    "Slot details"
+  ],
+  "Mes réponses": [
+    "Meine Antworten",
+    "My responses"
+  ],
+  "À répondre": [
+    "Offen",
+    "To answer"
+  ],
+  "À planifier": [
+    "Zu planen",
+    "Ready to schedule"
+  ],
+  "En attente": [
+    "Ausstehend",
+    "Pending"
+  ],
+  "Toutes vos réponses sont à jour.": [
+    "Alle Antworten sind aktuell.",
+    "All your responses are up to date."
+  ],
+  "Aucun vote en attente.": [
+    "Keine offene Abstimmung.",
+    "No votes pending."
+  ],
+  "Retour aux dates": [
+    "Zurück zu den Terminen",
+    "Back to dates"
+  ],
+  "Tri : meilleurs créneaux": [
+    "Sortierung: beste Termine",
+    "Sort: best slots"
+  ],
+  "Tri : chronologique": [
+    "Sortierung: chronologisch",
+    "Sort: chronological"
+  ],
+  "Quitter la sélection": [
+    "Auswahl verlassen",
+    "Exit selection"
+  ],
+  "Sélection multiple": [
+    "Mehrfachauswahl",
+    "Select multiple"
+  ],
+  "Annuler le dernier vote": [
+    "Letzte Stimme rückgängig",
+    "Undo last vote"
+  ],
+  "{0} sélectionné(s)": [
+    "{0} ausgewählt",
+    "{0} selected"
+  ],
+  "Tout désélectionner": [
+    "Alle abwählen",
+    "Deselect all"
+  ],
+  "Tout sélectionner": [
+    "Alle auswählen",
+    "Select all"
+  ],
+  "Prêtes à planifier": [
+    "Bereit zur Planung",
+    "Ready to schedule"
+  ],
+  "À vous de répondre": [
+    "Sie sind an der Reihe",
+    "Your response needed"
+  ],
+  "En attente des autres": [
+    "Antworten anderer ausstehend",
+    "Waiting for others"
+  ],
+  "Créneaux avec indisponibilité": [
+    "Termine mit Abwesenheiten",
+    "Slots with unavailability"
+  ],
+  "{0} créneaux": [
+    "{0} Termine",
+    "{0} slots"
+  ],
+  "Disponibles": [
+    "verfügbar",
+    "available"
+  ],
+  "Incertains": [
+    "unsicher",
+    "uncertain"
+  ],
+  "Indisponibles": [
+    "nicht verfügbar",
+    "unavailable"
+  ],
+  "Sans réponse": [
+    "Keine Antwort",
+    "No response"
+  ],
+  "Tous disponibles": [
+    "Alle verfügbar",
+    "Everyone available"
+  ],
+  "{0} indisponible(s)": [
+    "{0} nicht verfügbar",
+    "{0} unavailable"
+  ],
+  "{0} réponse(s) manquante(s)": [
+    "{0} offene Antwort(en)",
+    "{0} response(s) missing"
+  ],
+  "{0} réponse(s) incertaine(s)": [
+    "{0} unsichere Antwort(en)",
+    "{0} uncertain response(s)"
+  ],
+  "Sélectionner ce créneau": [
+    "Diesen Termin auswählen",
+    "Select this slot"
+  ],
+  "Planifier (choisir l’heure)": [
+    "Planen (Uhrzeit wählen)",
+    "Schedule (choose time)"
+  ],
+  "Ajouter à l’agenda": [
+    "Zum Ensemblekalender hinzufügen",
+    "Add to ensemble calendar"
+  ],
+  "Préciser les horaires": [
+    "Uhrzeiten festlegen",
+    "Refine times"
+  ],
+  "Proposer un autre horaire": [
+    "Andere Uhrzeit vorschlagen",
+    "Suggest another time"
+  ],
+  "Votre réponse": [
+    "Ihre Antwort",
+    "Your response"
+  ],
+  "Votre précision": [
+    "Ihre Anmerkung",
+    "Your note"
+  ],
+  "Ex. disponible dès 15h": [
+    "Z. B. ab 15 Uhr verfügbar",
+    "E.g. available from 3 pm"
+  ],
+  "Lieu envisagé": [
+    "Vorgesehener Ort",
+    "Proposed location"
+  ],
+  "Lieu suggéré par {0}": [
+    "Ort vorgeschlagen von {0}",
+    "Location suggested by {0}"
+  ],
+  "Relancer ({0})": [
+    "Erinnern ({0})",
+    "Remind ({0})"
+  ],
+  "Valider dans l’agenda": [
+    "Im Kalender bestätigen",
+    "Confirm in calendar"
+  ],
+  "Absence :": [
+    "Abwesenheit:",
+    "Absence:"
+  ],
+  "Vous": [
+    "Sie",
+    "You"
+  ],
+  "Sondage archivé": [
+    "Abstimmung archiviert",
+    "Archived poll"
+  ],
+  "Récupérer": [
+    "Wiederherstellen",
+    "Restore"
+  ],
+  "Créneau": [
+    "Termin",
+    "Time slot"
+  ],
+  "Total": [
+    "Gesamt",
+    "Total"
+  ],
+  "Touchez un créneau pour voir ses détails. Touchez votre case pour choisir votre réponse.": [
+    "Tippen Sie auf einen Termin für Details oder auf Ihr Feld, um zu antworten.",
+    "Tap a slot for details or your cell to choose a response."
+  ],
+  "Ce créneau n’est plus actif.": [
+    "Dieser Termin ist nicht mehr aktiv.",
+    "This slot is no longer active."
+  ],
+  "{0} sur {1}": [
+    "{0} von {1}",
+    "{0} of {1}"
+  ],
+  "{0} répondu(s)": [
+    "{0} beantwortet",
+    "{0} answered"
+  ],
+  "Êtes-vous disponible ?": [
+    "Sind Sie verfügbar?",
+    "Are you available?"
+  ],
+  "Précision facultative": [
+    "Optionale Anmerkung",
+    "Optional note"
+  ],
+  "Précédent": [
+    "Zurück",
+    "Previous"
+  ],
+  "Passer": [
+    "Überspringen",
+    "Skip"
+  ],
+  "Parcours terminé": [
+    "Abstimmung beendet",
+    "Voting session complete"
+  ],
+  "{0} réponse(s) enregistrée(s)": [
+    "{0} Antwort(en) gespeichert",
+    "{0} response(s) saved"
+  ],
+  "{0} créneau(x) restant(s) à répondre": [
+    "{0} Termin(e) noch offen",
+    "{0} slot(s) still to answer"
+  ],
+  "Terminer": [
+    "Fertig",
+    "Done"
+  ],
+  "Dernier vote annulé.": [
+    "Letzte Stimme rückgängig gemacht.",
+    "Last vote undone."
+  ],
+  "Confirmer le vote groupé ?": [
+    "Mehrfachabstimmung bestätigen?",
+    "Confirm bulk vote?"
+  ],
+  "Cette réponse sera appliquée aux créneaux sélectionnés qui attendent encore votre vote.": [
+    "Diese Antwort gilt für die ausgewählten Termine, bei denen Ihre Stimme noch fehlt.",
+    "This response will apply to the selected slots still awaiting your vote."
+  ],
+  "Votes groupés enregistrés.": [
+    "Mehrfachabstimmung gespeichert.",
+    "Bulk votes saved."
+  ],
+  "Aujourd’hui": [
+    "Heute",
+    "Today"
+  ],
+  "Demain": [
+    "Morgen",
+    "Tomorrow"
+  ],
+  "Dans {0} jours": [
+    "In {0} Tagen",
+    "In {0} days"
+  ],
+  "Prochain événement": [
+    "Nächster Termin",
+    "Next event"
+  ],
+  "Détails de l’événement": [
+    "Termindetails",
+    "Event details"
+  ],
+  "Ajouter à mon calendrier": [
+    "Zu meinem Kalender hinzufügen",
+    "Add to my calendar"
+  ],
+  "Événements à venir": [
+    "Bevorstehende Termine",
+    "Upcoming events"
+  ],
+  "Ce mois-ci": [
+    "Diesen Monat",
+    "This month"
+  ],
+  "Type d’événement": [
+    "Veranstaltungstyp",
+    "Event type"
+  ],
+  "Tous": [
+    "Alle",
+    "All"
+  ],
+  "Répétitions": [
+    "Proben",
+    "Rehearsals"
+  ],
+  "Concerts": [
+    "Konzerte",
+    "Concerts"
+  ],
+  "Aucun événement à venir.": [
+    "Keine bevorstehenden Termine.",
+    "No upcoming events."
+  ],
+  "Aucun événement de ce type à venir.": [
+    "Keine bevorstehenden Termine dieses Typs.",
+    "No upcoming events of this type."
+  ],
+  "Événements passés": [
+    "Vergangene Termine",
+    "Past events"
+  ],
+  "Raccord :": [
+    "Anspielprobe:",
+    "Soundcheck:"
+  ],
+  "Tenue :": [
+    "Kleidung:",
+    "Dress code:"
+  ],
+  "Cachet / Tarif :": [
+    "Gage / Preis:",
+    "Fee / price:"
+  ],
+  "Programme :": [
+    "Programm:",
+    "Programme:"
+  ],
+  "Modifier mon vote": [
+    "Meine Stimme ändern",
+    "Change my vote"
+  ],
+  "{0} disponible(s) sur {1}": [
+    "{0} von {1} verfügbar",
+    "{0} of {1} available"
+  ],
+  "Ce vote a entraîné l’archivage du créneau. Il peut être récupéré dans les archives.": [
+    "Diese Stimme führte zur Archivierung des Termins. Er kann im Archiv wiederhergestellt werden.",
+    "This vote archived the slot. It can be restored from the archive."
+  ]
+});
+
+// v21.1 proposal composer
+Object.assign(translations, {
+  "Type d'événement": [
+    "Veranstaltungsart",
+    "Event type"
+  ],
+  "Choisir les dates": [
+    "Daten auswählen",
+    "Choose dates"
+  ],
+  "Aujourd'hui": [
+    "Heute",
+    "Today"
+  ],
+  "Touchez les jours souhaités": [
+    "Gewünschte Tage antippen",
+    "Tap the desired days"
+  ],
+  "Dates sélectionnées": [
+    "Ausgewählte Daten",
+    "Selected dates"
+  ],
+  "Tout effacer": [
+    "Alles löschen",
+    "Clear all"
+  ],
+  "Choisir les horaires": [
+    "Zeiten auswählen",
+    "Choose times"
+  ],
+  "Organisation des horaires": [
+    "Zeiten organisieren",
+    "Time arrangement"
+  ],
+  "Mêmes horaires": [
+    "Gleiche Zeiten",
+    "Same times"
+  ],
+  "Par journée": [
+    "Je nach Tag",
+    "Per day"
+  ],
+  "+ Ajouter un horaire": [
+    "+ Zeit hinzufügen",
+    "+ Add a time"
+  ],
+  "Lieu et programme": [
+    "Ort und Programm",
+    "Location and programme"
+  ],
+  "Facultatif": [
+    "Optional",
+    "Optional"
+  ],
+  "Récapitulatif": [
+    "Übersicht",
+    "Summary"
+  ],
+  "Envoyer les propositions": [
+    "Vorschläge senden",
+    "Send proposals"
+  ],
+  "Horaire supplémentaire": [
+    "Weitere Zeit",
+    "Additional time"
+  ],
+  "Horaires rapides": [
+    "Schnellauswahl",
+    "Quick times"
+  ],
+  "Les horaires ci-dessous seront proposés pour chaque date sélectionnée.": [
+    "Die folgenden Zeiten gelten für alle ausgewählten Tage.",
+    "The times below will be proposed for every selected date."
+  ],
+  "Personnalisez les horaires de chaque date. Les horaires communs sont copiés lors de la première sélection.": [
+    "Zeiten pro Tag anpassen. Beim ersten Auswählen werden die gemeinsamen Zeiten übernommen.",
+    "Customise each date. Shared times are copied when a date is first selected."
+  ],
+  "Indiquez une heure de fin postérieure à l’heure de début pour chaque horaire.": [
+    "Die Endzeit muss nach der Startzeit liegen.",
+    "Each end time must be later than its start time."
+  ],
+  "Certains créneaux sont identiques. Retirez les doublons.": [
+    "Einige Termine sind identisch. Entfernen Sie die Duplikate.",
+    "Some slots are identical. Remove duplicates."
+  ],
+  "Un créneau identique existe déjà dans les disponibilités.": [
+    "Ein identischer Termin ist bereits vorhanden.",
+    "An identical slot already exists."
+  ],
+  "{0} date(s) · {1} créneau(x)": [
+    "{0} Datum/Daten · {1} Termin(e)",
+    "{0} date(s) · {1} slot(s)"
+  ],
+  "Envoi en cours…": [
+    "Wird gesendet…",
+    "Sending…"
+  ],
+  "Envoyer {0} créneau(x)": [
+    "{0} Termin(e) senden",
+    "Send {0} slot(s)"
+  ],
+  "Absence signalée": [
+    "Abwesenheit gemeldet",
+    "Reported absence"
+  ]
+});
+
+Object.assign(translations, {
+  "{0} date": [
+    "{0} Datum",
+    "{0} date"
+  ],
+  "{0} dates": [
+    "{0} Daten",
+    "{0} dates"
+  ],
+  "{0} créneau": [
+    "{0} Termin",
+    "{0} slot"
+  ],
+  "{0} créneaux": [
+    "{0} Termine",
+    "{0} slots"
+  ],
+  "Envoyer {0} créneau": [
+    "{0} Termin senden",
+    "Send {0} slot"
+  ],
+  "Envoyer {0} créneaux": [
+    "{0} Termine senden",
+    "Send {0} slots"
+  ],
+  "Configurer les horaires ↓": [
+    "Zeiten festlegen ↓",
+    "Set times ↓"
+  ],
+  "{0} créneaux proposés ({1}) — {2}": [
+    "{0} Terminvorschläge ({1}) — {2}",
+    "{0} proposed slots ({1}) — {2}"
+  ],
+  "{0} propose {1} créneaux sur {2} date(s).": [
+    "{0} schlägt {1} Termine an {2} Tag(en) vor.",
+    "{0} proposes {1} slots on {2} date(s)."
+  ],
+  "{0} créneaux envoyés aux membres.": [
+    "{0} Termine an die Mitglieder gesendet.",
+    "{0} slots sent to members."
+  ]
+});
+
+Object.assign(translations, {
+  "Une pièce ou un mouvement par ligne": [
+    "Ein Werk oder Satz pro Zeile",
+    "One piece or movement per line"
+  ],
+  "Retour à la ligne pour ajouter une pièce.": [
+    "Neue Zeile für ein weiteres Werk.",
+    "Start a new line to add a piece."
+  ],
+  "Progression": [
+    "Fortschritt",
+    "Progress"
+  ],
+  "Dates": [
+    "Daten",
+    "Dates"
+  ],
+  "Horaires": [
+    "Zeiten",
+    "Times"
+  ],
+  "Détails": [
+    "Details",
+    "Details"
+  ],
+  "Horaires et détails": [
+    "Zeiten und Details",
+    "Times and details"
+  ],
+  "Continuer vers les détails →": [
+    "Weiter zu den Details →",
+    "Continue to details →"
+  ],
+  "Date et horaires": [
+    "Datum und Zeiten",
+    "Date and times"
+  ],
+  "Programme et informations": [
+    "Programm und Informationen",
+    "Programme and information"
+  ],
+  "Durée : {0} h {1} min": [
+    "Dauer: {0} Std. {1} Min.",
+    "Duration: {0} h {1} min"
+  ],
+  "Indiquez une heure de fin postérieure à l’heure de début.": [
+    "Die Endzeit muss nach der Startzeit liegen.",
+    "The end time must be after the start time."
+  ],
+  "Vérifiez la date, les horaires et le lieu.": [
+    "Prüfen Sie Datum, Zeiten und Ort.",
+    "Check the date, times and location."
+  ],
+  "Me nommer responsable de l’ensemble (facultatif)": [
+    "Mich als Ensembleleitung einsetzen (optional)",
+    "Make me the ensemble manager (optional)"
+  ],
+  "Gestion des membres": [
+    "Mitgliederverwaltung",
+    "Member management"
+  ],
+  "Sans responsable, chaque membre peut gérer les autres. Avec un responsable, seul celui-ci peut modifier ou retirer les autres membres.": [
+    "Ohne Leitung können alle Mitglieder andere verwalten. Mit Leitung kann nur diese andere Mitglieder bearbeiten oder entfernen.",
+    "Without a manager, all members can manage others. With a manager, only they can edit or remove other members."
+  ],
+  "Responsable de l’ensemble": [
+    "Ensembleleitung",
+    "Ensemble manager"
+  ],
+  "Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.": [
+    "Einschränkung nur in der App. Profile sind nicht authentifiziert.",
+    "In-app restriction only. Profiles are not authenticated."
+  ],
+  "Gestion partagée": [
+    "Gemeinsame Verwaltung",
+    "Shared management"
+  ],
+  "Tous les membres peuvent gérer les profils.": [
+    "Alle Mitglieder können Profile verwalten.",
+    "All members can manage profiles."
+  ],
+  "Nommer": [
+    "Ernennen",
+    "Assign"
+  ],
+  "Responsable": [
+    "Leitung",
+    "Manager"
+  ],
+  "Aucun responsable (gestion partagée)": [
+    "Keine Leitung (gemeinsame Verwaltung)",
+    "No manager (shared management)"
+  ],
+  "Transférez ou désactivez votre rôle avant de quitter.": [
+    "Übertragen oder deaktivieren Sie Ihre Rolle, bevor Sie austreten.",
+    "Transfer or disable your role before leaving."
+  ],
+  "Action refusée : vérifiez les droits de gestion.": [
+    "Aktion abgelehnt: Verwaltungsrechte prüfen.",
+    "Action denied: check management permissions."
+  ],
+  "Gestion des membres mise à jour.": [
+    "Mitgliederverwaltung aktualisiert.",
+    "Member management updated."
+  ],
+  "Vous ne faites plus partie de cet ensemble.": [
+    "Sie gehören nicht mehr zu diesem Ensemble.",
+    "You are no longer part of this ensemble."
+  ]
+});
+
+Object.assign(translations, {
+  "Pop-up actives (maximum 2)": [
+    "Aktive Pop-ups (maximal 2)",
+    "Active pop-ups (maximum 2)"
+  ],
+  "Prévisualiser la séquence": [
+    "Reihenfolge ansehen",
+    "Preview sequence"
+  ],
+  "Tout désactiver": [
+    "Alle deaktivieren",
+    "Deactivate all"
+  ],
+  "Deux pop-up sont actives. Désactivez-en une pour en publier une autre.": [
+    "Zwei Pop-ups sind aktiv. Deaktivieren Sie eines, um ein weiteres zu veröffentlichen.",
+    "Two pop-ups are active. Deactivate one to publish another."
+  ],
+  "La prochaine pop-up sera affichée après la première.": [
+    "Das nächste Pop-up erscheint nach dem ersten.",
+    "The next pop-up will appear after the first."
+  ],
+  "Publiez une première pop-up, puis éventuellement une seconde.": [
+    "Veröffentlichen Sie ein erstes Pop-up und bei Bedarf ein zweites.",
+    "Publish the first pop-up, then optionally a second."
+  ],
+  "Publier en deuxième position": [
+    "An zweiter Stelle veröffentlichen",
+    "Publish second"
+  ],
+  "Information {0} sur {1}": [
+    "Information {0} von {1}",
+    "Message {0} of {1}"
+  ],
+  "Les pop-up ont été désactivées.": [
+    "Die Pop-ups wurden deaktiviert.",
+    "The pop-ups have been deactivated."
+  ],
+  "Sélection des jours d’absence": [
+    "Abwesenheitstage auswählen",
+    "Select absence days"
+  ],
+  "Sélectionné": [
+    "Ausgewählt",
+    "Selected"
+  ],
+  "Déjà déclaré": [
+    "Bereits gemeldet",
+    "Already reported"
+  ],
+  "Touchez les jours un par un ou glissez pour sélectionner une période.": [
+    "Tippen Sie einzelne Tage an oder ziehen Sie über mehrere Tage.",
+    "Tap individual days or drag to select a period."
+  ],
+  "Choisir une plage en deux touches": [
+    "Zeitraum mit zwei Berührungen wählen",
+    "Choose a range in two taps"
+  ],
+  "Choisissez la dernière date (même dans un autre mois).": [
+    "Wählen Sie das Enddatum (auch in einem anderen Monat).",
+    "Choose the last date (even in another month)."
+  ],
+  "Choisissez la première date.": [
+    "Wählen Sie das Anfangsdatum.",
+    "Choose the first date."
+  ],
+  "{0} jour(s) sélectionné(s)": [
+    "{0} Tag(e) ausgewählt",
+    "{0} day(s) selected"
+  ],
+  "Ces dates sont déjà déclarées.": [
+    "Diese Daten wurden bereits gemeldet.",
+    "These dates have already been reported."
+  ],
+  "Enregistrer les absences": [
+    "Abwesenheiten speichern",
+    "Save absences"
+  ]
+});
