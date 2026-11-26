@@ -2,7 +2,7 @@ import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
 import * as C18 from "./i18n.js";
 import {
   db, ref, set, update, remove,
-  state, $, haptic, genId, esc, getEventMeta,
+  state, $, haptic, genId, esc, getEventMeta, CALENDAR_SERVICE_URL, copyTextReliable,
   showToast, handleFirebaseError, formatDateFr
 } from "./config.js";
 import {
@@ -41,7 +41,7 @@ export function renderAgenda(){
   const type=r=>r.eventType||'rehearsal', matches=r=>agendaFilter==='all'||type(r)===agendaFilter;
   const filtered=upcoming.filter(matches), old=past.filter(matches);
   const count=upcoming.length;
-  controls.innerHTML=`<div class="agenda-summary"><div><strong>${count}</strong><small>${tr('Événements à venir')}</small></div><div><strong>${upcoming.filter(r=>r.date.slice(0,7)===today.slice(0,7)).length}</strong><small>${tr('Ce mois-ci')}</small></div><button type="button" class="btn-secondary" data-go-avail>${tr('Disponibilités')} →</button></div><div class="agenda-filters" role="group" aria-label="${tr('Type d’événement')}">${[['all','Tous'],['rehearsal','Répétitions'],['cours','Cours'],['concert','Concerts']].map(([k,label])=>`<button type="button" class="filter-pill ${agendaFilter===k?'active':''}" data-agenda-filter="${k}" aria-pressed="${agendaFilter===k}">${tr(label)}</button>`).join('')}</div>`;
+  controls.innerHTML=`<div class="agenda-summary"><div><strong>${count}</strong><small>${tr('Événements à venir')}</small></div><div><strong>${upcoming.filter(r=>r.date.slice(0,7)===today.slice(0,7)).length}</strong><small>${tr('Ce mois-ci')}</small></div><button type="button" class="btn-secondary" data-go-avail>${tr('Disponibilités')} →</button></div><button type="button" class="btn-secondary agenda-sync-button" data-calendar-sync><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18m-9 3v5m-2.5-2.5h5"/></svg>${tr('Synchroniser mon calendrier')}</button><div class="agenda-filters" role="group" aria-label="${tr('Type d’événement')}">${[['all','Tous'],['rehearsal','Répétitions'],['cours','Cours'],['concert','Concerts']].map(([k,label])=>`<button type="button" class="filter-pill ${agendaFilter===k?'active':''}" data-agenda-filter="${k}" aria-pressed="${agendaFilter===k}">${tr(label)}</button>`).join('')}</div>`;
   const hero=filtered[0];
   container.innerHTML=(hero?agendaCard(hero,true,false,today)+monthGroups(filtered.slice(1),false,today):`<div class="empty-state"><p>${tr(agendaFilter==='all'?'Aucun événement à venir.':'Aucun événement de ce type à venir.')}</p><button type="button" class="btn-primary" data-go-avail>${tr('Proposer des disponibilités')}</button></div>`)+(old.length?`<section class="agenda-history"><button type="button" class="smart-section-head" data-toggle-past aria-expanded="${agendaPast}"><span>◷</span><strong>${tr('Événements passés')}</strong><span class="smart-count">${old.length}</span><span>${agendaPast?'⌃':'⌄'}</span></button>${agendaPast?monthGroups(old,true,today):''}</section>`:'');
 }
@@ -64,8 +64,79 @@ export function downloadICS(reh) {
   a.click(); URL.revokeObjectURL(a.href); showToast(C18.t("Fichier calendrier (.ics) téléchargé."));
 }
 
+// The subscription token is specific to this ensemble/member on this browser.
+// It is a bearer secret, never stored in Firebase or sent to analytics.
+const calendarTokenPattern = /^[a-f0-9]{64}$/;
+let calendarContext = null, calendarBusy = false;
+const temporaryCalendarTokens = new Map();
+function calendarStorageKey(ctx) { return `cadenza_calendar_v1:${ctx.ensembleId}:${ctx.memberId}`; }
+function getCalendarToken(ctx) {
+  const key = calendarStorageKey(ctx);
+  if (temporaryCalendarTokens.has(key)) return temporaryCalendarTokens.get(key);
+  try { const token = localStorage.getItem(key); return calendarTokenPattern.test(token || '') ? token : null; } catch (_) { return null; }
+}
+function saveCalendarToken(ctx, token) {
+  const key = calendarStorageKey(ctx); temporaryCalendarTokens.set(key, token);
+  try { if (token) localStorage.setItem(key, token); else localStorage.removeItem(key); return true; } catch (_) { return false; }
+}
+function calendarURL(token) { return `${CALENDAR_SERVICE_URL}/${token}.ics`; }
+function updateCalendarModal(message = '') {
+  const token = calendarContext && getCalendarToken(calendarContext);
+  $('calendar-sync-ensemble').textContent = calendarContext?.name || '';
+  $('calendar-sync-ready').classList.toggle('hidden', !token);
+  $('calendar-sync-create').classList.toggle('hidden', !!token);
+  $('calendar-sync-create').disabled = calendarBusy || !calendarContext;
+  $('calendar-sync-revoke').disabled = calendarBusy;
+  $('calendar-sync-copy').disabled = calendarBusy;
+  $('calendar-sync-url').value = token ? calendarURL(token) : '';
+  if (token) $('calendar-sync-apple').href = calendarURL(token).replace(/^https:/, 'webcal:');
+  else $('calendar-sync-apple').removeAttribute('href');
+  $('calendar-sync-status').textContent = message ? C18.t(message) : '';
+}
+function openCalendarSubscription() {
+  if (calendarBusy) return;
+  const ensembleId = state.session.activeEnsembleId, memberId = state.session.ensembles[ensembleId]?.memberId;
+  if (!ensembleId || !memberId || !state.currentEnsembleData?.members?.[memberId]) return showToast(C18.t('Profil de membre introuvable.'));
+  calendarContext = {ensembleId, memberId, name: state.currentEnsembleData.name || 'Cadenza'};
+  updateCalendarModal(); openModal('modal-calendar-sync');
+}
+async function calendarRequest(path, body) {
+  const res = await fetch(`${CALENDAR_SERVICE_URL}/api/${path}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'omit',cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
+  const data = await res.json();
+  if (!res.ok) throw new Error('calendar service unavailable');
+  return data;
+}
+function initCalendarSubscriptionListeners() {
+  $('calendar-sync-create').addEventListener('click', async () => {
+    if (calendarBusy || !calendarContext || getCalendarToken(calendarContext)) return;
+    const ctx = calendarContext; calendarBusy = true; updateCalendarModal('Création du lien…');
+    let message = 'Lien créé. Le calendrier peut mettre un court instant à devenir accessible.';
+    try {
+      const data = await calendarRequest('subscribe', {ensembleId:ctx.ensembleId,memberId:ctx.memberId,language:C18.language});
+      if (!calendarTokenPattern.test(data.token || '')) throw new Error('invalid token');
+      if (!saveCalendarToken(ctx, data.token)) message = 'Le lien n’a pas pu être enregistré sur cet appareil. Copiez-le avant de fermer.';
+    } catch (_) { message = 'Service de calendrier indisponible. Réessayez plus tard.'; }
+    finally { calendarBusy = false; updateCalendarModal(message); }
+  });
+  $('calendar-sync-copy').addEventListener('click', async () => {
+    const token = calendarContext && getCalendarToken(calendarContext); if (!token) return;
+    if (await copyTextReliable(calendarURL(token))) showToast(C18.t('Lien d’abonnement copié.'));
+    else { $('calendar-sync-url').select(); showToast(C18.t('Sélectionnez et copiez le lien manuellement.')); }
+  });
+  $('calendar-sync-revoke').addEventListener('click', async () => {
+    const ctx = calendarContext, token = ctx && getCalendarToken(ctx); if (calendarBusy || !token) return;
+    if (!window.confirm(C18.t('Révoquer ce lien ? Les calendriers abonnés ne pourront plus se synchroniser.'))) return;
+    calendarBusy = true; updateCalendarModal('Révocation du lien…');
+    let message = 'Lien révoqué. La prise en compte peut prendre une minute ou davantage.';
+    try { await calendarRequest('revoke', {token}); if(!saveCalendarToken(ctx,null)) message='Lien révoqué. Effacez le lien enregistré si nécessaire.'; }
+    catch (_) { message = 'Service de calendrier indisponible. Réessayez plus tard.'; }
+    finally { calendarBusy = false; updateCalendarModal(message); }
+  });
+}
+
 export function initAgendaListeners() {
-  $("agenda-controls").addEventListener("click",e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-go-avail'))return hooks.switchTab('avail');if(b.dataset.agendaFilter){agendaFilter=b.dataset.agendaFilter;return renderAgenda();}});
+  initCalendarSubscriptionListeners();
+  $("agenda-controls").addEventListener("click",e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-calendar-sync'))return openCalendarSubscription();if(b.hasAttribute('data-go-avail'))return hooks.switchTab('avail');if(b.dataset.agendaFilter){agendaFilter=b.dataset.agendaFilter;return renderAgenda();}});
   $("agenda-list").addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
