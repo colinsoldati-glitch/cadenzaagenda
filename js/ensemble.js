@@ -366,35 +366,92 @@ function managerId(data){const id=data?.memberManagerId;return id&&data.members?
 function canManage(data,actor,target){return !!data?.members?.[actor]&&!!data?.members?.[target]&&(actor===target||!managerId(data)||managerId(data)===actor);}
 function canAssign(data,actor){return !!data?.members?.[actor]&&(!managerId(data)||managerId(data)===actor);}
 let managerContext=null, editMemberContext=null, leavingEnsemble=null;
+// Navigation locale, sans modifier les données ni les droits Firebase.
+function setEnsembleSection(section, focus = false) {
+  for (const tab of document.querySelectorAll('[data-ensemble-section]')) {
+    const active = tab.dataset.ensembleSection === section;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    $(tab.getAttribute('aria-controls')).classList.toggle('hidden', !active);
+    if (active && focus) tab.focus();
+  }
+}
+let renderedEnsembleId = null;
+const initials = name => String(name || '?').trim().split(/\s+/).slice(0,2).map(w => Array.from(w)[0] || '').join('').toLocaleUpperCase(locale) || '?';
+const searchText = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(locale);
+function filterEnsembleMembers() {
+  const query = searchText($('ensemble-member-search').value.trim());
+  let visible = 0;
+  for (const row of $('members-list').querySelectorAll('[data-member-search]')) {
+    const matches = query.split(/\s+/).every(word => row.dataset.memberSearch.includes(word));
+    row.classList.toggle('hidden', !matches);
+    if (matches) visible++;
+  }
+  $('ensemble-no-results')?.classList.toggle('hidden', visible > 0);
+}
+function absenceRow(u) {
+  const dates = u.startDate === u.endDate ? C18.tt`Le ${formatShortDateFr(u.startDate)}` : C18.tt`Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`;
+  return `<div class="member-row ensemble-absence-row"><div class="member-identity"><strong>${esc(dates)}</strong>${u.reason ? `<div class="member-meta">${esc(u.reason)}</div>` : ''}</div><button type="button" class="btn-secondary" data-del-unavail="${esc(u.id)}">${esc(C18.t('Supprimer'))}</button></div>`;
+}
 export function renderEnsembleInfo() {
-  const membersObj = state.currentEnsembleData.members || {}, members = Object.values(membersObj);
-  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId, today = new Date().toISOString().split("T")[0];
+  const data = state.currentEnsembleData, membersObj = data.members || {}, members = Object.values(membersObj);
+  const myId = state.session.ensembles[state.session.activeEnsembleId]?.memberId, today = absenceISO(new Date());
+  const newEnsemble = renderedEnsembleId !== state.session.activeEnsembleId;
+  const opened = newEnsemble ? [] : [...$('members-list').querySelectorAll('details[open]')].map(d => d.dataset.memberActions);
+  if (newEnsemble) {
+    renderedEnsembleId = state.session.activeEnsembleId;
+    $('ensemble-member-search').value = '';
+    $('ensemble-switcher').open = false;
+    $('ensemble-past-absences').open = false;
+    setEnsembleSection('members');
+  }
+  const manager = managerId(data), me = membersObj[myId];
+  members.sort((a,b) => Number(b.id === myId) - Number(a.id === myId) || String(a.name || '').localeCompare(String(b.name || ''),locale));
+  $('info-formation').textContent = localizeFormation(data.formation || 'Ensemble');
+  $('info-name').textContent = data.name;
+  $('info-code').textContent = state.session.activeEnsembleId;
+  $('members-count').textContent = members.length;
+  $('saved-ensembles-count').textContent = Object.keys(state.session.ensembles).length;
+  $('toggle-auto-remind-eve').checked = data.autoRemindEve !== false;
 
-  $("info-formation").textContent = localizeFormation(state.currentEnsembleData.formation || "Ensemble");
-  $("info-name").textContent = state.currentEnsembleData.name;
-  $("info-code").textContent = state.session.activeEnsembleId;
-  $("members-count").textContent = members.length;
-  $("toggle-auto-remind-eve").checked = state.currentEnsembleData.autoRemindEve !== false;
+  $('ensemble-manager-panel').innerHTML = `<div><strong>${esc(C18.t(manager?'Responsable de l’ensemble':'Gestion partagée'))}</strong><small>${esc(manager?membersObj[manager].name:C18.t('Tous les membres peuvent gérer les profils.'))}</small></div>${canAssign(data,myId)?`<button type="button" class="btn-secondary" data-manager-settings>${esc(C18.t(manager?'Modifier':'Nommer'))}</button>`:''}<p>${esc(C18.t('Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.'))}</p>`;
+  $('members-list').innerHTML = members.map(m => {
+    const isMe = m.id === myId, abs = Object.values(m.unavailabilities || {}).filter(u => u.endDate >= today).length;
+    const role = manager === m.id ? `<span class="manager-label">${esc(C18.t('Responsable'))}</span>` : '';
+    return `<article class="ensemble-member${isMe?' ensemble-member-me':''}" data-member-search="${esc(searchText(`${m.name || ''} ${m.instrument || ''}`))}"><div class="ensemble-member-main"><div class="ensemble-avatar" aria-hidden="true">${esc(initials(m.name))}</div><div class="member-identity"><div class="ensemble-member-name"><strong>${esc(m.name || '')}</strong>${isMe ? `<span class="ensemble-you">${esc(C18.t('(Vous)'))}</span>` : ''}${role}</div><div class="member-meta">${esc(m.instrument || '')}</div><div class="ensemble-member-status"><span class="ensemble-alert-status${m.pushEnabled?' is-on':''}">${esc(C18.t(m.pushEnabled?'Alertes actives':'Sans alerte'))}</span>${abs?`<span>${esc(C18.t('{0} absence(s)',abs))}</span>`:''}</div></div></div>${canManage(data,myId,m.id)?`<details class="ensemble-member-actions" data-member-actions="${esc(m.id)}"${opened.includes(m.id)?' open':''}><summary aria-label="${esc(C18.t('Actions pour {0}',m.name))}"><span>${esc(C18.t('Actions'))}</span></summary><div class="ensemble-member-action-buttons"><button type="button" class="btn-secondary" data-edit-member="${esc(m.id)}">${esc(C18.t('Modifier'))}</button><button type="button" class="btn-del-subtle" data-remove-member="${esc(m.id)}">${esc(C18.t(isMe?'Quitter':'Retirer'))}</button></div></details>`:''}</article>`;
+  }).join('')+`<p id="ensemble-no-results" class="ensemble-empty hidden">${esc(C18.t('Aucun musicien trouvé.'))}</p>`;
+  $('ensemble-member-search-wrap').classList.toggle('hidden',members.length < 7);
+  if (members.length < 7) $('ensemble-member-search').value = '';
+  filterEnsembleMembers();
+  $('ensemble-my-profile').innerHTML = me ? `<div class="member-row ensemble-profile-row"><div class="ensemble-avatar" aria-hidden="true">${esc(initials(me.name))}</div><div class="member-identity"><strong>${esc(me.name || '')}</strong><div class="member-meta">${esc(me.instrument || '')}</div></div><button type="button" class="btn-secondary" data-edit-member="${esc(myId)}">${esc(C18.t('Modifier'))}</button></div>` : '';
 
-  const manager=managerId(state.currentEnsembleData);
-  $('ensemble-manager-panel').innerHTML=`<div><strong>${esc(C18.t(manager?'Responsable de l’ensemble':'Gestion partagée'))}</strong><small>${esc(manager?membersObj[manager].name:C18.t('Tous les membres peuvent gérer les profils.'))}</small></div>${canAssign(state.currentEnsembleData,myId)?`<button type="button" class="btn-secondary" data-manager-settings>${esc(C18.t(manager?'Modifier':'Nommer'))}</button>`:''}<p>${esc(C18.t('Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.'))}</p>`;
-  $("members-list").innerHTML = members.map((m) => {
-    const isMe = m.id === myId, abs = Object.values(m.unavailabilities || {}).filter((u) => u.endDate >= today).length;
-    return `<div class="member-row"><div class="member-identity"><div><strong>${esc(m.name)}</strong> ${isMe ? esc(C18.t("(Vous)")) : ""}${manager===m.id?`<span class="manager-label">${esc(C18.t('Responsable'))}</span>`:''}</div><div class="member-meta">${esc(m.instrument)} • ${esc(C18.t(m.pushEnabled?"Alertes actives":"Sans alerte"))}${abs ? esc(C18.tt` • ${abs} absence(s)`) : ""}</div></div><div class="member-row-actions">${canManage(state.currentEnsembleData,myId,m.id)?`<button type="button" class="btn-secondary btn-xs" data-edit-member="${esc(m.id)}">${esc(C18.t('Modifier'))}</button><button type="button" class="btn-secondary btn-xs" data-remove-member="${esc(m.id)}">${esc(C18.t(isMe?"Quitter":"Retirer"))}</button>`:''}</div></div>`;
-  }).join("");
+  const absences = Object.values(me?.unavailabilities || {}).sort((a,b) => (a.startDate || '').localeCompare(b.startDate || ''));
+  const upcoming = absences.filter(u => u.endDate >= today), past = absences.filter(u => u.endDate < today).reverse();
+  $('ensemble-absence-count').textContent = upcoming.length;
+  $('my-unavailabilities-list').innerHTML = upcoming.length ? upcoming.map(absenceRow).join('') : `<p class="ensemble-empty">${esc(C18.t('Aucune absence en cours ou à venir.'))}</p>`;
+  $('ensemble-past-absences').classList.toggle('hidden', !past.length);
+  $('ensemble-past-count').textContent = past.length;
+  $('ensemble-past-list').innerHTML = past.map(absenceRow).join('');
 
-  const myUnavails = Object.values(membersObj[myId]?.unavailabilities || {}).sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
-  $("my-unavailabilities-list").innerHTML = myUnavails.length
-    ? myUnavails.map((u) => C18.h`<div class="member-row"><div style="min-width:0"><div style="font-size:13.5px"><strong>${esc(u.startDate === u.endDate ? C18.tt`Le ${formatShortDateFr(u.startDate)}` : C18.tt`Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`)}</strong></div>${u.reason ? `<div style="font-size:12.5px;color:var(--muted)">${esc(u.reason)}</div>` : ""}</div><button type="button" class="btn-secondary btn-xs" data-del-unavail="${esc(u.id)}">Supprimer</button></div>`).join("")
-    : C18.htmlLiteral("<div style=\"font-size:13px;color:var(--muted);padding-bottom:4px\">Aucune période d'indisponibilité enregistrée.</div>");
-
-  $("saved-ensembles-list").innerHTML = Object.keys(state.session.ensembles).map((id) => {
+  $('saved-ensembles-list').innerHTML = Object.keys(state.session.ensembles).sort((a,b) => Number(b === state.session.activeEnsembleId)-Number(a === state.session.activeEnsembleId)).map(id => {
     const it = state.session.ensembles[id], cur = id === state.session.activeEnsembleId;
-    return `<div class="member-row"><div><strong>${esc(it.ensembleName || id)}</strong><div style="font-size:12px;color:var(--muted)">${esc(it.name)} • ${esc(it.instrument)}</div></div>${cur ? C18.htmlLiteral("<span style=\"font-size:12px;font-weight:600;color:var(--yes-fg)\">Actif</span>") : C18.h`<button type="button" class="btn-secondary btn-sm" data-switch-ens="${esc(id)}">Ouvrir</button>`}</div>`;
-  }).join("");
+    return `<div class="member-row ensemble-saved-row"><div class="member-identity"><strong>${esc(it.ensembleName || id)}</strong><div class="member-meta">${esc(it.name || '')} • ${esc(it.instrument || '')}</div></div>${cur?`<span class="ensemble-active-label">${esc(C18.t('Actif'))}</span>`:`<button type="button" class="btn-secondary" data-switch-ens="${esc(id)}">${esc(C18.t('Ouvrir'))}</button>`}</div>`;
+  }).join('');
 }
 
 export function initEnsembleListeners() {
+  $('ensemble-member-search').addEventListener('input', filterEnsembleMembers);
+  document.querySelector('.ensemble-tabs').addEventListener('click', e => {
+    const tab = e.target.closest('[data-ensemble-section]');
+    if (tab) setEnsembleSection(tab.dataset.ensembleSection);
+  });
+  document.querySelector('.ensemble-tabs').addEventListener('keydown', e => {
+    const tabs = [...document.querySelectorAll('[data-ensemble-section]')], index = tabs.indexOf(document.activeElement);
+    if (index < 0 || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+    e.preventDefault();
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (index + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    setEnsembleSection(tabs[next].dataset.ensembleSection, true);
+  });
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); state.deferredInstallPrompt = e;
     $("install-banner").classList.remove("hidden"); $("tuto-direct-install-card").classList.remove("hidden");
