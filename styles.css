@@ -625,3 +625,73 @@ html[lang="de"] .type-btn, html[lang="de"] .slot-mode-btn { white-space:normal; 
 .smart-matrix .avail-matrix th.col-me,.smart-matrix .avail-matrix td:has(.matrix-cell-btn) { left:var(--matrix-date-width,142px); }
 @media (max-width:360px) { .smart-icon,.smart-select { flex-basis:44px; min-width:44px; } .smart-matrix .avail-matrix th.col-me,.smart-matrix .avail-matrix td:has(.matrix-cell-btn) { left:var(--matrix-date-width,122px); } }
 @media (min-width:640px) { .smart-matrix .avail-matrix th.col-me,.smart-matrix .avail-matrix td:has(.matrix-cell-btn) { left:var(--matrix-date-width,170px); } }
+
+/* v21.1 — DEV branding + mobile-first proposal composer */
+.dev-label { display:none; vertical-align:middle; font:700 9px/1.2 var(--font-sans); letter-spacing:.05em; color:#fff; background:#2563eb; padding:3px 5px; border-radius:4px; }
+html[data-environment="dev"] .dev-label { display:inline-block; }
+#modal-poll .proposal-sheet { display:flex; flex-direction:column; padding:0; max-height:min(94dvh,900px); overflow:hidden; }
+#modal-poll .proposal-header { flex:none; margin:0; padding:16px 18px 12px; border-bottom:1px solid var(--border); gap:8px; }
+#modal-poll .proposal-header button { min-height:44px; }
+#form-poll { min-height:0; display:flex; flex-direction:column; }
+.proposal-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:14px 16px 20px; }
+.proposal-footer { flex:none; border-top:1px solid var(--border); padding:10px 16px calc(12px + var(--safe-bottom)); background:var(--surface); }
+.proposal-footer button { min-height:48px; font-weight:600; }
+.proposal-footer .proposal-hint { text-align:center; margin:0 0 6px; }
+.proposal-step { display:flex; align-items:center; gap:9px; margin:16px 0 10px; font-size:15px; }
+.proposal-body > .proposal-step:first-of-type { margin-top:0; }
+.proposal-number { background:var(--fg); color:#fff; border-radius:50%; width:25px; height:25px; flex:none; display:grid; place-items:center; font-size:12px; font-weight:600; }
+.proposal-count { margin-left:auto; color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums; }
+#form-poll .type-btn { min-height:44px; }
+#form-poll .multi-cal-box { padding:10px; border-radius:13px; }
+#form-poll .multi-cal-header > button { width:44px; height:44px; padding:0; font-size:24px; }
+.proposal-month { display:flex; flex-direction:column; align-items:center; }
+.proposal-month .multi-cal-month { font-size:17px; }
+.proposal-link { border:none; background:transparent; color:var(--accent-fg); padding:5px 6px; min-height:32px; font-size:12px; font-weight:600; }
+#form-poll .multi-cal-grid { gap:3px; }
+#form-poll .cal-day-btn { min-height:36px; border-radius:8px; font-size:14px; }
+#form-poll .cal-day-btn:disabled { opacity:.28; cursor:default; background:var(--subtle); }
+#form-poll .cal-day-btn.selected { box-shadow:none; }
+.proposal-calendar-legend { display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px 8px; color:var(--muted); font-size:11px; margin:9px 0; }
+.proposal-calendar-legend span:last-child { display:inline-flex; align-items:center; gap:4px; }
+.proposal-selection-head { display:flex; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid var(--border); padding-top:6px; font-size:12px; }
+#form-poll .selected-dates-pills { margin-top:4px; }
+#form-poll .selected-date-pill { padding:3px 5px 3px 8px; }
+#form-poll .selected-date-pill button { min-width:26px; min-height:28px; }
+.proposal-scope { display:grid; grid-template-columns:1fr 1fr; background:var(--subtle); border:1px solid var(--border); border-radius:10px; padding:3px; gap:3px; }
+.proposal-scope button { border:0; background:transparent; min-height:44px; padding:6px; color:var(--muted); font-size:13px; }
+.proposal-scope button.active { color:var(--fg); background:var(--surface); box-shadow:0 1px 3px #11182719; font-weight:600; }
+.proposal-hint { color:var(--muted); font-size:12px; margin:7px 0 10px; line-height:1.4; }
+#form-poll .proposal-timing { border-radius:12px; background:var(--surface); padding:11px; margin-bottom:8px; }
+#form-poll .slot-mode-group { gap:5px; margin-bottom:4px; }
+#form-poll .slot-mode-btn { min-height:44px; padding:7px 5px; font-size:12px; }
+#form-poll .slot-mode-btn:not(.active) { background:var(--subtle); }
+#form-poll .slot-exact-times { margin-bottom:7px!important; }
+#form-poll input[type="time"] { min-height:44px; min-width:0; font-size:16px; }
+.proposal-timing-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:5px; }
+.proposal-timing-head .proposal-hint { margin:0; font-weight:600; }
+.proposal-remove { width:44px; min-height:44px; font-size:20px; padding:0; }
+.proposal-remove[hidden] { display:none; }
+.proposal-presets > span { display:block; color:var(--muted); font-size:11px; margin:4px 0; }
+.proposal-presets > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+.proposal-presets button { min-height:44px; font-size:11px; padding:4px 2px; font-variant-numeric:tabular-nums; }
+.proposal-add { min-height:44px; border-style:dashed; margin:0 0 10px; font-weight:600; }
+.proposal-day-group { background:var(--subtle); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:12px; }
+.proposal-day-group h4 { font-size:14px; margin:0 0 8px; text-transform:capitalize; }
+.proposal-fixed-date { font-weight:600; text-transform:capitalize; margin:0 0 12px; }
+.proposal-options { border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:0 12px; margin:12px 0; }
+.proposal-options summary { display:flex; align-items:center; gap:8px; min-height:48px; cursor:pointer; font-size:13px; list-style:none; }
+.proposal-options summary::-webkit-details-marker { display:none; }
+.proposal-options summary span { margin-left:auto; color:var(--muted); font-size:12px; }
+.proposal-options summary::after { content:'⌄'; font-size:17px; color:var(--muted); }
+.proposal-options[open] summary::after { transform:rotate(180deg); }
+.proposal-options .field:first-of-type { margin-top:8px; }
+.proposal-preview-row { display:flex; flex-direction:column; gap:3px; padding:8px 0; border-top:1px solid var(--subtle); font-size:13px; }
+.proposal-preview-row strong { text-transform:capitalize; }
+.proposal-preview-row span { color:var(--muted); overflow-wrap:anywhere; }
+#form-poll .alert-box { margin:10px 0; overflow-wrap:anywhere; }
+@media (min-width:640px) { #modal-poll .proposal-sheet { max-width:540px; } .proposal-body { padding:16px 20px 20px; } }
+@media (max-width:360px) { .proposal-body { padding-left:10px; padding-right:10px; } #form-poll .multi-cal-box { padding:7px; } #form-poll .cal-day-btn { min-height:32px; } }
+
+#poll-type-holder > label { display:none; }
+.proposal-go-times { min-height:44px; margin-top:10px; font-weight:600; }
+.proposal-error-text { color:var(--no-fg); }

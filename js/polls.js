@@ -266,27 +266,84 @@ export function readSlotRow(row) {
   };
 }
 
-export function getPendingProposalSlots() {
-  if (state.refiningFixedDate) {
-    return Array.from($("poll-slots-container").querySelectorAll(".poll-slot-row"))
-      .map(readSlotRow)
-      .filter((s) => s.date && (s.timeMode !== "exact" || (s.startTime && s.endTime)));
+// Drafts live only in this form. Each row produces the original Firebase slot schema.
+let proposalScope = "shared", proposalSubmitting = false;
+const sharedRows = () => [$('poll-global-mode-holder'), ...$('proposal-extra-times').querySelectorAll('.proposal-timing')];
+const draftGroups = () => [...$('proposal-custom-area').querySelectorAll('[data-proposal-date]')];
+const rowValid = s => s.date && (s.timeMode !== 'exact' || (s.startTime && s.endTime && s.endTime > s.startTime));
+function nextTiming(rows) {
+  const used=rows.map(readSlotRow);const times=[['14:00','17:00'],['09:00','12:00'],['18:00','21:00']];
+  const [startTime,endTime]=times.find(([a,b])=>!used.some(s=>s.timeMode==='exact'&&s.startTime===a&&s.endTime===b))||times[0];
+  return {timeMode:'exact',startTime,endTime};
+}
+function newTimingRow(container, timing = nextTiming([...container.querySelectorAll('.proposal-timing')]), removable = true) {
+  const row = document.createElement('div'); row.className = 'poll-slot-row proposal-timing';
+  row.innerHTML = `<div class="proposal-timing-head"><span class="proposal-hint">${esc(C18.t('Horaire'))}</span><button type="button" class="btn-secondary proposal-remove" aria-label="${esc(C18.t('Retirer'))}">×</button></div>${buildModeSelectorHtml(timing.startTime || '14:00', timing.endTime || '17:00')}`;
+  const removeBtn = row.querySelector('.proposal-remove'); removeBtn.hidden = !removable;
+  removeBtn.addEventListener('click',()=>{ if(container.querySelectorAll('.proposal-timing').length===1 && container!==$('proposal-extra-times')) return;row.remove(); updatePollConflictsWarning(); });
+  container.appendChild(row); bindModeSelector(row, updatePollConflictsWarning); applyModeState(row,timing.timeMode||'day',timing.period||'Après-midi'); enhanceTiming(row); return row;
+}
+function enhanceTiming(row) {
+  if(row.querySelector('.proposal-presets')) return;
+  const box = document.createElement('div');box.className='proposal-presets';
+  box.innerHTML = `<span>${esc(C18.t('Horaires rapides'))}</span><div>${[['09:00','12:00'],['14:00','17:00'],['18:00','21:00']].map(([a,b])=>`<button type="button" class="btn-secondary" data-start="${a}" data-end="${b}">${a}–${b}</button>`).join('')}</div>`;
+  row.querySelector('.slot-exact-times').after(box);
+  box.addEventListener('click',e=>{const b=e.target.closest('[data-start]');if(!b)return;row.querySelector('.slot-start').value=b.dataset.start;row.querySelector('.slot-end').value=b.dataset.end;applyModeState(row,'exact','',updatePollConflictsWarning);});
+  for(const inp of row.querySelectorAll('.slot-start,.slot-end'))inp.addEventListener('input',updatePollConflictsWarning);
+}
+function syncCustomGroups() {
+  const area=$('proposal-custom-area'), dates=[...state.selectedCalDates].sort();
+  for(const g of draftGroups()) if(!state.selectedCalDates.has(g.dataset.proposalDate))g.remove();
+  if(proposalScope!=='custom')return;
+  for(const date of dates){
+    let group=draftGroups().find(g=>g.dataset.proposalDate===date);
+    if(!group){group=document.createElement('section');group.className='proposal-day-group';group.dataset.proposalDate=date;
+      group.innerHTML=`<h4>${esc(formatDateFr(date))}</h4><div class="proposal-day-rows"></div><button type="button" class="btn-secondary btn-full proposal-add">${esc(C18.t('+ Ajouter un horaire'))}</button>`;
+      const rows=group.querySelector('.proposal-day-rows');for(const r of sharedRows())newTimingRow(rows,readSlotRow(r));
+      group.querySelector('.proposal-add').addEventListener('click',()=>{newTimingRow(rows);updatePollConflictsWarning();});
+    }
+    // Keep existing DOM and input focus when changing another date.
+    if(!group.isConnected)area.appendChild(group);
   }
-  const globalTiming = readSlotRow($("poll-global-mode-holder"));
-  return [...state.selectedCalDates].sort().map((date) => ({ ...globalTiming, date }));
+  // Dates are sorted without reattaching focused controls.
+  dates.forEach((date,i)=>{const g=draftGroups().find(x=>x.dataset.proposalDate===date);if(area.children[i]!==g)area.insertBefore(g,area.children[i]||null);});
+  for(const group of draftGroups()){const rows=[...group.querySelectorAll('.proposal-timing')];rows.forEach(r=>r.querySelector('.proposal-remove').hidden=rows.length===1);}
+}
+function setProposalScope(scope) {
+  proposalScope=scope;
+  for(const [id,on] of [['proposal-shared',scope==='shared'],['proposal-custom',scope==='custom']]){$(id).classList.toggle('active',on);$(id).setAttribute('aria-pressed',String(on));}
+  $('proposal-shared-area').classList.toggle('hidden',scope!=='shared');$('proposal-custom-area').classList.toggle('hidden',scope!=='custom');
+  $('proposal-scope-hint').textContent=C18.t(scope==='shared'?'Les horaires ci-dessous seront proposés pour chaque date sélectionnée.':'Personnalisez les horaires de chaque date. Les horaires communs sont copiés lors de la première sélection.');
+  updatePollConflictsWarning();
+}
+export function getPendingProposalSlots() {
+  if (state.refiningFixedDate) return [...$('poll-slots-container').querySelectorAll('.poll-slot-row')].map(r=>({...readSlotRow(r),date:state.refiningFixedDate}));
+  if(proposalScope==='custom')return draftGroups().flatMap(g=>[...g.querySelectorAll('.proposal-timing')].map(r=>({...readSlotRow(r),date:g.dataset.proposalDate})));
+  return [...state.selectedCalDates].sort().flatMap(date=>sharedRows().map(r=>({...readSlotRow(r),date})));
+}
+function proposalError(slots) {
+  if(slots.some(s=>!rowValid(s)))return C18.t('Indiquez une heure de fin postérieure à l’heure de début pour chaque horaire.');
+  const keys=slots.map(getSlotFingerprint);if(new Set(keys).size!==keys.length)return C18.t('Certains créneaux sont identiques. Retirez les doublons.');
+  const type=$('poll-type-holder').dataset.value||'rehearsal';
+  const active=Object.values(state.currentEnsembleData?.polls||{}).filter(p=>(p.eventType||'rehearsal')===type && !(p.id===state.refiningPollId && $('poll-replace-checkbox').checked));
+  if(active.some(p=>keys.includes(getSlotFingerprint(p))))return C18.t('Un créneau identique existe déjà dans les disponibilités.');
+  return '';
+}
+function renderProposalSummary(slots,error) {
+  const dates=new Set(slots.map(s=>s.date)); const count=[C18.t(dates.size===1?'{0} date':'{0} dates',dates.size),C18.t(slots.length===1?'{0} créneau':'{0} créneaux',slots.length)].join(' · ');
+  $('proposal-date-count').textContent=String(state.selectedCalDates.size);$('btn-cal-clear').disabled=!state.selectedCalDates.size;$('proposal-go-times').disabled=!state.selectedCalDates.size;
+  $('proposal-preview-count').textContent=String(slots.length);$('proposal-footer-status').textContent=error || (slots.length?count+(proposalScope==='shared'&&!state.refiningFixedDate&&sharedRows().length===1?' · '+formatPollTimeLabel(slots[0]):''):C18.t('Sélectionnez au moins une date'));$('proposal-footer-status').classList.toggle('proposal-error-text',!!error);
+  $('proposal-validation').textContent=error;$('proposal-validation').classList.toggle('hidden',!error);
+  $('proposal-preview-list').innerHTML=slots.length?[...dates].map(d=>`<div class="proposal-preview-row"><strong>${esc(formatCompactDateFr(d))}</strong><span>${slots.filter(s=>s.date===d).map(s=>esc(formatPollTimeLabel(s)||'—')).join(' · ')}</span></div>`).join(''):`<p class="proposal-hint">${esc(C18.t('Aucune date sélectionnée'))}</p>`;
+  $('btn-submit-poll').textContent=proposalSubmitting?C18.t('Envoi en cours…'):slots.length?C18.t(slots.length===1?'Envoyer {0} créneau':'Envoyer {0} créneaux',slots.length):C18.t('Envoyer les propositions');
 }
 
 export function updatePollConflictsWarning() {
   const warnBox = $("poll-unavail-warning"), lockBox = $("poll-archive-lock-warning"), subBtn = $("btn-submit-poll");
+  if(!state.refiningFixedDate)syncCustomGroups();
   const slots = getPendingProposalSlots();
-
-  if (!state.refiningFixedDate) {
-    subBtn.textContent = slots.length > 1
-      ? C18.tt`Soumettre ces ${slots.length} dates aux membres`
-      : slots.length === 1
-        ? C18.tt`Soumettre le ${formatCompactDateFr(slots[0].date)} aux membres`
-        : C18.t("Sélectionnez au moins une date");
-  }
+  const error=proposalError(slots);
+  renderProposalSummary(slots,error);
 
   const lockedMatches = [];
   const lockedLines = slots.map((s) => {
@@ -306,7 +363,8 @@ export function updatePollConflictsWarning() {
   } else {
     lockBox.innerHTML = "";
   }
-  subBtn.disabled = slots.length === 0 || lockedLines.length > 0;
+  subBtn.disabled = proposalSubmitting || slots.length === 0 || !!error || lockedLines.length > 0;
+  if(lockedLines.length&&!error){$("proposal-footer-status").textContent=C18.t("Créneau archivé détecté");$("proposal-footer-status").classList.add("proposal-error-text");}
 
   const conflictLines = [];
   [...new Set(slots.map((s) => s.date))].forEach((d) => {
@@ -334,7 +392,7 @@ export function refreshPollSlotsUI() {
 
 export function addPollSlot(defDate = "", defMode = "", defPeriod = "", defStart = "", defEnd = "") {
   const container = $("poll-slots-container"), rows = container.querySelectorAll(".poll-slot-row"), last = rows[rows.length - 1];
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date(); const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
   const mode = defMode || (last ? last.dataset.mode : "day");
   const period = defPeriod || (last ? last.dataset.period : "Après-midi");
   let start = defStart || (last ? last.querySelector(".slot-start").value : "14:00");
@@ -350,7 +408,7 @@ export function addPollSlot(defDate = "", defMode = "", defPeriod = "", defStart
   }
 
   const row = document.createElement("div");
-  row.className = "poll-slot-row";
+  row.className = "poll-slot-row proposal-timing";
   row.innerHTML = C18.h`
     <div class="poll-slot-head">
       <span class="slot-label" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Créneau</span>
@@ -359,10 +417,12 @@ export function addPollSlot(defDate = "", defMode = "", defPeriod = "", defStart
     <div class="field" style="margin-bottom:10px"><label>Date</label><input type="date" class="slot-date" value="${esc(date)}" required /></div>
     ${buildModeSelectorHtml(start, end)}
   `;
+  if(state.refiningFixedDate){const input=row.querySelector(".slot-date");input.disabled=true;input.closest(".field").classList.add("hidden");}
   row.querySelector(".slot-date").addEventListener("change", updatePollConflictsWarning);
   bindModeSelector(row, updatePollConflictsWarning);
   row.querySelector(".btn-remove-slot").addEventListener("click", () => { haptic(); row.remove(); refreshPollSlotsUI(); });
   container.appendChild(row);
+  enhanceTiming(row);
   applyModeState(row, mode, period, refreshPollSlotsUI);
 }
 
@@ -380,6 +440,11 @@ export function resetPollSlots() {
   state.calYear = now.getFullYear();
   state.calMonth = now.getMonth();
   state.selectedCalDates.clear();
+  $('proposal-extra-times').innerHTML='';$('proposal-custom-area').innerHTML='';
+  $('proposal-options').open=false;$('proposal-preview').open=false;
+  $('poll-location').value='';$('poll-note').value='';
+  $('poll-global-mode-holder').querySelector('.slot-start').value='14:00';$('poll-global-mode-holder').querySelector('.slot-end').value='17:00';
+  enhanceTiming($('poll-global-mode-holder'));setProposalScope('shared');
   applyModeState($("poll-global-mode-holder"), "day", "Après-midi");
   renderMultiCalendar();
 }
@@ -403,7 +468,8 @@ export function openRefineTimeModal(poll) {
   addPollSlot(poll.date, "exact", "", s, e);
   $("poll-location").value = poll.location || "";
   $("poll-note").value = poll.note || "";
-  $("modal-poll").classList.add("open");
+  $("proposal-fixed-date").textContent=formatDateFr(poll.date);$("proposal-options").open=!!(poll.location||poll.note);$("proposal-preview").open=false;
+  updatePollConflictsWarning();openModal("modal-poll");
 }
 
 export function openCounterProposalModal(poll) {
@@ -421,7 +487,8 @@ export function openCounterProposalModal(poll) {
   addPollSlot(poll.date, "exact", "", s, e);
   $("poll-location").value = poll.location || "";
   $("poll-note").value = poll.note || "";
-  $("modal-poll").classList.add("open");
+  $("proposal-fixed-date").textContent=formatDateFr(poll.date);$("proposal-options").open=!!(poll.location||poll.note);$("proposal-preview").open=false;
+  updatePollConflictsWarning();openModal("modal-poll");
 }
 
 // Édition d'un créneau
@@ -638,6 +705,12 @@ export function initPollsListeners() {
     }
   });
 
+  $('proposal-go-times').addEventListener('click',()=>{ $('proposal-times-heading').scrollIntoView({block:'start',behavior:'auto'}); $('proposal-shared').focus({preventScroll:true}); });
+  $('proposal-shared').addEventListener('click',()=>setProposalScope('shared'));
+  $('proposal-custom').addEventListener('click',()=>setProposalScope('custom'));
+  $('proposal-add-shared').addEventListener('click',()=>{newTimingRow($('proposal-extra-times'),nextTiming(sharedRows()));updatePollConflictsWarning();});
+  $('poll-type-holder').addEventListener('click',updatePollConflictsWarning);
+  $('poll-replace-checkbox').addEventListener('change',updatePollConflictsWarning);
   $("btn-add-poll-slot").addEventListener("click", () => { haptic(); addPollSlot(); });
   $("edit-poll-date").addEventListener("change", checkEditPollArchiveLock);
 
@@ -708,8 +781,9 @@ export function initPollsListeners() {
   });
 
   $("form-poll").addEventListener("submit", async (e) => {
-    e.preventDefault(); haptic();
+    e.preventDefault(); if(proposalSubmitting)return;haptic();
     const slots = getPendingProposalSlots();
+    const error=proposalError(slots);if(error){updatePollConflictsWarning();return showToast(error);}
     if (!slots.length) return showToast(C18.t("Veuillez sélectionner au moins une date."));
     const blocked = slots.find(findArchivedSlotMatch);
     if (blocked) { updatePollConflictsWarning(); return showToast(C18.tt`Le ${formatCompactDateFr(blocked.date)} est dans les archives : récupérez-le pour le rouvrir.`); }
@@ -718,6 +792,8 @@ export function initPollsListeners() {
     const location = $("poll-location").value.trim(), note = $("poll-note").value.trim(), me = state.session.ensembles[state.session.activeEnsembleId];
     const replaceId = state.refiningPollId && $("poll-replace-checkbox").checked ? state.refiningPollId : null, wasRefining = Boolean(state.refiningPollId);
     const tMeta = getEventMeta(eventType);
+    if(!me || !state.session.activeEnsembleId)return;
+    proposalSubmitting=true;updatePollConflictsWarning();
     try {
       const updates = {};
       slots.forEach((s) => {
@@ -728,15 +804,15 @@ export function initPollsListeners() {
       await update(ref(db, `ensembles/${state.session.activeEnsembleId}/polls`), updates);
 
       const ens = state.currentEnsembleData?.name || "Cadenza", s0 = slots[0];
-      await hooks.publishEnsembleNotification(
-        C18.localizedMessages(() => [wasRefining ? C18.tt`Horaires proposés (${tMeta.label}) — ${ens}` : slots.length === 1 ? C18.tt`Nouvelle date proposée (${tMeta.label}) — ${ens}` : C18.tt`${slots.length} dates proposées (${tMeta.label}) — ${ens}`, wasRefining ? C18.tt`${me.name} propose ${slots.length === 1 ? formatPollTimeLabel(s0) : C18.tt`${slots.length} horaires`} pour le ${formatDateFr(s0.date)}.`
+      try { await hooks.publishEnsembleNotification(
+        C18.localizedMessages(() => [wasRefining ? C18.tt`Horaires proposés (${tMeta.label}) — ${ens}` : slots.length === 1 ? C18.tt`Nouvelle date proposée (${tMeta.label}) — ${ens}` : C18.t('{0} créneaux proposés ({1}) — {2}',slots.length,getEventMeta(eventType).label,ens), wasRefining ? C18.tt`${me.name} propose ${slots.length === 1 ? formatPollTimeLabel(s0) : C18.tt`${slots.length} horaires`} pour le ${formatDateFr(s0.date)}.`
           : slots.length === 1 ? C18.tt`${me.name} propose le ${formatDateFr(s0.date)} (${formatPollTimeLabel(s0)}).`
-          : C18.tt`${me.name} a proposé ${slots.length} dates (${slots.map((s) => formatCompactDateFr(s.date)).join(", ")}).`])
-      );
+          : C18.t('{0} propose {1} créneaux sur {2} date(s).',me.name,slots.length,new Set(slots.map(s=>s.date)).size)])
+      ); } catch(err) { console.warn("Proposal saved; notification failed",err); }
       $("form-poll").reset(); resetPollSlots(); closeModal("modal-poll");
-      showToast(wasRefining ? C18.t("Horaires envoyés aux membres.") : slots.length > 1 ? C18.tt`${slots.length} dates envoyées aux membres.` : C18.t("Date envoyée aux membres."));
+      showToast(wasRefining ? C18.t("Horaires envoyés aux membres.") : slots.length > 1 ? C18.t("{0} créneaux envoyés aux membres.",slots.length) : C18.t("Date envoyée aux membres."));
       state.availFilterMode = "all"; renderPolls(); hooks.switchTab("avail");
-    } catch (err) { handleFirebaseError(err); }
+    } catch (err) { handleFirebaseError(err); } finally { proposalSubmitting=false;updatePollConflictsWarning(); }
   });
 
   const handlePollClick=async e=>{

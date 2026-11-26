@@ -17,7 +17,17 @@
 
   <!-- Génération de l'icône Apple Touch 180x180 -->
   <script>
-    try {
+    // Netlify previews and dev.* use separate branding; production remains unchanged.
+    const devHost = /\.netlify\.app$/i.test(location.hostname) || /^dev\./i.test(location.hostname) || ["localhost", "127.0.0.1"].includes(location.hostname);
+    window.CADENZA_DEV = devHost;
+    if (devHost) {
+      document.documentElement.dataset.environment = "dev";
+      document.title = "Cadenza DEV";
+      document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "Cadenza DEV";
+      document.querySelector('link[rel="manifest"]').href = "./manifest.dev.fr.json";
+      document.querySelector('link[rel="icon"]').href = "./icons/dev.svg";
+      const l = document.createElement("link"); l.rel = "apple-touch-icon"; l.href = "./icons/dev-180.png"; document.head.appendChild(l);
+    } else try {
       const c = document.createElement("canvas");
       c.width = c.height = 180;
       const ctx = c.getContext("2d"), s = 1.8;
@@ -47,7 +57,7 @@
           <circle cx="50" cy="57" r="6.5" fill="#111827"/>
         </svg>
         <div class="brand-titles">
-          <h1 class="brand-name">Cadenza</h1>
+          <h1 class="brand-name">Cadenza <span class="dev-label" data-no-translate>DEV</span></h1>
           <div id="header-ensemble-name" class="ensemble-subtitle">Synchronisation...</div>
         </div>
       </div>
@@ -674,54 +684,61 @@
     </div>
   </div>
 
-  <!-- Modale Proposition de dates (Multi-Sélection Calendrier + Mode Précision) -->
-  <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des dates</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
-      <div id="poll-refine-banner" class="info-banner-box hidden"></div>
+  <!-- Proposition de dates et horaires -->
+  <div id="modal-poll" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-poll-title">
+    <div class="modal-sheet proposal-sheet">
+      <div class="modal-header proposal-header"><h3 class="modal-title" id="modal-poll-title">Proposer des dates</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-poll">Fermer</button></div>
       <form id="form-poll" novalidate>
-        <div id="poll-type-holder"></div>
-
-        <!-- Mode Multi-Dates Tap-Tap-Tap (Calendrier) -->
-        <div id="poll-calendar-wrapper">
-          <div class="multi-cal-box">
-            <div class="multi-cal-header">
-              <button type="button" id="btn-cal-prev" class="btn-secondary btn-xs" aria-label="Mois précédent">←</button>
-              <span id="cal-month-label" class="multi-cal-month">—</span>
-              <button type="button" id="btn-cal-next" class="btn-secondary btn-xs" aria-label="Mois suivant">→</button>
+        <div class="proposal-body">
+          <div id="poll-refine-banner" class="info-banner-box hidden"></div>
+          <div class="proposal-step"><span class="proposal-number">1</span><strong>Type d'événement</strong></div>
+          <div id="poll-type-holder"></div>
+          <div id="poll-calendar-wrapper">
+            <div class="proposal-step"><span class="proposal-number">2</span><strong>Choisir les dates</strong><span id="proposal-date-count" class="proposal-count" aria-live="polite"></span></div>
+            <div class="multi-cal-box">
+              <div class="multi-cal-header">
+                <button type="button" id="btn-cal-prev" class="btn-secondary" aria-label="Mois précédent">‹</button>
+                <div class="proposal-month"><span id="cal-month-label" class="multi-cal-month">—</span><button type="button" id="btn-cal-today" class="proposal-link">Aujourd'hui</button></div>
+                <button type="button" id="btn-cal-next" class="btn-secondary" aria-label="Mois suivant">›</button>
+              </div>
+              <div class="multi-cal-weekdays"><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span></div>
+              <div id="multi-cal-grid" class="multi-cal-grid"></div>
+              <div class="proposal-calendar-legend"><span>Touchez les jours souhaités</span><span><span class="cal-day-dot"></span> Absence signalée</span></div>
+              <div class="proposal-selection-head"><strong>Dates sélectionnées</strong><button type="button" class="proposal-link" id="btn-cal-clear">Tout effacer</button></div>
+              <div id="cal-selected-pills" class="selected-dates-pills"></div>
+              <button type="button" id="proposal-go-times" class="btn-secondary btn-full proposal-go-times" disabled>Configurer les horaires ↓</button>
             </div>
-            <div class="multi-cal-weekdays"><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span></div>
-            <div id="multi-cal-grid" class="multi-cal-grid"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:11.5px;color:var(--muted);">
-              <span>Touchez plusieurs jours pour les sélectionner</span>
-              <span style="display:inline-flex;align-items:center;gap:4px;color:var(--no-fg);"><span class="cal-day-dot"></span> Absence signalée</span>
+            <div class="proposal-step" id="proposal-times-heading"><span class="proposal-number">3</span><strong>Choisir les horaires</strong></div>
+            <div class="proposal-scope" role="group" aria-label="Organisation des horaires">
+              <button type="button" id="proposal-shared" aria-pressed="true" class="active">Mêmes horaires</button>
+              <button type="button" id="proposal-custom" aria-pressed="false">Par journée</button>
             </div>
-            <div id="cal-selected-pills" class="selected-dates-pills"></div>
+            <p id="proposal-scope-hint" class="proposal-hint"></p>
+            <div id="proposal-shared-area">
+              <div id="poll-global-mode-holder" class="poll-slot-row proposal-timing"></div>
+              <div id="proposal-extra-times"></div>
+              <button type="button" id="proposal-add-shared" class="btn-secondary btn-full proposal-add">+ Ajouter un horaire</button>
+            </div>
+            <div id="proposal-custom-area" class="hidden"></div>
           </div>
-          <div id="poll-global-mode-holder" class="poll-slot-row"></div>
+          <div id="poll-slots-wrapper" class="hidden">
+            <div class="proposal-step"><span class="proposal-number">2</span><strong>Choisir les horaires</strong></div>
+            <div id="proposal-fixed-date" class="proposal-fixed-date"></div>
+            <div id="poll-slots-container"></div>
+            <button type="button" id="btn-add-poll-slot" class="btn-secondary btn-full proposal-add">+ Ajouter un autre horaire ce jour</button>
+          </div>
+          <details id="proposal-options" class="proposal-options">
+            <summary><strong>Lieu et programme</strong><span>Facultatif</span></summary>
+            <div class="field"><label for="poll-location">Lieu envisagé / suggéré (optionnel)</label><input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" /><div id="poll-location-suggestions" class="location-suggestions-row hidden"></div></div>
+            <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
+          </details>
+          <div id="poll-replace-row" class="hidden"><label class="toggle-row" for="poll-replace-checkbox"><input type="checkbox" id="poll-replace-checkbox" checked /><span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span></label></div>
+          <div id="poll-archive-lock-warning" class="alert-box hidden"></div>
+          <div id="poll-unavail-warning" class="alert-box hidden"></div>
+          <div id="proposal-validation" class="alert-box hidden" role="status"></div>
+          <details id="proposal-preview" class="proposal-options proposal-preview"><summary><strong>Récapitulatif</strong><span id="proposal-preview-count"></span></summary><div id="proposal-preview-list"></div></details>
         </div>
-
-        <!-- Mode Multi-Horaires (pour préciser une journée) -->
-        <div id="poll-slots-wrapper" class="hidden">
-          <div id="poll-slots-container"></div>
-          <div style="margin-bottom: 16px;"><button type="button" id="btn-add-poll-slot" class="btn-secondary btn-sm btn-full">+ Ajouter un autre horaire ce jour</button></div>
-        </div>
-
-        <div id="poll-archive-lock-warning" class="alert-box hidden"></div>
-        <div id="poll-unavail-warning" class="alert-box hidden"></div>
-        <div class="field">
-          <label for="poll-location">Lieu envisagé / suggéré (optionnel)</label>
-          <input type="text" id="poll-location" placeholder="Ex: Sion, Lausanne, Salle 103" />
-          <div id="poll-location-suggestions" class="location-suggestions-row hidden"></div>
-        </div>
-        <div class="field"><label for="poll-note">Programme / Infos concert (optionnel)</label><input type="text" id="poll-note" placeholder="Ex: Lecture du 2e mouvement, Concert de printemps..." /></div>
-        <div id="poll-replace-row" class="hidden" style="margin-bottom: 14px;">
-          <label class="toggle-row" for="poll-replace-checkbox" style="margin-top: 0;">
-            <input type="checkbox" id="poll-replace-checkbox" checked />
-            <span id="poll-replace-label">Remplacer la proposition générale par ces créneaux horaires</span>
-          </label>
-        </div>
-        <button type="submit" id="btn-submit-poll" class="btn-primary btn-full">Soumettre les dates aux membres</button>
+        <div class="proposal-footer"><div id="proposal-footer-status" class="proposal-hint" aria-live="polite"></div><button type="submit" id="btn-submit-poll" class="btn-primary btn-full" disabled>Envoyer les propositions</button></div>
       </form>
     </div>
   </div>

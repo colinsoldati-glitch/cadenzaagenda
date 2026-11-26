@@ -2902,3 +2902,154 @@ Object.assign(translations, {
     "This vote archived the slot. It can be restored from the archive."
   ]
 });
+
+// v21.1 proposal composer
+Object.assign(translations, {
+  "Type d'événement": [
+    "Veranstaltungsart",
+    "Event type"
+  ],
+  "Choisir les dates": [
+    "Daten auswählen",
+    "Choose dates"
+  ],
+  "Aujourd'hui": [
+    "Heute",
+    "Today"
+  ],
+  "Touchez les jours souhaités": [
+    "Gewünschte Tage antippen",
+    "Tap the desired days"
+  ],
+  "Dates sélectionnées": [
+    "Ausgewählte Daten",
+    "Selected dates"
+  ],
+  "Tout effacer": [
+    "Alles löschen",
+    "Clear all"
+  ],
+  "Choisir les horaires": [
+    "Zeiten auswählen",
+    "Choose times"
+  ],
+  "Organisation des horaires": [
+    "Zeiten organisieren",
+    "Time arrangement"
+  ],
+  "Mêmes horaires": [
+    "Gleiche Zeiten",
+    "Same times"
+  ],
+  "Par journée": [
+    "Je nach Tag",
+    "Per day"
+  ],
+  "+ Ajouter un horaire": [
+    "+ Zeit hinzufügen",
+    "+ Add a time"
+  ],
+  "Lieu et programme": [
+    "Ort und Programm",
+    "Location and programme"
+  ],
+  "Facultatif": [
+    "Optional",
+    "Optional"
+  ],
+  "Récapitulatif": [
+    "Übersicht",
+    "Summary"
+  ],
+  "Envoyer les propositions": [
+    "Vorschläge senden",
+    "Send proposals"
+  ],
+  "Horaire supplémentaire": [
+    "Weitere Zeit",
+    "Additional time"
+  ],
+  "Horaires rapides": [
+    "Schnellauswahl",
+    "Quick times"
+  ],
+  "Les horaires ci-dessous seront proposés pour chaque date sélectionnée.": [
+    "Die folgenden Zeiten gelten für alle ausgewählten Tage.",
+    "The times below will be proposed for every selected date."
+  ],
+  "Personnalisez les horaires de chaque date. Les horaires communs sont copiés lors de la première sélection.": [
+    "Zeiten pro Tag anpassen. Beim ersten Auswählen werden die gemeinsamen Zeiten übernommen.",
+    "Customise each date. Shared times are copied when a date is first selected."
+  ],
+  "Indiquez une heure de fin postérieure à l’heure de début pour chaque horaire.": [
+    "Die Endzeit muss nach der Startzeit liegen.",
+    "Each end time must be later than its start time."
+  ],
+  "Certains créneaux sont identiques. Retirez les doublons.": [
+    "Einige Termine sind identisch. Entfernen Sie die Duplikate.",
+    "Some slots are identical. Remove duplicates."
+  ],
+  "Un créneau identique existe déjà dans les disponibilités.": [
+    "Ein identischer Termin ist bereits vorhanden.",
+    "An identical slot already exists."
+  ],
+  "{0} date(s) · {1} créneau(x)": [
+    "{0} Datum/Daten · {1} Termin(e)",
+    "{0} date(s) · {1} slot(s)"
+  ],
+  "Envoi en cours…": [
+    "Wird gesendet…",
+    "Sending…"
+  ],
+  "Envoyer {0} créneau(x)": [
+    "{0} Termin(e) senden",
+    "Send {0} slot(s)"
+  ],
+  "Absence signalée": [
+    "Abwesenheit gemeldet",
+    "Reported absence"
+  ]
+});
+
+Object.assign(translations, {
+  "{0} date": [
+    "{0} Datum",
+    "{0} date"
+  ],
+  "{0} dates": [
+    "{0} Daten",
+    "{0} dates"
+  ],
+  "{0} créneau": [
+    "{0} Termin",
+    "{0} slot"
+  ],
+  "{0} créneaux": [
+    "{0} Termine",
+    "{0} slots"
+  ],
+  "Envoyer {0} créneau": [
+    "{0} Termin senden",
+    "Send {0} slot"
+  ],
+  "Envoyer {0} créneaux": [
+    "{0} Termine senden",
+    "Send {0} slots"
+  ],
+  "Configurer les horaires ↓": [
+    "Zeiten festlegen ↓",
+    "Set times ↓"
+  ],
+  "{0} créneaux proposés ({1}) — {2}": [
+    "{0} Terminvorschläge ({1}) — {2}",
+    "{0} proposed slots ({1}) — {2}"
+  ],
+  "{0} propose {1} créneaux sur {2} date(s).": [
+    "{0} schlägt {1} Termine an {2} Tag(en) vor.",
+    "{0} proposes {1} slots on {2} date(s)."
+  ],
+  "{0} créneaux envoyés aux membres.": [
+    "{0} Termine an die Mitglieder gesendet.",
+    "{0} slots sent to members."
+  ]
+});
