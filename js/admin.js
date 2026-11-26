@@ -1,3 +1,5 @@
+import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
+import * as C18 from "./i18n.js";
 import {
   APP_VERSION, KEYS, db, ref, set, update, remove, onValue,
   state, $, haptic, genId, esc, getVoterDeviceId, getCurrentRespondentLabel,
@@ -6,10 +8,10 @@ import {
 import { openConfirmationModal, closeModal } from "./ui.js";
 
 export const POPUP_TYPE_META = {
-  poll: { label: "Sondage", defaultBadge: "Sondage", defaultTitle: "Votre avis sur Cadenza", defaultSub: "Quelle option préférez-vous ?" },
-  feedback: { label: "Demande d'avis", defaultBadge: "Retour", defaultTitle: "Vos idées & retours", defaultSub: "Aidez-nous à améliorer Cadenza :" },
-  message: { label: "Message", defaultBadge: "Info", defaultTitle: "Message de l'équipe Cadenza", defaultSub: "Information importante :" },
-  update: { label: "Mise à jour", defaultBadge: APP_VERSION, defaultTitle: "Nouveautés sur Cadenza", defaultSub: "Découvrez les dernières améliorations :" }
+  poll: { label: C18.t("Sondage"), defaultBadge: C18.t("Sondage"), defaultTitle: C18.t("Votre avis sur Cadenza"), defaultSub: C18.t("Quelle option préférez-vous ?") },
+  feedback: { label: C18.t("Demande d'avis"), defaultBadge: C18.t("Retour"), defaultTitle: C18.t("Vos idées & retours"), defaultSub: C18.t("Aidez-nous à améliorer Cadenza :") },
+  message: { label: C18.t("Message"), defaultBadge: "Info", defaultTitle: C18.t("Message de l'équipe Cadenza"), defaultSub: C18.t("Information importante :") },
+  update: { label: C18.t("Mise à jour"), defaultBadge: APP_VERSION, defaultTitle: C18.t("Nouveautés sur Cadenza"), defaultSub: C18.t("Découvrez les dernières améliorations :") }
 };
 
 export function openAdminPinPrompt() {
@@ -39,20 +41,20 @@ export function setAdminPopupType(type) {
   $("admin-fields-update").classList.toggle("hidden", state.adminPopupType !== "update");
 
   const meta = POPUP_TYPE_META[state.adminPopupType];
-  $("admin-ann-version").placeholder = `Ex: ${meta.defaultBadge}`;
+  $("admin-ann-version").placeholder = C18.tt`Ex: ${meta.defaultBadge}`;
   if (!$("admin-ann-version").dataset.touched) $("admin-ann-version").value = meta.defaultBadge;
   if (!$("admin-ann-title").dataset.touched) $("admin-ann-title").value = meta.defaultTitle;
-  $("lbl-admin-subtitle").textContent = state.adminPopupType === "poll" ? "Question du sondage" : state.adminPopupType === "feedback" ? "Question posée aux utilisateurs" : "Sous-titre (optionnel)";
+  $("lbl-admin-subtitle").textContent = state.adminPopupType === "poll" ? C18.t("Question du sondage") : state.adminPopupType === "feedback" ? C18.t("Question posée aux utilisateurs") : C18.t("Sous-titre (optionnel)");
   $("admin-ann-subtitle").placeholder = meta.defaultSub;
   if (state.adminPopupType === "poll") renderAdminPollOptionsBuilder();
 }
 
 export function renderAdminPollOptionsBuilder() {
   const box = $("admin-poll-options-list");
-  box.innerHTML = state.adminPollOptions.map((opt, idx) => `
+  box.innerHTML = state.adminPollOptions.map((opt, idx) => C18.h`
     <div class="poll-opt-builder-row">
       <input type="text" class="admin-poll-opt-input" data-opt-idx="${idx}" value="${esc(opt)}" placeholder="Option ${idx + 1} (ex: Oui, Non...)" />
-      ${state.adminPollOptions.length > 2 ? `<button type="button" class="btn-remove-opt" data-del-opt="${idx}" aria-label="Retirer cette option">✕</button>` : ""}
+      ${state.adminPollOptions.length > 2 ? C18.h`<button type="button" class="btn-remove-opt" data-del-opt="${idx}" aria-label="Retirer cette option">✕</button>` : ""}
     </div>`).join("");
 }
 
@@ -60,13 +62,13 @@ export function refreshAdminAnnouncementStatusUI() {
   const box = $("admin-current-announcement"), retest = $("btn-admin-retest-popup"), clear = $("btn-admin-clear-announcement");
   const latest = state.latestAnnouncementData;
   if (!latest?.active) {
-    box.textContent = "Aucune pop-up publiée actuellement.";
+    box.textContent = C18.t("Aucune pop-up publiée actuellement.");
     retest.classList.add("hidden"); clear.classList.add("hidden");
     return;
   }
   const pType = latest.type || "update";
-  const typeLabel = POPUP_TYPE_META[pType]?.label || "Annonce";
-  const d = latest.publishedAt ? new Date(latest.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+  const typeLabel = POPUP_TYPE_META[pType]?.label || C18.t("Annonce");
+  const d = latest.publishedAt ? new Date(latest.publishedAt).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
   box.innerHTML = `
     <div style="color:var(--fg);font-weight:600">
       <span class="event-type-badge" style="margin-right:5px">${esc(typeLabel)}</span>
@@ -74,7 +76,7 @@ export function refreshAdminAnnouncementStatusUI() {
       ${latest.version ? `<span class="whats-new-badge" style="margin-left:6px;margin-bottom:0">${esc(latest.version)}</span>` : ""}
     </div>
     ${latest.subtitle ? `<div style="font-size:12.5px;color:var(--fg);margin-top:3px">${esc(latest.subtitle)}</div>` : ""}
-    ${d ? `<div style="font-size:12px;margin-top:2px">Publiée le ${esc(d)}</div>` : ""}`;
+    ${d ? C18.h`<div style="font-size:12px;margin-top:2px">Publiée le ${esc(d)}</div>` : ""}`;
   retest.classList.remove("hidden"); clear.classList.remove("hidden");
 }
 
@@ -87,12 +89,12 @@ export function buildAdminAnnouncementPayload(id) {
   if (type === "poll") {
     const cleanOpts = state.adminPollOptions.map((o) => String(o || "").trim()).filter(Boolean);
     if (cleanOpts.length < 2) {
-      showToast("Ajoutez au moins 2 choix de vote.");
+      showToast(C18.t("Ajoutez au moins 2 choix de vote."));
       return null;
     }
     return {
       id, active: true, type: "poll", version, title,
-      subtitle: subtitle || "Faites votre choix ci-dessous :",
+      subtitle: subtitle || C18.t("Faites votre choix ci-dessous :"),
       options: cleanOpts,
       allowComment: $("admin-poll-allow-comment").checked,
       publishedAt: Date.now()
@@ -100,9 +102,9 @@ export function buildAdminAnnouncementPayload(id) {
   }
 
   if (type === "feedback") {
-    const ph = $("admin-feedback-placeholder").value.trim() || "Écrivez votre retour ou suggestion ici...";
+    const ph = $("admin-feedback-placeholder").value.trim() || C18.t("Écrivez votre retour ou suggestion ici...");
     if (!subtitle) {
-      showToast("Indiquez la question posée aux utilisateurs.");
+      showToast(C18.t("Indiquez la question posée aux utilisateurs."));
       return null;
     }
     return {
@@ -114,24 +116,24 @@ export function buildAdminAnnouncementPayload(id) {
   if (type === "message") {
     const body = $("admin-message-body").value.trim();
     if (!body) {
-      showToast("Écrivez le contenu du message à afficher.");
+      showToast(C18.t("Écrivez le contenu du message à afficher."));
       return null;
     }
     return {
       id, active: true, type: "message", version, title, subtitle,
-      body, ctaLabel: $("admin-message-cta").value.trim() || "J'ai compris, fermer",
+      body, ctaLabel: $("admin-message-cta").value.trim() || C18.t("J'ai compris, fermer"),
       publishedAt: Date.now()
     };
   }
 
   const items = $("admin-ann-notes").value.split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
   if (!items.length) {
-    showToast("Ajoutez au moins une nouveauté.");
+    showToast(C18.t("Ajoutez au moins une nouveauté."));
     return null;
   }
   return {
     id, active: true, type: "update", version, title,
-    subtitle: subtitle || "Découvrez les dernières améliorations :",
+    subtitle: subtitle || C18.t("Découvrez les dernières améliorations :"),
     items, publishedAt: Date.now()
   };
 }
@@ -146,7 +148,7 @@ export function showWhatsNewModal(ann, isPreview = false) {
 
   const pType = ann.type || "update";
   $("whats-new-title").textContent = ann.title || "Cadenza";
-  $("whats-new-version-badge").textContent = ann.version ? (isPreview ? `Aperçu • ${ann.version}` : ann.version) : (isPreview ? "Aperçu" : "Information");
+  $("whats-new-version-badge").textContent = ann.version ? (isPreview ? C18.tt`Aperçu • ${ann.version}` : ann.version) : (isPreview ? C18.t("Aperçu") : C18.t("Information"));
 
   const subEl = $("whats-new-subtitle");
   if (ann.subtitle) {
@@ -158,7 +160,7 @@ export function showWhatsNewModal(ann, isPreview = false) {
 
   const dEl = $("whats-new-date");
   if (ann.publishedAt) {
-    dEl.textContent = new Date(ann.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    dEl.textContent = new Date(ann.publishedAt).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
     dEl.classList.remove("hidden");
   } else dEl.classList.add("hidden");
 
@@ -175,32 +177,24 @@ export function showWhatsNewModal(ann, isPreview = false) {
             <span>${esc(opt)}</span>
           </button>`).join("")}
       </div>
-      ${ann.allowComment ? `
-        <div class="field" style="margin-bottom: 14px;">
-          <label for="user-popup-comment-input">Commentaire ou précision (facultatif)</label>
-          <textarea id="user-popup-comment-input" rows="2" maxlength="400" placeholder="Ajoutez une remarque si vous le souhaitez..."></textarea>
-        </div>` : ""}`;
+      ${ann.allowComment ? C18.htmlLiteral("\n        <div class=\"field\" style=\"margin-bottom: 14px;\">\n          <label for=\"user-popup-comment-input\">Commentaire ou précision (facultatif)</label>\n          <textarea id=\"user-popup-comment-input\" rows=\"2\" maxlength=\"400\" placeholder=\"Ajoutez une remarque si vous le souhaitez...\"></textarea>\n        </div>") : ""}`;
 
-    footerEl.innerHTML = `
-      <button type="button" id="btn-submit-user-popup-response" class="btn-confirm btn-full">Envoyer mon vote</button>
-      <button type="button" id="btn-skip-user-popup" class="btn-secondary btn-sm btn-full">Fermer sans voter</button>`;
+    footerEl.innerHTML = C18.htmlLiteral("\n      <button type=\"button\" id=\"btn-submit-user-popup-response\" class=\"btn-confirm btn-full\">Envoyer mon vote</button>\n      <button type=\"button\" id=\"btn-skip-user-popup\" class=\"btn-secondary btn-sm btn-full\">Fermer sans voter</button>");
   } else if (pType === "feedback") {
-    bodyEl.innerHTML = `
+    bodyEl.innerHTML = C18.h`
       <div class="field" style="margin-bottom: 14px;">
         <label for="user-popup-comment-input">Votre réponse</label>
-        <textarea id="user-popup-comment-input" rows="4" maxlength="600" placeholder="${esc(ann.placeholder || "Écrivez votre retour ici...")}"></textarea>
+        <textarea id="user-popup-comment-input" rows="4" maxlength="600" placeholder="${esc(ann.placeholder || C18.t("Écrivez votre retour ici..."))}"></textarea>
       </div>`;
 
-    footerEl.innerHTML = `
-      <button type="button" id="btn-submit-user-popup-response" class="btn-confirm btn-full">Envoyer mon retour</button>
-      <button type="button" id="btn-skip-user-popup" class="btn-secondary btn-sm btn-full">Fermer sans répondre</button>`;
+    footerEl.innerHTML = C18.htmlLiteral("\n      <button type=\"button\" id=\"btn-submit-user-popup-response\" class=\"btn-confirm btn-full\">Envoyer mon retour</button>\n      <button type=\"button\" id=\"btn-skip-user-popup\" class=\"btn-secondary btn-sm btn-full\">Fermer sans répondre</button>");
   } else if (pType === "message") {
     bodyEl.innerHTML = `<div class="message-free-box">${esc(ann.body || ann.message || "")}</div>`;
-    footerEl.innerHTML = `<button type="button" id="btn-skip-user-popup" class="btn-primary btn-full">${esc(ann.ctaLabel || "J'ai compris, fermer")}</button>`;
+    footerEl.innerHTML = `<button type="button" id="btn-skip-user-popup" class="btn-primary btn-full">${esc(ann.ctaLabel || C18.t("J'ai compris, fermer"))}</button>`;
   } else {
     const lines = Array.isArray(ann.items) ? ann.items : String(ann.message || "").split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
     bodyEl.innerHTML = `<ul class="release-notes-list">${lines.map((l) => `<li><span class="release-notes-check">✓</span><span>${esc(l)}</span></li>`).join("")}</ul>`;
-    footerEl.innerHTML = `<button type="button" id="btn-skip-user-popup" class="btn-primary btn-full">J'ai compris, fermer</button>`;
+    footerEl.innerHTML = C18.htmlLiteral("<button type=\"button\" id=\"btn-skip-user-popup\" class=\"btn-primary btn-full\">J'ai compris, fermer</button>");
   }
 
   $("modal-whats-new").classList.add("open");
@@ -258,19 +252,19 @@ export function renderAdminResultsPanel() {
 
   select.innerHTML = campaigns.map((c) => {
     const count = Object.keys(c.responses || {}).length;
-    const tLabel = POPUP_TYPE_META[c.meta.type]?.label || "Campagne";
+    const tLabel = POPUP_TYPE_META[c.meta.type]?.label || C18.t("Campagne");
     const isCurrent = c.meta.id === latest?.id && latest?.active;
-    return `<option value="${esc(c.meta.id)}" ${c.meta.id === state.selectedResultsCampaignId ? "selected" : ""}>[${tLabel}] ${esc(c.meta.title || "Sans titre")} (${count} rép.)${isCurrent ? " — Actif" : ""}</option>`;
+    return C18.h`<option value="${esc(c.meta.id)}" ${c.meta.id === state.selectedResultsCampaignId ? "selected" : ""}>[${tLabel}] ${esc(c.meta.title || C18.t("Sans titre"))} (${count} rép.)${isCurrent ? C18.t(" — Actif") : ""}</option>`;
   }).join("");
 
   const activeCamp = campaignsMap[state.selectedResultsCampaignId] || campaigns[0];
   const meta = activeCamp.meta || {};
   const responses = Object.values(activeCamp.responses || {}).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
 
-  $("res-campaign-badge").textContent = `${POPUP_TYPE_META[meta.type]?.label || "Campagne"}${meta.version ? ` • ${meta.version}` : ""}`;
-  $("res-campaign-title").textContent = meta.title || "Sondage";
+  $("res-campaign-badge").textContent = `${POPUP_TYPE_META[meta.type]?.label || C18.t("Campagne")}${meta.version ? ` • ${meta.version}` : ""}`;
+  $("res-campaign-title").textContent = meta.title || C18.t("Sondage");
   $("res-campaign-subtitle").textContent = meta.subtitle || "";
-  $("res-total-count").textContent = `${responses.length} réponse${responses.length > 1 ? "s" : ""}`;
+  $("res-total-count").textContent = C18.t(responses.length === 1 ? "{0} réponse" : "{0} réponses", responses.length);
 
   const barsBox = $("res-poll-bars-container");
   if (meta.type === "poll" && Array.isArray(meta.options) && meta.options.length) {
@@ -302,18 +296,18 @@ export function renderAdminResultsPanel() {
   $("res-comments-count").textContent = String(comments.length);
   $("res-comments-list").innerHTML = comments.length
     ? comments.map((r) => {
-        const dStr = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+        const dStr = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
         return `
           <div class="feedback-response-card">
             <div class="feedback-response-meta">
-              <strong>${esc(r.respondent || "Utilisateur")}</strong>
+              <strong>${esc(r.respondent || C18.t("Utilisateur"))}</strong>
               <span>${esc(dStr)}</span>
             </div>
-            ${r.optionLabel ? `<div style="font-size:11.5px;color:var(--accent-fg);font-weight:600;margin-bottom:3px">Vote : ${esc(r.optionLabel)}</div>` : ""}
+            ${r.optionLabel ? C18.h`<div style="font-size:11.5px;color:var(--accent-fg);font-weight:600;margin-bottom:3px">Vote : ${esc(r.optionLabel)}</div>` : ""}
             <div style="white-space:pre-line;color:var(--fg)">${esc(r.comment)}</div>
           </div>`;
       }).join("")
-    : `<div style="font-size:13px;color:var(--muted)">Aucun commentaire écrit pour le moment.</div>`;
+    : C18.htmlLiteral("<div style=\"font-size:13px;color:var(--muted)\">Aucun commentaire écrit pour le moment.</div>");
 }
 
 // Extraction de l'horodatage de création d'un ensemble (avec repli sur le 1er membre)
@@ -337,18 +331,18 @@ function getEnsembleTimestamp(ens) {
 }
 
 function formatEnsembleRegistrationDate(ts) {
-  if (!ts) return "Inscription récente";
+  if (!ts) return C18.t("Inscription récente");
   const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return "Inscription récente";
+  if (Number.isNaN(d.getTime())) return C18.t("Inscription récente");
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diffDays = Math.round((startOfToday - startOfDay) / 86400000);
-  const timeStr = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  if (diffDays === 0) return `Aujourd'hui à ${timeStr}`;
-  if (diffDays === 1) return `Hier à ${timeStr}`;
-  if (diffDays > 1 && diffDays < 7) return `Il y a ${diffDays} jours`;
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  const timeStr = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  if (diffDays === 0) return C18.tt`Aujourd'hui à ${timeStr}`;
+  if (diffDays === 1) return C18.tt`Hier à ${timeStr}`;
+  if (diffDays > 1 && diffDays < 7) return C18.tt`Il y a ${diffDays} jours`;
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function ensureAdminEnsemblesListener() {
@@ -365,7 +359,7 @@ function ensureAdminEnsemblesListener() {
         const membersList = Object.values(val.members || {}).filter((m) => m && typeof m === "object" && m.name);
         list.push({
           id: val.id || childSnap.key,
-          name: val.name || "Ensemble sans nom",
+          name: val.name || C18.t("Ensemble sans nom"),
           formation: val.formation || "Ensemble",
           members: membersList,
           memberCount: membersList.length,
@@ -425,11 +419,11 @@ export function renderAdminStatsPanel() {
 
   $("stat-active-ensembles").textContent = String(activeEnsembles.length);
   $("stat-active-ensembles-sub").textContent = allEnsembles.length > activeEnsembles.length
-    ? `sur ${allEnsembles.length} créés au total`
-    : `${activeEnsembles.length > 1 ? "espaces actifs" : "espace actif"}`;
+    ? C18.tt`sur ${allEnsembles.length} créés au total`
+    : `${activeEnsembles.length > 1 ? C18.t("espaces actifs") : C18.t("espace actif")}`;
 
   $("stat-total-musicians").textContent = String(totalMusicians);
-  $("stat-total-musicians-sub").textContent = `moy. ${avgMusicians} / ensemble`;
+  $("stat-total-musicians-sub").textContent = C18.tt`moy. ${avgMusicians} / ensemble`;
 
   const sourceList = activeEnsembles.length > 0 ? activeEnsembles : allEnsembles;
   const limit = 10;
@@ -443,12 +437,12 @@ export function renderAdminStatsPanel() {
       .map((m) => (m.instrument ? `${m.name} (${m.instrument})` : m.name))
       .join(", ") + (ens.memberCount > 5 ? ` +${ens.memberCount - 5}` : "");
     const dateLabel = formatEnsembleRegistrationDate(ens.timestamp);
-    return `
+    return C18.h`
       <div class="admin-stat-ensemble-row">
         <div class="admin-stat-ens-top">
           <div style="min-width: 0;">
             <span class="admin-stat-ens-name">${esc(ens.name)}</span>
-            <span class="event-type-badge" style="margin-left: 6px;">${esc(ens.formation)}</span>
+            <span class="event-type-badge" style="margin-left: 6px;">${esc(localizeFormation(ens.formation))}</span>
           </div>
           <span class="consensus-badge partial-good">${ens.memberCount} musicien${ens.memberCount > 1 ? "s" : ""}</span>
         </div>
@@ -465,8 +459,8 @@ export function renderAdminStatsPanel() {
   if (sourceList.length > limit) {
     toggleBtn.classList.remove("hidden");
     toggleBtn.textContent = state.showAllRecentEnsembles
-      ? "Afficher uniquement les 10 derniers"
-      : `Afficher tous les ensembles (${sourceList.length})`;
+      ? C18.t("Afficher uniquement les 10 derniers")
+      : C18.tt`Afficher tous les ensembles (${sourceList.length})`;
   } else {
     toggleBtn.classList.add("hidden");
   }
@@ -537,14 +531,14 @@ export function initAdminListeners() {
     const commentVal = $("user-popup-comment-input")?.value.trim() || "";
 
     if (pType === "poll" && state.selectedUserPollOptionIndex === null) {
-      return showToast("Sélectionnez une option avant d'envoyer votre vote.");
+      return showToast(C18.t("Sélectionnez une option avant d'envoyer votre vote."));
     }
     if (pType === "feedback" && !commentVal) {
-      return showToast("Écrivez un message avant d'envoyer votre retour.");
+      return showToast(C18.t("Écrivez un message avant d'envoyer votre retour."));
     }
 
     if (state.isPreviewingWhatsNew) {
-      showToast("Aperçu : votre réponse a bien été simulée.");
+      showToast(C18.t("Aperçu : votre réponse a bien été simulée."));
       return dismissWhatsNewModal();
     }
 
@@ -572,11 +566,11 @@ export function initAdminListeners() {
           submittedAt: Date.now()
         }
       });
-      showToast(pType === "poll" ? "Merci ! Votre vote a été enregistré." : "Merci ! Votre retour a été envoyé.");
+      showToast(pType === "poll" ? C18.t("Merci ! Votre vote a été enregistré.") : C18.t("Merci ! Votre retour a été envoyé."));
       dismissWhatsNewModal();
     } catch (err) {
       console.warn("Feedback write error:", err);
-      showToast("Impossible d'enregistrer la réponse (vérifiez les règles Firebase).");
+      showToast(C18.t("Impossible d'enregistrer la réponse (vérifiez les règles Firebase)."));
       dismissWhatsNewModal();
     } finally {
       submitBtn.disabled = false;
@@ -614,13 +608,13 @@ export function initAdminListeners() {
   $("btn-copy-fb-rule").addEventListener("click", async () => {
     haptic();
     const ok = await copyTextReliable($("firebase-feedback-rule-snippet").textContent);
-    showToast(ok ? "Règle Firebase copiée." : "Copiez la règle affichée.");
+    showToast(ok ? C18.t("Règle Firebase copiée.") : C18.t("Copiez la règle affichée."));
   });
 
   $("btn-copy-ensembles-rule").addEventListener("click", async () => {
     haptic();
     const ok = await copyTextReliable($("firebase-ensembles-rule-snippet").textContent);
-    showToast(ok ? "Règle Firebase copiée." : "Copiez la règle affichée.");
+    showToast(ok ? C18.t("Règle Firebase copiée.") : C18.t("Copiez la règle affichée."));
   });
 
   $("btn-toggle-all-recent-ensembles").addEventListener("click", () => {
@@ -633,15 +627,15 @@ export function initAdminListeners() {
     if (!state.selectedResultsCampaignId || !state.verifiedAdminPin) return;
     const campId = state.selectedResultsCampaignId;
     openConfirmationModal({
-      title: "Supprimer ces résultats ?",
+      title: C18.t("Supprimer ces résultats ?"),
       context: $("res-campaign-title").textContent,
-      message: "Tous les votes et commentaires associés à cette campagne seront définitivement effacés.",
-      confirmLabel: "Supprimer les résultats",
+      message: C18.t("Tous les votes et commentaires associés à cette campagne seront définitivement effacés."),
+      confirmLabel: C18.t("Supprimer les résultats"),
       onConfirm: async () => {
         try {
           await remove(ref(db, `app_feedback/${campId}`));
           state.selectedResultsCampaignId = null;
-          showToast("Résultats supprimés.");
+          showToast(C18.t("Résultats supprimés."));
         } catch (err) {
           handleFirebaseError(err);
         }
@@ -701,8 +695,8 @@ export function initAdminListeners() {
       }
       localStorage.setItem(KEYS.ann, newId);
       closeModal("modal-admin-portal");
-      showToast("Pop-up publiée pour tous les utilisateurs !");
-    } catch (_) { $("admin-firebase-warning").classList.remove("hidden"); showToast("Accès refusé par Firebase."); }
+      showToast(C18.t("Pop-up publiée pour tous les utilisateurs !"));
+    } catch (_) { $("admin-firebase-warning").classList.remove("hidden"); showToast(C18.t("Accès refusé par Firebase.")); }
     finally { btn.disabled = false; }
   });
 
@@ -718,7 +712,7 @@ export function initAdminListeners() {
     if (!state.verifiedAdminPin) { closeModal("modal-admin-portal"); return openAdminPinPrompt(); }
     try {
       await set(ref(db, "app_announcements/latest"), { public: { ...(state.latestAnnouncementData || {}), active: false }, auth: { pin: state.verifiedAdminPin } });
-      showToast("La pop-up a été désactivée.");
+      showToast(C18.t("La pop-up a été désactivée."));
     } catch (_) { $("admin-firebase-warning").classList.remove("hidden"); }
   });
 

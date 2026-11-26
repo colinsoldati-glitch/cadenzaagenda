@@ -1,3 +1,5 @@
+import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
+import * as C18 from "./i18n.js";
 import { APP_VERSION, KEYS, $ } from "./config.js";
 import {
   registerUiHooks, initFormSelectors, initCalendarControls, initModalGlobalListeners
@@ -17,6 +19,7 @@ import {
   proceedAfterTutorial, publishEnsembleNotification, switchTab, initEnsembleListeners
 } from "./ensemble.js";
 
+C18.initLanguage();
 $("app-version-label").textContent = APP_VERSION;
 
 // Connexion des modules entre eux (évite les dépendances circulaires)

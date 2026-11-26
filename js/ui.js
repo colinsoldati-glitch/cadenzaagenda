@@ -1,3 +1,5 @@
+import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
+import * as C18 from "./i18n.js";
 import {
   state, $, haptic, esc, EVENT_TYPES,
   formatCompactDateFr, getInviteUrl, getTransferUrl, getUnavailabilityConflictsForDate
@@ -15,8 +17,8 @@ export function registerUiHooks(h) {
 }
 
 // Composants réutilisables : Sélecteur de type d'événement & champs Concert
-export function buildTypeSelectorHtml(label = "Nature de l'événement") {
-  return `
+export function buildTypeSelectorHtml(label = C18.t("Nature de l'événement")) {
+  return C18.h`
     <div class="field" style="margin-bottom: 10px;">
       <label>${esc(label)}</label>
       <div class="type-selector-group">
@@ -28,7 +30,7 @@ export function buildTypeSelectorHtml(label = "Nature de l'événement") {
 }
 
 export function buildConcertFieldsHtml(prefix) {
-  return `
+  return C18.h`
     <div id="${prefix}-concert-box" class="concert-fields-box hidden">
       <div class="concert-box-title">Informations Concert</div>
       <div class="row-2" style="margin-bottom: 10px;">
@@ -49,7 +51,7 @@ export function buildConcertFieldsHtml(prefix) {
 }
 
 export function bindTypeSelector(holder, onChange) {
-  holder.innerHTML = buildTypeSelectorHtml(holder.dataset.label || "Nature de l'événement");
+  holder.innerHTML = buildTypeSelectorHtml(holder.dataset.label || C18.t("Nature de l'événement"));
   holder.dataset.value = "rehearsal";
   holder.querySelectorAll(".type-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -70,8 +72,8 @@ export function syncConcertFieldsVisibility(prefix, type, startLabelId, endLabel
   const box = $(`${prefix}-concert-box`);
   const isConcert = type === "concert";
   if (box) box.classList.toggle("hidden", !isConcert);
-  if (startLabelId && $(startLabelId)) $(startLabelId).textContent = isConcert ? "Début concert" : "Début";
-  if (endLabelId && $(endLabelId)) $(endLabelId).textContent = isConcert ? "Fin estimée" : "Fin";
+  if (startLabelId && $(startLabelId)) $(startLabelId).textContent = isConcert ? C18.t("Début concert") : C18.t("Début");
+  if (endLabelId && $(endLabelId)) $(endLabelId).textContent = isConcert ? C18.t("Fin estimée") : C18.t("Fin");
 }
 
 export function readConcertFields(prefix, type) {
@@ -91,7 +93,7 @@ export function populateConcertFields(prefix, item) {
 
 // Composant réutilisable : sélecteur de mode horaire
 export function buildModeSelectorHtml(startVal = "14:00", endVal = "17:00") {
-  return `
+  return C18.h`
     <div class="field" style="margin-bottom: 10px;">
       <label>Moment ou horaire</label>
       <div class="slot-mode-group">
@@ -145,13 +147,13 @@ export function initFormSelectors() {
 
   bindTypeSelector($("reh-type-holder"), (t) => {
     syncConcertFieldsVisibility("reh", t, "lbl-reh-start", "lbl-reh-end");
-    $("modal-reh-title").textContent = t === "concert" ? "Planifier un concert" : t === "cours" ? "Planifier un cours" : "Planifier une répétition";
+    $("modal-reh-title").textContent = t === "concert" ? C18.t("Planifier un concert") : t === "cours" ? C18.t("Planifier un cours") : C18.t("Planifier une répétition");
     if (t === "concert" && $("reh-start").value === "14:00") { $("reh-start").value = "20:00"; $("reh-end").value = "22:00"; $("reh-soundcheck").value = "18:30"; }
   });
 
   bindTypeSelector($("edit-reh-type-holder"), (t) => {
     syncConcertFieldsVisibility("edit-reh", t, "lbl-edit-reh-start", "lbl-edit-reh-end");
-    $("modal-edit-reh-title").textContent = t === "concert" ? "Modifier le concert" : t === "cours" ? "Modifier le cours" : "Modifier la répétition";
+    $("modal-edit-reh-title").textContent = t === "concert" ? C18.t("Modifier le concert") : t === "cours" ? C18.t("Modifier le cours") : C18.t("Modifier la répétition");
   });
 
   bindTypeSelector($("confirm-poll-type-holder"), (t) => {
@@ -176,7 +178,7 @@ export function renderMultiCalendar() {
   const grid = $("multi-cal-grid"), label = $("cal-month-label"), pills = $("cal-selected-pills");
   if (!grid) return;
   const firstDay = new Date(state.calYear, state.calMonth, 1);
-  label.textContent = firstDay.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  label.textContent = firstDay.toLocaleDateString(locale, { month: "long", year: "numeric" });
 
   const startOffset = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(state.calYear, state.calMonth + 1, 0).getDate();
@@ -207,8 +209,8 @@ export function renderMultiCalendar() {
 
   const sorted = [...state.selectedCalDates].sort();
   pills.innerHTML = sorted.length
-    ? sorted.map((iso) => `<span class="selected-date-pill">${esc(formatCompactDateFr(iso))}<button type="button" data-unselect-iso="${iso}" aria-label="Retirer">×</button></span>`).join("")
-    : `<span style="font-size:12px;color:var(--muted)">Aucune date sélectionnée</span>`;
+    ? sorted.map((iso) => C18.h`<span class="selected-date-pill">${esc(formatCompactDateFr(iso))}<button type="button" data-unselect-iso="${iso}" aria-label="Retirer">×</button></span>`).join("")
+    : C18.htmlLiteral("<span style=\"font-size:12px;color:var(--muted)\">Aucune date sélectionnée</span>");
   hooks.updatePollConflictsWarning();
 }
 
@@ -273,9 +275,9 @@ export function renderLocationSuggestions(containerId, inputId) {
 }
 
 // Modale de confirmation universelle & gestion des modales
-export function openConfirmationModal({ title, context, message, confirmLabel = "Confirmer", danger = true, onConfirm }) {
+export function openConfirmationModal({ title, context, message, confirmLabel = C18.t("Confirmer"), danger = true, onConfirm }) {
   haptic();
-  $("confirm-delete-title").textContent = title || "Confirmer";
+  $("confirm-delete-title").textContent = title || C18.t("Confirmer");
   const ctxEl = $("confirm-delete-context");
   ctxEl.textContent = context || "";
   ctxEl.classList.toggle("hidden", !context);
@@ -297,7 +299,7 @@ export function openModal(id) {
   }
   if (id === "modal-rehearsal") {
     setEventTypeValue($("reh-type-holder"), "rehearsal", (t) => syncConcertFieldsVisibility("reh", t, "lbl-reh-start", "lbl-reh-end"));
-    $("modal-reh-title").textContent = "Planifier un événement";
+    $("modal-reh-title").textContent = C18.t("Planifier un événement");
     populateConcertFields("reh", null);
     if (!$("reh-date").value) $("reh-date").value = today;
   }

@@ -1,9 +1,11 @@
+import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
+import * as C18 from "./i18n.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
 import { getDatabase, ref, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
 import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-export const APP_VERSION = "v20.2";
+export const APP_VERSION = "v20.4";
 export const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
 export const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
 
@@ -17,9 +19,9 @@ export const KEYS = {
 };
 
 export const EVENT_TYPES = {
-  rehearsal: { label: "Répétition", badgeCls: "", cardCls: "", nextLabel: "Prochaine répétition" },
-  cours: { label: "Cours", badgeCls: "cours", cardCls: "cours-card", nextLabel: "Prochain cours" },
-  concert: { label: "Concert", badgeCls: "concert", cardCls: "concert-card", nextLabel: "Prochain concert" }
+  rehearsal: { get label() { return C18.t("Répétition"); }, badgeCls: "", cardCls: "", get nextLabel() { return C18.t("Prochaine répétition"); } },
+  cours: { get label() { return C18.t("Cours"); }, badgeCls: "cours", cardCls: "cours-card", get nextLabel() { return C18.t("Prochain cours"); } },
+  concert: { get label() { return C18.t("Concert"); }, badgeCls: "concert", cardCls: "concert-card", get nextLabel() { return C18.t("Prochain concert"); } }
 };
 export const getEventMeta = (t) => EVENT_TYPES[t] || EVENT_TYPES.rehearsal;
 
@@ -65,7 +67,7 @@ export const state = {
   isPreviewingWhatsNew: false,
   adminActiveTab: "publish",
   adminPopupType: "poll",
-  adminPollOptions: ["Oui, tout à fait", "Plutôt oui", "Non, pas besoin"],
+  adminPollOptions: [C18.t("Oui, tout à fait"), C18.t("Plutôt oui"), C18.t("Non, pas besoin")],
   selectedUserPollOptionIndex: null,
   currentRenderedPopupData: null,
   allFeedbackCampaigns: {},
@@ -99,7 +101,7 @@ export function getVoterDeviceId() {
 
 export function getCurrentRespondentLabel() {
   const ses = state.session.activeEnsembleId ? state.session.ensembles[state.session.activeEnsembleId] : null;
-  if (!ses?.name) return "Utilisateur Cadenza";
+  if (!ses?.name) return C18.t("Utilisateur Cadenza");
   const details = [ses.instrument, ses.ensembleName].filter(Boolean).join(" — ");
   return details ? `${ses.name} (${details})` : ses.name;
 }
@@ -116,19 +118,19 @@ export function handleFirebaseError(err) {
   console.error("Firebase error:", err);
   const msg = String(err?.message || err || "");
   $("firebase-error-text").textContent = (msg.toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED")
-    ? "Accès refusé par Firebase : autorisez .read et .write sur \"ensembles\"."
-    : `Erreur de synchronisation Firebase : ${msg}`;
+    ? C18.t("Accès refusé par Firebase : autorisez .read et .write sur \"ensembles\".")
+    : C18.tt`Erreur de synchronisation Firebase : ${msg}`;
   $("firebase-error-banner").classList.remove("hidden");
-  showToast("Erreur de connexion à la base de données.");
+  showToast(C18.t("Erreur de connexion à la base de données."));
 }
 
 // Formatage des dates & créneaux
 export const parseIso = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
-export const formatDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
-export const formatCompactDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "";
-export const formatShortDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "";
-export const formatPollTimeLabel = (p) => p.timeMode === "day" ? "Journée entière" : p.timeMode === "period" && p.period ? p.period : p.startTime && p.endTime ? `${p.startTime} – ${p.endTime}` : (p.startTime || p.period || "");
-export const formatVoteLabelFr = (v) => ({ yes: "Oui (Disponible)", maybe: "Peut-être (Incertain)", no: "Non (Indisponible)" }[v] || "");
+export const formatDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
+export const formatCompactDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" }) : "";
+export const formatShortDateFr = (iso) => iso ? parseIso(iso).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : "";
+export const formatPollTimeLabel = (p) => p.timeMode === "day" ? C18.t("Journée entière") : p.timeMode === "period" && p.period ? localizePeriod(p.period) : p.startTime && p.endTime ? `${p.startTime} – ${p.endTime}` : (p.startTime || localizePeriod(p.period) || "");
+export const formatVoteLabelFr = (v) => ({ yes: C18.t("Oui (Disponible)"), maybe: C18.t("Peut-être (Incertain)"), no: C18.t("Non (Indisponible)") }[v] || "");
 
 export function getPollSortKey(p) {
   if (p.timeMode === "day") return `${p.date}T00:00`;
@@ -178,7 +180,7 @@ export async function shareOrCopy(url, title, text, copiedMsg) {
   if (navigator.share) {
     try { await navigator.share({ title, text, url }); return; } catch (e) { if (e?.name === "AbortError") return; }
   }
-  showToast((await copyTextReliable(url)) ? copiedMsg : "Copiez le lien affiché ci-dessus.");
+  showToast((await copyTextReliable(url)) ? copiedMsg : C18.t("Copiez le lien affiché ci-dessus."));
 }
 
 export function getUnavailabilityConflictsForDate(iso) {
