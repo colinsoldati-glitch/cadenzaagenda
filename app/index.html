@@ -222,68 +222,89 @@
 
     <!-- VUE 3 : ENSEMBLE -->
     <section id="view-ensemble" class="hidden">
-      <div class="section-head">
+      <div class="section-head ensemble-page-head">
         <h2 class="section-title">Ensemble</h2>
-        <button type="button" id="btn-open-edit-ensemble" class="btn-secondary btn-sm">Modifier l'ensemble</button>
+      </div>
+      <div class="card ensemble-hero">
+        <div class="ensemble-hero-top">
+          <div class="ensemble-mark"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="ensemble-title-block">
+            <div class="card-kicker" id="info-formation">Formation</div>
+            <h3 id="info-name">—</h3>
+            <div class="ensemble-invite-code"><span>Code d'invitation :</span> <strong id="info-code">—</strong></div>
+          </div>
+          <button type="button" id="btn-open-edit-ensemble" class="btn-secondary ensemble-edit" aria-label="Modifier l'ensemble" title="Modifier l'ensemble"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 5 5-12 12H4v-5zM13 6l5 5"/></svg></button>
+        </div>
+        <button type="button" id="btn-share-invite" class="btn-primary btn-full ensemble-invite"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a4 4 0 0 0 6 .4l3-3a4 4 0 0 0-5.7-5.7l-1.7 1.7m2.4 4.6a4 4 0 0 0-6-.4l-3 3a4 4 0 0 0 5.7 5.7l1.7-1.7"/></svg><span>Envoyer le lien d'invitation</span></button>
+        <details id="ensemble-switcher" class="ensemble-disclosure ensemble-switcher">
+          <summary><span>Mes ensembles</span><span class="ensemble-count" id="saved-ensembles-count">0</span></summary>
+          <div id="saved-ensembles-list"></div>
+          <button type="button" id="btn-switch-onboarding" class="btn-secondary btn-full"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Créer ou rejoindre un autre ensemble</span></button>
+        </details>
       </div>
 
-      <div class="card featured">
-        <div class="card-kicker" id="info-formation">Formation</div>
-        <h3 class="card-date" id="info-name" style="font-size: 22px;">—</h3>
-        <div class="card-meta">Code d'invitation : <strong id="info-code">—</strong></div>
-        <div class="card-actions" style="border-top: none; padding-top: 0;">
-          <button type="button" id="btn-share-invite" class="btn-primary btn-full">Envoyer le lien d'invitation</button>
+      <div class="ensemble-tabs" role="tablist" aria-label="Sections de l’ensemble">
+        <button type="button" role="tab" id="ensemble-tab-members" aria-controls="ensemble-panel-members" aria-selected="true" data-ensemble-section="members"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/><circle cx="9" cy="7" r="4"/></svg><span>Musiciens</span><span class="ensemble-count" id="members-count">0</span></button>
+        <button type="button" role="tab" id="ensemble-tab-absences" aria-controls="ensemble-panel-absences" aria-selected="false" tabindex="-1" data-ensemble-section="absences"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18m-12 4 6 4m0-4-6 4"/></svg><span>Mes absences</span><span class="ensemble-count" id="ensemble-absence-count">0</span></button>
+        <button type="button" role="tab" id="ensemble-tab-settings" aria-controls="ensemble-panel-settings" aria-selected="false" tabindex="-1" data-ensemble-section="settings"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="m10 3-.6 2.3-2 .9-2.1-1.2-2.4 4.1 1.9 1.6v2.6l-1.9 1.6 2.4 4.1 2.1-1.2 2 .9.6 2.3h4l.6-2.3 2-.9 2.1 1.2 2.4-4.1-1.9-1.6v-2.6l1.9-1.6-2.4-4.1-2.1 1.2-2-.9L14 3z"/></svg><span>Réglages</span></button>
+      </div>
+
+      <div id="ensemble-panel-members" role="tabpanel" aria-labelledby="ensemble-tab-members">
+        <div class="card ensemble-card">
+          <div class="ensemble-card-heading"><h3>Les musiciens</h3></div>
+          <div id="ensemble-member-search-wrap" class="ensemble-search hidden"><input type="search" id="ensemble-member-search" placeholder="Rechercher un nom ou un instrument" aria-label="Rechercher un nom ou un instrument" autocomplete="off" /></div>
+          <div id="members-list"></div>
+        </div>
+        <div class="card ensemble-card ensemble-management">
+          <div class="ensemble-card-heading"><h3>Gestion des membres</h3></div>
+          <div id="ensemble-manager-panel" class="manager-panel"></div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-kicker">Musiciens (<span id="members-count">0</span>)</div>
-        <div id="ensemble-manager-panel" class="manager-panel"></div><div id="members-list"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-kicker">Mes indisponibilités déclarées</div>
-        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">Signalez vos périodes d'absence (vacances, examens, tournée). Elles seront affichées lors de la proposition de dates.</p>
-        <div id="my-unavailabilities-list"></div>
-        <button type="button" id="btn-open-unavail" class="btn-secondary btn-sm btn-full" style="margin-top: 8px;">+ Déclarer une période d'absence</button>
-      </div>
-
-      <div class="card">
-        <div class="card-kicker">Notifications push (cet ensemble)</div>
-        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">Activez ou coupez les alertes sur votre téléphone pour cet ensemble.</p>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" id="btn-toggle-push" class="btn-primary btn-sm">Activer les notifications</button>
-          <button type="button" id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
-        </div>
-        <div id="push-status-msg" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
-        <label class="toggle-row" for="toggle-auto-remind-eve">
-          <input type="checkbox" id="toggle-auto-remind-eve" checked />
-          <span>Rappel automatique la veille des répétitions, cours et concerts à 19h00</span>
-        </label>
-      </div>
-
-      <div class="card">
-        <div class="card-kicker">Mon profil &amp; Mes ensembles</div>
-        <div id="saved-ensembles-list" style="margin: 8px 0 12px;"></div>
-        <div style="display: grid; gap: 8px;">
-          <button type="button" id="btn-open-transfer" class="btn-secondary btn-sm btn-full">Sauvegarder / Transférer sur un autre appareil</button>
-          <button type="button" id="btn-switch-onboarding" class="btn-secondary btn-sm btn-full">Créer ou rejoindre un autre ensemble</button>
-          <button type="button" id="btn-reopen-tuto" class="btn-secondary btn-sm btn-full">Guide d'installation sur l'écran d'accueil</button>
+      <div id="ensemble-panel-absences" role="tabpanel" aria-labelledby="ensemble-tab-absences" class="hidden">
+        <div class="card ensemble-card">
+          <div class="ensemble-card-heading"><h3>Mes indisponibilités déclarées</h3></div>
+          <p class="ensemble-help">Signalez vos périodes d'absence (vacances, examens, tournée). Elles seront affichées lors de la proposition de dates.</p>
+          <button type="button" id="btn-open-unavail" class="btn-primary btn-full"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Déclarer une période d'absence</span></button>
+          <h4 class="ensemble-subheading">En cours et à venir</h4>
+          <div id="my-unavailabilities-list"></div>
+          <details id="ensemble-past-absences" class="ensemble-disclosure hidden">
+            <summary><span>Absences passées</span><span id="ensemble-past-count" class="ensemble-count">0</span></summary>
+            <div id="ensemble-past-list"></div>
+          </details>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-kicker">Aide et contact</div>
-        <p style="font-size: 13.5px; color: var(--muted); margin: 6px 0 12px;">Une question, un problème technique ou une suggestion ?</p>
-        <a href="mailto:contact@cadenzaapp.ch?subject=Cadenza%20%E2%80%94%20Demande%20d'aide" class="btn btn-secondary btn-sm btn-full">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
-          <span>contact@cadenzaapp.ch</span>
-        </a>
+      <div id="ensemble-panel-settings" role="tabpanel" aria-labelledby="ensemble-tab-settings" class="hidden">
+        <div class="card ensemble-card">
+          <div class="ensemble-card-heading"><h3>Mon profil</h3></div>
+          <div id="ensemble-my-profile"></div>
+          <button type="button" id="btn-open-transfer" class="btn-secondary btn-full">Sauvegarder / Transférer sur un autre appareil</button>
+        </div>
+        <div class="card ensemble-card">
+          <div class="ensemble-card-heading"><h3>Notifications push (cet ensemble)</h3></div>
+          <div id="push-status-msg" class="ensemble-help" role="status"></div>
+          <div class="ensemble-setting-actions">
+            <button type="button" id="btn-toggle-push" class="btn-primary btn-sm">Activer les notifications</button>
+            <button type="button" id="btn-test-push" class="btn-secondary btn-sm">Tester une alerte</button>
+          </div>
+          <label class="toggle-row" for="toggle-auto-remind-eve">
+            <input type="checkbox" id="toggle-auto-remind-eve" checked />
+            <span>Rappel automatique la veille des répétitions, cours et concerts à 19h00</span>
+          </label>
+        </div>
+        <div class="card ensemble-card">
+          <div class="ensemble-card-heading"><h3>Application</h3></div>
+          <div class="language-setting"><label for="language-settings">Langue de l’application</label><select id="language-settings" data-language-select aria-label="Langue de l’application" data-no-translate><option value="fr">Français</option><option value="de">Deutsch</option><option value="en">English</option></select></div>
+          <button type="button" id="btn-reopen-tuto" class="btn-secondary btn-full">Guide d'installation sur l'écran d'accueil</button>
+          <details class="ensemble-disclosure">
+            <summary><span>Aide et contact</span></summary>
+            <p class="ensemble-help">Une question, un problème technique ou une suggestion ?</p>
+            <a href="mailto:contact@cadenzaapp.ch?subject=Cadenza%20%E2%80%94%20Demande%20d'aide" class="btn btn-secondary btn-full">contact@cadenzaapp.ch</a>
+          </details>
+        </div>
+        <div class="app-version-footer">Cadenza • Version <span id="app-version-label">—</span></div>
       </div>
-
-      <div class="card"><div class="language-setting"><label for="language-settings">Langue de l’application</label><select id="language-settings" data-language-select aria-label="Langue de l’application" data-no-translate><option value="fr">Français</option><option value="de">Deutsch</option><option value="en">English</option></select></div></div>
-
-      <div class="app-version-footer">Cadenza • Version <span id="app-version-label">—</span></div>
     </section>
   </main>
 

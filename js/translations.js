@@ -1,5 +1,22 @@
 // Dictionnaire des textes de l’interface. Les clés sont les textes source français.
 export const translations = {
+  "Mes ensembles": ["Meine Ensembles", "My ensembles"],
+  "Sections de l’ensemble": ["Ensemble-Bereiche", "Ensemble sections"],
+  "Musiciens": ["Musiker", "Musicians"],
+  "Mes absences": ["Meine Abwesenheiten", "My absences"],
+  "Réglages": ["Einstellungen", "Settings"],
+  "Les musiciens": ["Die Musiker", "Musicians"],
+  "Rechercher un nom ou un instrument": ["Name oder Instrument suchen", "Search by name or instrument"],
+  "Déclarer une période d'absence": ["Abwesenheit melden", "Report an absence"],
+  "En cours et à venir": ["Laufend und bevorstehend", "Current and upcoming"],
+  "Absences passées": ["Vergangene Abwesenheiten", "Past absences"],
+  "Mon profil": ["Mein Profil", "My profile"],
+  "Application": ["App", "App"],
+  "{0} absence(s)": ["{0} Abwesenheit(en)", "{0} absence(s)"],
+  "Actions pour {0}": ["Aktionen für {0}", "Actions for {0}"],
+  "Aucun musicien trouvé.": ["Keine Musiker gefunden.", "No musicians found."],
+  "Aucune absence en cours ou à venir.": ["Keine laufenden oder bevorstehenden Abwesenheiten.", "No current or upcoming absences."],
+
   "Synchroniser mon calendrier": ["Meinen Kalender synchronisieren", "Sync my calendar"],
   "Abonnez-vous à tous les événements de cet ensemble. Les changements sont récupérés automatiquement par votre calendrier, à sa propre fréquence.": ["Abonnieren Sie alle Termine dieses Ensembles. Ihr Kalender ruft Änderungen automatisch in seinem eigenen Rhythmus ab.", "Subscribe to all events for this ensemble. Your calendar retrieves changes automatically on its own schedule."],
   "Le lien est privé : toute personne qui le possède peut lire les événements, leurs lieux, programmes et notes. Ne le partagez pas.": ["Der Link ist privat: Wer ihn kennt, kann Termine, Orte, Programme und Notizen lesen. Teilen Sie ihn nicht.", "The link is private: anyone with it can read the events, locations, programmes and notes. Do not share it."],
