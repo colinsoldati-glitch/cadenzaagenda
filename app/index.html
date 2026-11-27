@@ -376,7 +376,7 @@
       <div id="admin-panel-publish" role="tabpanel">
         <div class="admin-section-heading"><div><h4>Communications</h4><p>Créez et diffusez vos annonces dans l'application.</p></div><span class="admin-audience">● <span>Membres d'un ensemble uniquement</span></span></div>
         <div class="card" style="padding: 12px 14px; margin-bottom: 16px;">
-          <div class="admin-queue-heading"><div class="card-kicker">Campagnes actives ou programmées (max. 4)</div><span id="admin-active-count" class="admin-count-pill">0 / 4</span></div>
+          <div class="admin-queue-heading"><div class="card-kicker">Campagnes actives ou programmées</div><span id="admin-active-count" class="admin-count-pill">0</span></div>
           <div id="admin-current-announcement" style="font-size: 13.5px; color: var(--muted); margin-top: 4px;">Aucune pop-up publiée.</div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
             <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Prévisualiser la séquence</button>
@@ -395,9 +395,9 @@
               <label><input type="checkbox" data-campaign-language value="de" checked><span data-no-translate>DE · Deutsch</span></label>
               <label><input type="checkbox" data-campaign-language value="en" checked><span data-no-translate>EN · English</span></label>
             </div>
-            <p class="admin-muted">Le même texte est envoyé aux langues sélectionnées. Créez une campagne par traduction si nécessaire.</p>
+            <p class="admin-muted">Sélectionnez les langues destinataires. Rédigez ensuite une version pour chacune dans la même campagne.</p>
             <div class="admin-period-grid"><div class="field"><label for="admin-start-at">Début (facultatif)</label><input type="datetime-local" id="admin-start-at"><small>Vide : immédiatement</small></div><div class="field"><label for="admin-end-at">Fin (facultative)</label><input type="datetime-local" id="admin-end-at"><small>Vide : sans limite</small></div></div>
-            <p class="admin-muted">Horaires locaux de votre appareil. Les campagnes terminées libèrent automatiquement une place.</p>
+            <p class="admin-muted">Horaires locaux de votre appareil. Les campagnes terminées ne sont plus affichées.</p>
           </section>
           <div class="field" style="margin-bottom: 10px;">
             <label>Type de fenêtre pop-up</label>
@@ -421,6 +421,10 @@
             </div>
           </div>
 
+          <section class="admin-language-editor">
+            <div class="admin-form-heading"><h4>Contenu multilingue</h4><p>Une seule campagne, un texte par langue. Les champs sont conservés lorsque vous changez de langue.</p></div>
+            <div id="admin-content-language-tabs" class="admin-content-language-tabs" role="tablist" aria-label="Langue du contenu"></div>
+            <p class="admin-muted"><span>Version en cours :</span> <strong id="admin-editing-language" data-no-translate></strong></p>
           <div class="row-2">
             <div class="field"><label for="admin-ann-version">Badge / Étiquette</label><input type="text" id="admin-ann-version" placeholder="Ex: Sondage, v20.2..." required /></div>
             <div class="field"><label for="admin-ann-title">Titre de la fenêtre</label><input type="text" id="admin-ann-title" value="Votre avis sur Cadenza" required /></div>
@@ -431,6 +435,7 @@
           <div id="admin-fields-poll">
             <div class="field">
               <label>Choix de vote personnalisés</label>
+              <p class="admin-muted">Gardez les choix dans le même ordre dans chaque langue : les votes sont regroupés par choix.</p>
               <div id="admin-poll-options-list"></div>
               <button type="button" id="btn-admin-add-option" class="btn-secondary btn-xs btn-full" style="margin-top: 4px;">+ Ajouter un choix de vote</button>
             </div>
@@ -462,23 +467,24 @@
             <div class="field"><label for="admin-ann-notes">Nouveautés (une par ligne)</label><textarea id="admin-ann-notes" rows="4" placeholder="Nouveau calendrier multi-dates&#10;Gestion des concerts et cours"></textarea></div>
           </div>
 
+            <div class="field"><label for="admin-popup-cta">Texte du bouton principal (optionnel)</label><input id="admin-popup-cta" type="text" maxlength="70" placeholder="Utiliser le texte par défaut"></div>
+            <div class="field" id="admin-popup-secondary-field"><label for="admin-popup-secondary">Texte du bouton secondaire (optionnel)</label><input id="admin-popup-secondary" type="text" maxlength="70" placeholder="Utiliser le texte par défaut"></div>
+            <div class="field"><label for="admin-popup-link-label">Texte du lien</label><input id="admin-popup-link-label" type="text" maxlength="70" placeholder="En savoir plus"></div>
+          </section>
           <details class="admin-design" open><summary>Apparence et personnalisation</summary>
-          <div class="admin-design-fields">
+          <div class="admin-design-fields"><p class="admin-muted">Apparence et adresse du lien communes à toutes les langues.</p>
             <div class="row-2"><div class="field"><label for="admin-popup-theme">Style de couleur</label><select id="admin-popup-theme"><option value="blue">Bleu Cadenza</option><option value="ink">Graphite</option><option value="green">Vert sauge</option><option value="purple">Violet</option><option value="amber">Ambre</option><option value="rose">Rose</option></select></div>
             <div class="field"><label for="admin-popup-icon">Icône</label><select id="admin-popup-icon"><option value="none">Aucune</option><option value="info">ℹ️ Information</option><option value="sparkles">✨ Nouveauté</option><option value="music">♫ Musique</option><option value="heart">♥ Remerciement</option><option value="bell">🔔 Alerte</option><option value="poll">📊 Sondage</option></select></div></div>
             <div class="field"><label for="admin-popup-layout">Alignement de l'en-tête</label><select id="admin-popup-layout"><option value="left">À gauche</option><option value="center">Centré</option></select></div>
             <div class="admin-checks"><label><input type="checkbox" id="admin-popup-show-badge" checked> Afficher le badge</label><label><input type="checkbox" id="admin-popup-show-date" checked> Afficher la date</label></div>
-            <div class="field"><label for="admin-popup-cta">Texte du bouton principal (optionnel)</label><input id="admin-popup-cta" type="text" maxlength="70" placeholder="Utiliser le texte par défaut"></div>
-            <div class="field" id="admin-popup-secondary-field"><label for="admin-popup-secondary">Texte du bouton secondaire (optionnel)</label><input id="admin-popup-secondary" type="text" maxlength="70" placeholder="Utiliser le texte par défaut"></div>
             <div class="field"><label for="admin-popup-link">Lien complémentaire HTTPS (optionnel)</label><input id="admin-popup-link" type="url" placeholder="https://…"></div>
-            <div class="field"><label for="admin-popup-link-label">Texte du lien</label><input id="admin-popup-link-label" type="text" maxlength="70" placeholder="En savoir plus"></div>
           </div></details>
           <div class="admin-form-actions">
             <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser la pop-up</button>
             <p id="admin-queue-help" class="admin-queue-help" aria-live="polite"></p><button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour les membres</button>
           </div>
         </form>
-        <aside class="admin-preview-column"><div class="admin-form-heading"><h4>Aperçu en direct</h4><p>Les modifications apparaissent ici sans publication.</p></div><div id="admin-live-preview" class="admin-live-preview" inert></div><p class="admin-muted">Utilisez le bouton de prévisualisation pour tester les interactions.</p></aside>
+        <aside class="admin-preview-column"><div class="admin-form-heading"><h4>Aperçu en direct</h4><span id="admin-preview-language" class="admin-count-pill" data-no-translate></span><p>Les modifications apparaissent ici sans publication.</p></div><div id="admin-live-preview" class="admin-live-preview" inert></div><p class="admin-muted">Utilisez le bouton de prévisualisation pour tester les interactions.</p></aside>
         </div>
       </div>
 

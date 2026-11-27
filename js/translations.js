@@ -1,5 +1,18 @@
 // Dictionnaire des textes de l’interface. Les clés sont les textes source français.
 export const translations = {
+  "Gardez les choix dans le même ordre dans chaque langue : les votes sont regroupés par choix.": ["Behalten Sie dieselbe Reihenfolge der Optionen in jeder Sprache bei: Die Stimmen werden pro Option zusammengefasst.", "Keep the options in the same order in every language: votes are combined by option."],
+  "Campagnes actives ou programmées": ["Aktive oder geplante Kampagnen", "Active or scheduled campaigns"],
+  "Sélectionnez les langues destinataires. Rédigez ensuite une version pour chacune dans la même campagne.": ["Wählen Sie die Zielsprachen. Schreiben Sie je eine Version in derselben Kampagne.", "Choose the target languages, then write a version for each within the same campaign."],
+  "Horaires locaux de votre appareil. Les campagnes terminées ne sont plus affichées.": ["Lokale Zeit Ihres Geräts. Beendete Kampagnen werden nicht mehr angezeigt.", "Times are local to your device. Ended campaigns are no longer displayed."],
+  "Contenu multilingue": ["Mehrsprachiger Inhalt", "Multilingual content"],
+  "Une seule campagne, un texte par langue. Les champs sont conservés lorsque vous changez de langue.": ["Eine Kampagne, ein Text pro Sprache. Beim Sprachwechsel bleiben die Eingaben erhalten.", "One campaign, one text per language. Your entries are preserved when switching languages."],
+  "Langue du contenu": ["Sprache des Inhalts", "Content language"],
+  "Version en cours :": ["Aktuelle Version:", "Editing version:"],
+  "Apparence et adresse du lien communes à toutes les langues.": ["Design und Linkadresse gelten für alle Sprachen.", "Appearance and link URL are shared across languages."],
+  "Indiquez un titre.": ["Geben Sie einen Titel ein.", "Enter a title."],
+  "Complétez tous les choix de vote dans cette langue.": ["Füllen Sie alle Antwortoptionen in dieser Sprache aus.", "Complete all voting options in this language."],
+  "Retirer cette option": ["Option entfernen", "Remove this option"],
+
   "Campagnes actives ou programmées (max. 4)": ["Aktive oder geplante Kampagnen (max. 4)", "Active or scheduled campaigns (max. 4)"],
   "Diffusion": ["Veröffentlichung", "Delivery"],
   "Choisissez les destinataires et la période de visibilité.": ["Wählen Sie die Zielgruppe und den Anzeigezeitraum.", "Choose the audience and display period."],

@@ -42,6 +42,12 @@ export const localizePeriod = value => periods.has(value) ? t(value) : value;
 export const localizeLocation = value => value === 'Lieu à confirmer' ? t(value) : value;
 
 // Synchronously generate recipient-specific variants without changing the user's preference.
+export function withLanguage(code, build) {
+  if (!SUPPORTED_LANGUAGES.includes(code)) return build();
+  const oldLanguage=language, oldLocale=locale;
+  try { language=code; locale=locales[code]; return build(); }
+  finally { language=oldLanguage; locale=oldLocale; }
+}
 export function localizedMessages(build) {
   const previousLanguage = language, previousLocale = locale;
   const result = {};

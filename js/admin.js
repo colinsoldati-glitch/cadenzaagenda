@@ -40,12 +40,17 @@ export function setAdminPopupType(type) {
   $("admin-fields-message").classList.toggle("hidden", state.adminPopupType !== "message");
   $("admin-fields-update").classList.toggle("hidden", state.adminPopupType !== "update");
 
-  const meta = POPUP_TYPE_META[state.adminPopupType];
-  $("admin-ann-version").placeholder = C18.tt`Ex: ${meta.defaultBadge}`;
-  if (!$("admin-ann-version").dataset.touched) $("admin-ann-version").value = meta.defaultBadge;
-  if (!$("admin-ann-title").dataset.touched) $("admin-ann-title").value = meta.defaultTitle;
+  const meta = popupDefaults(state.adminPopupType, editorLanguage);
+  for(const [code,d] of Object.entries(languageDrafts)){
+    const defaults=popupDefaults(state.adminPopupType,code);
+    if(!d.titleTouched)d.title=defaults.title;
+    if(!d.badgeTouched)d.version=defaults.version;
+  }
+  $("admin-ann-version").placeholder = C18.tt`Ex: ${meta.version}`;
+  if (!$("admin-ann-version").dataset.touched) $("admin-ann-version").value = meta.version;
+  if (!$("admin-ann-title").dataset.touched) $("admin-ann-title").value = meta.title;
   $("lbl-admin-subtitle").textContent = state.adminPopupType === "poll" ? C18.t("Question du sondage") : state.adminPopupType === "feedback" ? C18.t("Question posée aux utilisateurs") : C18.t("Sous-titre (optionnel)");
-  $("admin-ann-subtitle").placeholder = meta.defaultSub;
+  $("admin-ann-subtitle").placeholder = meta.subtitle;
   if (state.adminPopupType === "poll") renderAdminPollOptionsBuilder();
   $("admin-popup-secondary-field").classList.toggle("hidden", !["poll","feedback"].includes(state.adminPopupType));
   renderLivePreview();
@@ -55,21 +60,21 @@ export function renderAdminPollOptionsBuilder() {
   const box = $("admin-poll-options-list");
   box.innerHTML = state.adminPollOptions.map((opt, idx) => C18.h`
     <div class="poll-opt-builder-row">
-      <input type="text" class="admin-poll-opt-input" data-opt-idx="${idx}" value="${esc(opt)}" placeholder="Option ${idx + 1} (ex: Oui, Non...)" />
-      ${state.adminPollOptions.length > 2 ? C18.h`<button type="button" class="btn-remove-opt" data-del-opt="${idx}" aria-label="Retirer cette option">✕</button>` : ""}
+      <input type="text" class="admin-poll-opt-input" data-opt-idx="${idx}" value="${esc(opt)}" placeholder="${esc(C18.t('Option {0}',idx+1))}" />
+      ${state.adminPollOptions.length > 2 ? C18.h`<button type="button" class="btn-remove-opt" data-del-opt="${idx}" aria-label="${esc(C18.t('Retirer cette option'))}">✕</button>` : ""}
     </div>`).join("");
 }
 
 // New campaigns are deliberately hidden from legacy clients, which cannot enforce targeting.
 const SEEN_QUEUE_KEY = 'cadenza_seen_announcements_v2';
-const MAX_CAMPAIGNS=4, LANGS=['fr','de','en'];
+const LANGS=['fr','de','en'];
 const LANG_NAMES={fr:'Français',de:'Deutsch',en:'English'};
 let adminPublishing=false, popupSubmitting=false, previewQueue=[], scheduleTimer;
 const viewWrites=new Set();
 function activeAnnouncements(raw=state.latestAnnouncementData) {
   if(!raw)return [];
-  const items=raw.campaigns?Object.values(raw.campaigns):raw.active&&raw.id?[...Object.values(raw.queue||{}),raw]:[];
-  return [...new Map(items.filter(a=>a?.active&&a.id).map(({queue,...a})=>[a.id,a])).values()].slice(-MAX_CAMPAIGNS);
+  const items=[...Object.values(raw.campaigns||{}),...Object.values(raw.multilingualCampaigns||{}),...(raw.active&&raw.id?[...Object.values(raw.queue||{}),raw]:[])];
+  return [...new Map(items.filter(a=>a?.active&&a.id).map(({queue,...a})=>[a.id,a])).values()].sort((a,b)=>(a.publishedAt||0)-(b.publishedAt||0));
 }
 function campaignStatus(a,now=Date.now()){
   if(a.endsAt&&now>=a.endsAt)return 'expired';
@@ -78,7 +83,15 @@ function campaignStatus(a,now=Date.now()){
 }
 function campaignLanguages(a){return Array.isArray(a.languages)?a.languages:LANGS;}
 function availableAnnouncements(){return activeAnnouncements().filter(a=>campaignStatus(a)!=='expired');}
-function userAnnouncements(){return availableAnnouncements().filter(a=>campaignStatus(a)==='live'&&campaignLanguages(a).includes(language));}
+function userAnnouncements(){return availableAnnouncements().filter(a=>campaignStatus(a)==='live'&&campaignLanguages(a).includes(language)&&(!a.localized||a.localized[language]));}
+function localizedCampaign(a,code=language){
+  if(!a.localized)return a;
+  const actual=a.localized[code]?code:campaignLanguages(a)[0];
+  const variant=a.localized[actual];
+  if(!variant)return a;
+  return {...a,...variant,design:{...a.design,...variant.design},displayLanguage:actual};
+}
+function canonicalCampaign(a){return activeAnnouncements().find(c=>c.id===a.id)||a;}
 function statusLabel(a){return C18.t({expired:'Terminée',scheduled:'Programmée',live:'En diffusion'}[campaignStatus(a)]);}
 function formatDate(ts){return ts?new Date(ts).toLocaleString(locale,{dateStyle:'short',timeStyle:'short'}):'';}
 function periodLabel(a){return `${a.startsAt?formatDate(a.startsAt):C18.t('Immédiatement')} → ${a.endsAt?formatDate(a.endsAt):C18.t('Sans fin')}`;}
@@ -97,7 +110,7 @@ function recordView(a){
   try{impression=JSON.parse(pending||'null');}catch(_){}
   if(!impression||typeof impression!=='object')impression={language,viewedAt:Date.now()};
   localStorage.setItem(key,JSON.stringify(impression));
-  update(ref(db,`app_feedback/${a.id}`),{[`views/${voter}`]:impression,meta:a})
+  update(ref(db,`app_feedback/${a.id}`),{[`views/${voter}`]:impression,meta:canonicalCampaign(a)})
     .then(()=>localStorage.setItem(key,'1')).catch(err=>console.warn('Campaign impression not saved',err)).finally(()=>viewWrites.delete(key));
 }
 function seenAnnouncements(){
@@ -105,101 +118,108 @@ function seenAnnouncements(){
   const legacy=localStorage.getItem(KEYS.ann);if(legacy)seen.add(legacy);return seen;
 }
 function markSeen(id){if(!id)return;const seen=seenAnnouncements();seen.add(id);localStorage.setItem(SEEN_QUEUE_KEY,JSON.stringify([...seen]));localStorage.setItem(KEYS.ann,id);}
-function encodeAnnouncements(items){return {active:false,campaigns:items};}
+// Older releases ignore multilingualCampaigns rather than show an untranslated message.
+function encodeAnnouncements(items){return {active:false,campaigns:items.filter(a=>!a.localized),multilingualCampaigns:items.filter(a=>a.localized)};}
 async function readActiveAnnouncements(){const snap=await get(ref(db,'app_announcements/latest/public'));return activeAnnouncements(snap.exists()?snap.val():null);}
 async function saveAnnouncements(items){await set(ref(db,'app_announcements/latest'),{public:encodeAnnouncements(items),auth:{pin:state.verifiedAdminPin}});}
 export function refreshAdminAnnouncementStatusUI(){
   const box=$('admin-current-announcement'), retest=$('btn-admin-retest-popup'), clear=$('btn-admin-clear-announcement'),items=availableAnnouncements();
   box.innerHTML=items.length?items.map((a,i)=>{
     const views=state.feedbackPermissionDenied||!a.trackViews?'—':Object.keys(state.allFeedbackCampaigns[a.id]?.views||{}).length;
-    return `<div class="admin-queue-item"><span class="admin-queue-number">${i+1}</span><div class="admin-queue-content"><strong>${esc(a.title||'Pop-up')}</strong><div class="admin-campaign-meta"><span class="admin-campaign-status ${campaignStatus(a)}">${esc(statusLabel(a))}</span><span>${esc(campaignLanguages(a).map(l=>LANG_NAMES[l]||l).join(' · '))}</span></div><small>${esc(periodLabel(a))}</small><small>${esc(C18.t('{0} consultations uniques',views))}</small></div><button type="button" class="btn-del-subtle btn-xs" data-admin-deactivate="${esc(a.id)}">${esc(C18.t('Désactiver'))}</button></div>`;
+    return `<div class="admin-queue-item"><span class="admin-queue-number">${i+1}</span><div class="admin-queue-content"><strong>${esc(localizedCampaign(a).title||'Pop-up')}</strong><div class="admin-campaign-meta"><span class="admin-campaign-status ${campaignStatus(a)}">${esc(statusLabel(a))}</span><span>${esc(campaignLanguages(a).map(l=>LANG_NAMES[l]||l).join(' · '))}</span></div><small>${esc(periodLabel(a))}</small><small>${esc(C18.t('{0} consultations uniques',views))}</small></div><button type="button" class="btn-del-subtle btn-xs" data-admin-deactivate="${esc(a.id)}">${esc(C18.t('Désactiver'))}</button></div>`;
   }).join(''):esc(C18.t('Aucune pop-up publiée actuellement.'));
   retest.classList.toggle('hidden',!items.length);clear.classList.toggle('hidden',!items.length);
-  $('admin-queue-help').textContent=C18.t(items.length>=MAX_CAMPAIGNS?'Quatre places occupées. Désactivez une campagne ou attendez son expiration.':'Les campagnes sont affichées dans leur ordre de publication, selon la langue et la période.');
-  $('btn-admin-publish').disabled=adminPublishing||items.length>=MAX_CAMPAIGNS;
-  $('admin-active-count').textContent=`${items.length} / ${MAX_CAMPAIGNS}`;
+  $('admin-queue-help').textContent=C18.t('Les campagnes sont affichées dans leur ordre de publication, selon la langue et la période.');
+  $('btn-admin-publish').disabled=adminPublishing;
+  $('admin-active-count').textContent=String(items.length);
   $('btn-admin-publish').textContent=C18.t($('admin-start-at').value&&new Date($('admin-start-at').value).getTime()>Date.now()?'Programmer la pop-up':'Publier pour les membres');
 }
 
 const THEMES=['blue','ink','green','purple','amber','rose'];
 const ICONS={none:'',info:'ℹ️',sparkles:'✨',music:'♫',heart:'♥',bell:'🔔',poll:'📊'};
 function safeLink(value){try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch(_){return '';}}
-function getDesign(){return {theme:$("admin-popup-theme").value,icon:$("admin-popup-icon").value,layout:$("admin-popup-layout").value,showBadge:$("admin-popup-show-badge").checked,showDate:$("admin-popup-show-date").checked,primaryLabel:$("admin-popup-cta").value.trim(),secondaryLabel:$("admin-popup-secondary").value.trim(),link:safeLink($("admin-popup-link").value.trim()),linkLabel:$("admin-popup-link-label").value.trim()};}
+// Shared visual settings and per-language text drafts. Options are matched by index.
+const TEXT_FIELDS={version:'admin-ann-version',title:'admin-ann-title',subtitle:'admin-ann-subtitle',placeholder:'admin-feedback-placeholder',body:'admin-message-body',notes:'admin-ann-notes',primaryLabel:'admin-popup-cta',secondaryLabel:'admin-popup-secondary',linkLabel:'admin-popup-link-label'};
+let editorLanguage=language;
+const languageDrafts={};
+function popupDefaults(type,code){return C18.withLanguage(code,()=>({
+  version:C18.t({poll:'Sondage',feedback:'Retour',message:'Info',update:APP_VERSION}[type]),
+  title:C18.t({poll:'Votre avis sur Cadenza',feedback:'Vos idées & retours',message:"Message de l'équipe Cadenza",update:'Nouveautés sur Cadenza'}[type]),
+  subtitle:C18.t({poll:'Quelle option préférez-vous ?',feedback:'Aidez-nous à améliorer Cadenza :',message:'Information importante :',update:'Découvrez les dernières améliorations :'}[type])
+}));}
+function newLanguageDraft(code){const d=popupDefaults(state.adminPopupType,code);return {...d,subtitle:'',placeholder:'',body:'',notes:'',primaryLabel:'',secondaryLabel:'',linkLabel:'',options:C18.withLanguage(code,()=>['Oui, tout à fait','Plutôt oui','Non, pas besoin'].map(x=>C18.t(x))),titleTouched:false,badgeTouched:false};}
+function selectedLanguages(){return [...document.querySelectorAll('[data-campaign-language]:checked')].map(el=>el.value);}
+function saveEditorDraft(){
+  const d=languageDrafts[editorLanguage]||newLanguageDraft(editorLanguage);
+  for(const [key,id] of Object.entries(TEXT_FIELDS))d[key]=$(id).value;
+  d.titleTouched=Boolean($('admin-ann-title').dataset.touched);d.badgeTouched=Boolean($('admin-ann-version').dataset.touched);
+  d.options=[...state.adminPollOptions];languageDrafts[editorLanguage]=d;
+}
+function loadEditorDraft(code){
+  editorLanguage=code;const d=languageDrafts[code]||=newLanguageDraft(code);
+  for(const [key,id] of Object.entries(TEXT_FIELDS))$(id).value=d[key]||'';
+  for(const [id,touched] of [['admin-ann-title',d.titleTouched],['admin-ann-version',d.badgeTouched]]){if(touched)$(id).dataset.touched='1';else delete $(id).dataset.touched;}
+  state.adminPollOptions=[...d.options];
+  $('admin-ann-subtitle').placeholder=popupDefaults(state.adminPopupType,code).subtitle;
+  renderAdminPollOptionsBuilder();renderLanguageTabs();renderLivePreview();
+}
+function changeEditorLanguage(code){saveEditorDraft();loadEditorDraft(code);}
+function renderLanguageTabs(){
+  const langs=selectedLanguages();
+  const tabs=$('admin-content-language-tabs');
+  if([...tabs.children].map(b=>b.dataset.editLanguage).join(',')!==langs.join(','))tabs.innerHTML=langs.map(code=>`<button type="button" role="tab" data-edit-language="${code}" class="admin-content-lang"></button>`).join('');
+  for(const b of tabs.children){const code=b.dataset.editLanguage;const active=editorLanguage===code;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));const text=LANG_NAMES[code]+(variantError(languageDrafts[code]||newLanguageDraft(code),state.adminPopupType)?' · ○':' · ✓');if(b.textContent!==text)b.textContent=text;}
+  $('admin-editing-language').textContent=LANG_NAMES[editorLanguage];
+  $('admin-preview-language').textContent=LANG_NAMES[editorLanguage];
+}
+function syncSelectedLanguages(){const langs=selectedLanguages();if(langs.length&&!langs.includes(editorLanguage))changeEditorLanguage(langs[0]);else{saveEditorDraft();renderLanguageTabs();renderLivePreview();}}
+function variantError(d,type){
+  if(!d.title.trim())return 'Indiquez un titre.';
+  if(type==='poll'&&(d.options.length<2||d.options.some(o=>!o.trim())))return 'Complétez tous les choix de vote dans cette langue.';
+  if(type==='feedback'&&!d.subtitle.trim())return 'Indiquez la question posée aux utilisateurs.';
+  if(type==='message'&&!d.body.trim())return 'Écrivez le contenu du message à afficher.';
+  if(type==='update'&&!noteItems(d.notes).length)return 'Ajoutez au moins une nouveauté.';
+  return '';
+}
+function noteItems(value){return value.split("\n").map(l=>l.replace(/^[-•*✓]\s*/, '').trim()).filter(Boolean);}
+function buildVariant(d,type,code){return C18.withLanguage(code,()=>{
+  const defaults=popupDefaults(type,code);
+  const design={primaryLabel:d.primaryLabel.trim(),secondaryLabel:d.secondaryLabel.trim(),linkLabel:d.linkLabel.trim()};
+  const result={version:d.version.trim()||defaults.version,title:d.title.trim()||defaults.title,subtitle:d.subtitle.trim(),design};
+  if(type==='poll'){result.subtitle||=C18.t('Faites votre choix ci-dessous :');result.options=d.options.map((o,i)=>o.trim()||C18.t('Option {0}',i+1));}
+  if(type==='feedback')result.placeholder=d.placeholder.trim()||C18.t('Écrivez votre retour ou suggestion ici...');
+  if(type==='message'){result.body=d.body.trim()||C18.t('Votre message apparaîtra ici.');result.ctaLabel=design.primaryLabel||C18.t("J'ai compris, fermer");}
+  if(type==='update'){result.subtitle||=C18.t('Découvrez les dernières améliorations :');result.items=noteItems(d.notes);if(!result.items.length)result.items=[C18.t('Votre nouveauté apparaîtra ici.')];}
+  return result;
+});}
+function getDesign(){return {theme:$("admin-popup-theme").value,icon:$("admin-popup-icon").value,layout:$("admin-popup-layout").value,showBadge:$("admin-popup-show-badge").checked,showDate:$("admin-popup-show-date").checked,link:safeLink($("admin-popup-link").value.trim())};}
 export function buildAdminAnnouncementPayload(id, draft=false) {
-  const type = state.adminPopupType;
-  const version = $("admin-ann-version").value.trim() || POPUP_TYPE_META[type].defaultBadge;
-  const title = $("admin-ann-title").value.trim() || POPUP_TYPE_META[type].defaultTitle;
-  const subtitle = $("admin-ann-subtitle").value.trim();
-  const design=getDesign();
-  if(!draft&&$("admin-popup-link").value.trim()&&!design.link){showToast(C18.t("Indiquez un lien HTTPS valide."));return null;}
-  const languages=[...document.querySelectorAll('[data-campaign-language]:checked')].map(el=>el.value);
-  const start=$('admin-start-at').value, end=$('admin-end-at').value;
-  const startsAt=start?new Date(start).getTime():null, endsAt=end?new Date(end).getTime():null;
-  if(!draft&&!languages.length){showToast(C18.t('Sélectionnez au moins une langue.'));return null;}
-  if(!draft&&((start&&!Number.isFinite(startsAt))||(end&&!Number.isFinite(endsAt))||(endsAt!==null&&endsAt<=Math.max(Date.now(),startsAt||0)))){showToast(C18.t('La fin doit être postérieure au début et à maintenant.'));return null;}
-  const common={design, audience:'ensemble-members',languages,trackViews:true,...(Number.isFinite(startsAt)?{startsAt}:{}),...(Number.isFinite(endsAt)?{endsAt}:{})};
-
-  if (type === "poll") {
-    const cleanOpts = state.adminPollOptions.map((o) => String(o || "").trim()).filter(Boolean);
-    if (!draft && cleanOpts.length < 2) {
-      showToast(C18.t("Ajoutez au moins 2 choix de vote."));
-      return null;
-    }
-    return {
-      ...common, id, active: true, type: "poll", version, title,
-      subtitle: subtitle || C18.t("Faites votre choix ci-dessous :"),
-      options: draft&&cleanOpts.length<2?[...cleanOpts,...Array.from({length:2-cleanOpts.length},(_,i)=>C18.t("Option {0}",cleanOpts.length+i+1))]:cleanOpts,
-      allowComment: $("admin-poll-allow-comment").checked,
-      publishedAt: Date.now()
-    };
+  saveEditorDraft();const type=state.adminPopupType,design=getDesign(),languages=selectedLanguages();
+  const start=$('admin-start-at').value,end=$('admin-end-at').value;
+  const startsAt=start?new Date(start).getTime():null,endsAt=end?new Date(end).getTime():null;
+  if(!draft){
+    if(!languages.length){showToast(C18.t('Sélectionnez au moins une langue.'));return null;}
+    if($('admin-popup-link').value.trim()&&!design.link){showToast(C18.t('Indiquez un lien HTTPS valide.'));return null;}
+    if((start&&!Number.isFinite(startsAt))||(end&&!Number.isFinite(endsAt))||(endsAt!==null&&endsAt<=Math.max(Date.now(),startsAt||0))){showToast(C18.t('La fin doit être postérieure au début et à maintenant.'));return null;}
+    for(const code of languages){const error=variantError(languageDrafts[code],type);if(error){loadEditorDraft(code);showToast(`${LANG_NAMES[code]} : ${C18.t(error)}`);return null;}}
   }
-
-  if (type === "feedback") {
-    const ph = $("admin-feedback-placeholder").value.trim() || C18.t("Écrivez votre retour ou suggestion ici...");
-    if (!draft && !subtitle) {
-      showToast(C18.t("Indiquez la question posée aux utilisateurs."));
-      return null;
-    }
-    return {
-      ...common, id, active: true, type: "feedback", version, title, subtitle,
-      placeholder: ph, publishedAt: Date.now()
-    };
-  }
-
-  if (type === "message") {
-    const body = $("admin-message-body").value.trim();
-    if (!draft && !body) {
-      showToast(C18.t("Écrivez le contenu du message à afficher."));
-      return null;
-    }
-    return {
-      ...common, id, active: true, type: "message", version, title, subtitle,
-      body: body || C18.t("Votre message apparaîtra ici."), ctaLabel: design.primaryLabel || C18.t("J'ai compris, fermer"),
-      publishedAt: Date.now()
-    };
-  }
-
-  const items = $("admin-ann-notes").value.split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
-  if (!draft && !items.length) {
-    showToast(C18.t("Ajoutez au moins une nouveauté."));
-    return null;
-  }
-  return {
-    ...common, id, active: true, type: "update", version, title,
-    subtitle: subtitle || C18.t("Découvrez les dernières améliorations :"),
-    items: items.length?items:[C18.t("Votre nouveauté apparaîtra ici.")], publishedAt: Date.now()
-  };
+  const codes=draft?[editorLanguage]:languages;
+  const localized=Object.fromEntries(codes.map(code=>[code,buildVariant(languageDrafts[code],type,code)]));
+  const primary=localized[codes.includes(language)?language:codes[0]];
+  const payload={...primary,design:{...design,...primary.design},id,active:true,type,localized,languages:codes,audience:'ensemble-members',trackViews:true,publishedAt:Date.now(),...(type==='poll'?{allowComment:$('admin-poll-allow-comment').checked}:{}),...(Number.isFinite(startsAt)?{startsAt}:{}),...(Number.isFinite(endsAt)?{endsAt}:{})};
+  return draft?localizedCampaign(payload,editorLanguage):payload;
 }
 
 // Affichage de la pop-up côté utilisateur (Mise à jour, Sondage, Avis ou Message libre)
 export function showWhatsNewModal(ann, isPreview = false) {
   if (!ann || (!isPreview&&!eligibleForAnnouncement())) return;
+  ann=ann.displayLanguage?ann:localizedCampaign(ann,language);
   state.isPreviewingWhatsNew = isPreview;
   state.currentRenderedPopupData = ann;
   state.displayedAnnouncementId = ann.id || null;
   state.selectedUserPollOptionIndex = null;
 
-  renderPopupContent(ann, $("modal-whats-new").querySelector('.modal-sheet'), $, isPreview, isPreview?previewQueue:userAnnouncements());
+  C18.withLanguage(ann.displayLanguage||language,()=>renderPopupContent(ann, $("modal-whats-new").querySelector('.modal-sheet'), $, isPreview, isPreview?previewQueue:userAnnouncements()));
   $("modal-whats-new").classList.add("open");
   $("modal-whats-new").querySelector(".modal-sheet").scrollTop=0;
   if(!isPreview)recordView(ann);
@@ -209,6 +229,7 @@ function renderPopupContent(ann,sheet,part,isPreview=false,active=[]){
   const position=active.findIndex(a=>a.id===ann.id), progress=part('whats-new-progress');
   progress.classList.toggle('hidden',active.length<2||position<0);
   progress.textContent=C18.t('Information {0} sur {1}',position+1,active.length);
+  part('btn-close-whats-new-top').textContent=C18.t('Fermer');
   const design=ann.design||{};
   const theme=THEMES.includes(design.theme)?design.theme:'blue';
   sheet.dataset.popupTheme=theme; sheet.dataset.popupLayout=design.layout==='center'?'center':'left';
@@ -278,10 +299,10 @@ function renderLivePreview(){
   sheet.classList.add('popup-preview-sheet');
   sheet.querySelectorAll('[id]').forEach(el=>{el.dataset.previewPart=el.id;el.removeAttribute('id');});
   const part=id=>sheet.querySelector(`[data-preview-part="${id}"]`);
-  renderPopupContent(ann,sheet,part,false,[]);
+  C18.withLanguage(editorLanguage,()=>renderPopupContent(ann,sheet,part,false,[]));
   sheet.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
   sheet.querySelectorAll('[for]').forEach(el=>el.removeAttribute('for'));
-  box.replaceChildren(sheet);
+  box.replaceChildren(sheet);renderLanguageTabs();
 }
 function eligibleForAnnouncement(){
   const id=state.session.activeEnsembleId,member=state.session.ensembles[id]?.memberId;
@@ -356,11 +377,11 @@ export function renderAdminResultsPanel() {
     const count = Object.keys(c.views || {}).length;
     const tLabel = POPUP_TYPE_META[c.meta.type]?.label || C18.t("Campagne");
     const isCurrent = active.some(a=>a.id===c.meta.id&&campaignStatus(a)!=='expired');
-    return `<option value="${esc(c.meta.id)}" ${c.meta.id === state.selectedResultsCampaignId ? "selected" : ""}>[${esc(tLabel)}] ${esc(c.meta.title || C18.t("Sans titre"))} · ${esc(C18.t("{0} consultations uniques",c.meta.trackViews?count:"—"))}${isCurrent ? " · "+esc(statusLabel(c.meta)) : ""}</option>`;
+    return `<option value="${esc(c.meta.id)}" ${c.meta.id === state.selectedResultsCampaignId ? "selected" : ""}>[${esc(tLabel)}] ${esc(localizedCampaign(c.meta).title || C18.t("Sans titre"))} · ${esc(C18.t("{0} consultations uniques",c.meta.trackViews?count:"—"))}${isCurrent ? " · "+esc(statusLabel(c.meta)) : ""}</option>`;
   }).join("");
 
   const activeCamp = campaignsMap[state.selectedResultsCampaignId] || campaigns[0];
-  const meta = activeCamp.meta || {};
+  const meta = localizedCampaign(activeCamp.meta || {});
   const responses = Object.values(activeCamp.responses || {}).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
 
   $("res-campaign-badge").textContent = `${POPUP_TYPE_META[meta.type]?.label || C18.t("Campagne")}${meta.version ? ` • ${meta.version}` : ""}`;
@@ -576,9 +597,13 @@ export function renderAdminStatsPanel() {
 }
 
 export function initAdminListeners() {
+  for(const code of LANGS)languageDrafts[code]=newLanguageDraft(code);
+  loadEditorDraft(editorLanguage);
+  $('admin-content-language-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-edit-language]');if(b)changeEditorLanguage(b.dataset.editLanguage);});
+  document.querySelectorAll('[data-campaign-language]').forEach(el=>el.addEventListener('change',syncSelectedLanguages));
   $('form-admin-announcement').addEventListener('input',()=>queueMicrotask(renderLivePreview));
   $('form-admin-announcement').addEventListener('change',()=>{queueMicrotask(renderLivePreview);refreshAdminAnnouncementStatusUI();});
-  $('admin-select-languages').addEventListener('click',()=>{document.querySelectorAll('[data-campaign-language]').forEach(el=>el.checked=true);});
+  $('admin-select-languages').addEventListener('click',()=>{document.querySelectorAll('[data-campaign-language]').forEach(el=>el.checked=true);syncSelectedLanguages();});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){refreshAdminAnnouncementStatusUI();scheduleRefresh();maybeDisplayLatestAnnouncement();}});
   window.addEventListener('online',maybeDisplayLatestAnnouncement);
   $('admin-ensemble-search').addEventListener('input',()=>{state.showAllRecentEnsembles=false;renderAdminStatsPanel();});
@@ -612,13 +637,15 @@ export function initAdminListeners() {
     const del = e.target.closest("[data-del-opt]");
     if (!del || state.adminPollOptions.length <= 2) return;
     haptic();
-    state.adminPollOptions.splice(Number(del.dataset.delOpt), 1);
+    saveEditorDraft();for(const d of Object.values(languageDrafts))d.options.splice(Number(del.dataset.delOpt),1);
+    state.adminPollOptions=[...languageDrafts[editorLanguage].options];
     renderAdminPollOptionsBuilder();renderLivePreview();
   });
 
   $("btn-admin-add-option").addEventListener("click", () => {
     haptic();
-    state.adminPollOptions.push("");
+    saveEditorDraft();for(const d of Object.values(languageDrafts))d.options.push("");
+    state.adminPollOptions=[...languageDrafts[editorLanguage].options];
     renderAdminPollOptionsBuilder();renderLivePreview();
     const inputs = $("admin-poll-options-list").querySelectorAll(".admin-poll-opt-input");
     inputs[inputs.length - 1]?.focus();
@@ -660,16 +687,17 @@ export function initAdminListeners() {
       return dismissWhatsNewModal();
     }
 
-    if(!eligibleForAnnouncement())return maybeDisplayLatestAnnouncement();
+    if(!eligibleForAnnouncement()||!userAnnouncements().some(a=>a.id===ann.id))return maybeDisplayLatestAnnouncement();
     submitBtn.disabled = true; popupSubmitting=true;
     const voterId = getVoterDeviceId();
     const optionLabel = pType === "poll" ? (ann.options?.[state.selectedUserPollOptionIndex] || "") : "";
 
     try {
       await update(ref(db, `app_feedback/${ann.id}`), {
-        meta: ann,
+        meta: canonicalCampaign(ann),
         [`responses/${voterId}`]: {
           voterId,
+          language,
           respondent: getCurrentRespondentLabel(),
           optionIndex: pType === "poll" ? state.selectedUserPollOptionIndex : null,
           optionLabel,
@@ -770,8 +798,6 @@ export function initAdminListeners() {
       ensureAdminEnsemblesListener();
       closeModal("modal-admin-pin");
       $("admin-firebase-warning").classList.add("hidden");
-      delete $("admin-ann-version").dataset.touched;
-      delete $("admin-ann-title").dataset.touched;
       setAdminPopupType(state.adminPopupType);
       switchAdminPortalTab("publish");
       refreshAdminAnnouncementStatusUI();
@@ -785,7 +811,7 @@ export function initAdminListeners() {
 
   $("btn-admin-preview").addEventListener("click", () => {
     haptic();
-    const payload = buildAdminAnnouncementPayload("preview");
+    const payload = buildAdminAnnouncementPayload("preview",true);
     if (!payload) return;
     previewQueue=[];showWhatsNewModal(payload, true);
   });
@@ -797,7 +823,6 @@ export function initAdminListeners() {
     adminPublishing=true;refreshAdminAnnouncementStatusUI();
     try{
       const items=(await readActiveAnnouncements()).filter(a=>campaignStatus(a)!=='expired');
-      if(items.length>=MAX_CAMPAIGNS){showToast(C18.t('Quatre places occupées. Désactivez une campagne ou attendez son expiration.'));return;}
       await saveAnnouncements([...items,payload]);
       // Publisher has already read the new message; preview is available in the portal.
       markSeen(newId);
@@ -808,7 +833,7 @@ export function initAdminListeners() {
     finally{adminPublishing=false;refreshAdminAnnouncementStatusUI();maybeDisplayLatestAnnouncement();}
   });
   $('btn-admin-retest-popup').addEventListener('click',()=>{
-    previewQueue=availableAnnouncements();if(!previewQueue.length)return;
+    previewQueue=availableAnnouncements().map(a=>localizedCampaign(a,campaignLanguages(a).includes(language)?language:campaignLanguages(a)[0]));if(!previewQueue.length)return;
     showWhatsNewModal(previewQueue[0],true);
   });
   const deactivate=async id=>{
