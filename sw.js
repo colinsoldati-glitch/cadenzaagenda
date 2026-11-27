@@ -1,4 +1,4 @@
-const CACHE_NAME = "cadenza-cache-v22.1.1";
+const CACHE_NAME = "cadenza-cache-v22.1.3";
 const APP_SHELL = [
   "./",
   "./index.html",
