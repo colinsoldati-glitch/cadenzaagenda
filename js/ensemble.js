@@ -209,6 +209,7 @@ export function switchTab(tab) {
 
 // Tutoriel & Onboarding
 export function showInstallTutorial() {
+  state.verifiedPopupEnsembleId=null; hooks.maybeDisplayLatestAnnouncement();
   ["app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble", "view-onboarding", "install-banner"].forEach((id) => $(id).classList.add("hidden"));
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   $("tuto-ios-card").classList.toggle("featured", isIOS);
@@ -284,11 +285,14 @@ export async function proceedAfterTutorial() {
 }
 
 export function showOnboarding() {
+  state.verifiedPopupEnsembleId=null; state.currentEnsembleData=null;
+  state.unsubscribeEnsemble?.(); state.unsubscribeEnsemble=null; hooks.maybeDisplayLatestAnnouncement();
   ["view-install-tuto", "app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble"].forEach((id) => $(id).classList.add("hidden"));
   $("view-onboarding").classList.remove("hidden");
 }
 
 export function enterEnsemble(ensembleId) {
+  state.verifiedPopupEnsembleId=null; state.currentEnsembleData=null; hooks.maybeDisplayLatestAnnouncement();
   ["view-install-tuto", "view-onboarding"].forEach((id) => $(id).classList.add("hidden"));
   ["app-header", "app-nav"].forEach((id) => $(id).classList.remove("hidden"));
   $("header-ensemble-name").textContent = state.session.ensembles[ensembleId]?.ensembleName || ensembleId;
@@ -296,6 +300,7 @@ export function enterEnsemble(ensembleId) {
 
   if (state.unsubscribeEnsemble) state.unsubscribeEnsemble();
   state.unsubscribeEnsemble = onValue(ref(db, `ensembles/${ensembleId}`), (snap) => {
+    if(state.session.activeEnsembleId!==ensembleId)return;
     $("firebase-error-banner").classList.add("hidden");
     if (!snap.exists()) {
       showToast(C18.t("Cet ensemble n'existe plus."));
@@ -325,7 +330,9 @@ export function enterEnsemble(ensembleId) {
     }
     hooks.archiveFailedPollsIfNeeded();
     renderAll();
-  }, handleFirebaseError);
+    state.verifiedPopupEnsembleId=state.currentEnsembleData?.members?.[myId]?ensembleId:null;
+    hooks.maybeDisplayLatestAnnouncement();
+  }, err=>{state.verifiedPopupEnsembleId=null;hooks.maybeDisplayLatestAnnouncement();handleFirebaseError(err);});
 }
 
 export async function publishEnsembleNotification(localized, options = {}) {

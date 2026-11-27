@@ -360,22 +360,23 @@
   </div>
 
   <!-- Portail d'Administration enrichi : Diffusion Pop-up + Résultats & Retours + Statistiques -->
-  <div id="modal-admin-portal" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title">Portail d'administration</h3><button type="button" class="btn-secondary btn-sm" data-close="modal-admin-portal">Fermer</button></div>
+  <div id="modal-admin-portal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="admin-portal-title">
+    <div class="modal-sheet admin-workspace">
+      <div class="modal-header admin-workspace-header"><div><div class="admin-eyebrow">CADENZA / ADMIN</div><h3 class="modal-title" id="admin-portal-title">Portail d'administration</h3><p class="admin-muted">Gérez vos communications et suivez votre communauté.</p></div><button type="button" class="btn-secondary btn-sm" data-close="modal-admin-portal">Fermer</button></div>
 
       <div class="admin-nav-tabs" role="tablist">
-        <button type="button" class="admin-nav-tab active" data-admin-tab="publish">Diffuser une pop-up</button>
-        <button type="button" class="admin-nav-tab" data-admin-tab="results">Résultats &amp; Retours <span id="admin-results-badge" class="admin-count-pill hidden">0</span></button>
-        <button type="button" class="admin-nav-tab" data-admin-tab="stats">Statistiques</button>
+        <button type="button" class="admin-nav-tab active" data-admin-tab="publish" role="tab" aria-controls="admin-panel-publish" aria-selected="true">Pop-up</button>
+        <button type="button" class="admin-nav-tab" data-admin-tab="results" role="tab" aria-controls="admin-panel-results" aria-selected="false">Résultats &amp; Retours <span id="admin-results-badge" class="admin-count-pill hidden">0</span></button>
+        <button type="button" class="admin-nav-tab" data-admin-tab="stats" role="tab" aria-controls="admin-panel-stats" aria-selected="false">Statistiques</button>
       </div>
 
       <div id="admin-firebase-warning" class="alert-box hidden"><strong>Accès refusé par Firebase</strong><span>Vérifiez <code>admin_config/secret_pin</code> dans Firebase.</span></div>
 
       <!-- ONGLET 1 : DIFFUSER UNE POP-UP -->
-      <div id="admin-panel-publish">
+      <div id="admin-panel-publish" role="tabpanel">
+        <div class="admin-section-heading"><div><h4>Communications</h4><p>Créez et diffusez vos annonces dans l'application.</p></div><span class="admin-audience">● <span>Membres d'un ensemble uniquement</span></span></div>
         <div class="card" style="padding: 12px 14px; margin-bottom: 16px;">
-          <div class="card-kicker">Pop-up actives (maximum 2)</div>
+          <div class="admin-queue-heading"><div class="card-kicker">Campagnes actives ou programmées (max. 4)</div><span id="admin-active-count" class="admin-count-pill">0 / 4</span></div>
           <div id="admin-current-announcement" style="font-size: 13.5px; color: var(--muted); margin-top: 4px;">Aucune pop-up publiée.</div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
             <button type="button" id="btn-admin-retest-popup" class="btn-secondary btn-xs hidden">Prévisualiser la séquence</button>
@@ -383,7 +384,21 @@
           </div>
         </div>
 
-        <form id="form-admin-announcement" novalidate>
+        <div class="admin-editor-layout">
+        <form id="form-admin-announcement" novalidate class="admin-editor-card">
+          <div class="admin-form-heading"><h4>Créer une pop-up</h4><p>Choisissez un format, puis personnalisez son contenu.</p></div>
+          <section class="admin-distribution">
+            <div class="admin-form-heading"><h4>Diffusion</h4><p>Choisissez les destinataires et la période de visibilité.</p></div>
+            <div class="admin-language-heading"><label>Langues de l'application</label><button type="button" class="btn-secondary btn-xs" id="admin-select-languages">Tout sélectionner</button></div>
+            <div class="admin-language-grid">
+              <label><input type="checkbox" data-campaign-language value="fr" checked><span data-no-translate>FR · Français</span></label>
+              <label><input type="checkbox" data-campaign-language value="de" checked><span data-no-translate>DE · Deutsch</span></label>
+              <label><input type="checkbox" data-campaign-language value="en" checked><span data-no-translate>EN · English</span></label>
+            </div>
+            <p class="admin-muted">Le même texte est envoyé aux langues sélectionnées. Créez une campagne par traduction si nécessaire.</p>
+            <div class="admin-period-grid"><div class="field"><label for="admin-start-at">Début (facultatif)</label><input type="datetime-local" id="admin-start-at"><small>Vide : immédiatement</small></div><div class="field"><label for="admin-end-at">Fin (facultative)</label><input type="datetime-local" id="admin-end-at"><small>Vide : sans limite</small></div></div>
+            <p class="admin-muted">Horaires locaux de votre appareil. Les campagnes terminées libèrent automatiquement une place.</p>
+          </section>
           <div class="field" style="margin-bottom: 10px;">
             <label>Type de fenêtre pop-up</label>
             <div class="admin-type-grid" id="admin-popup-type-grid">
@@ -439,10 +454,7 @@
               <label for="admin-message-body">Contenu de votre message</label>
               <textarea id="admin-message-body" rows="4" placeholder="Écrivez librement le texte que vous souhaitez afficher aux utilisateurs..."></textarea>
             </div>
-            <div class="field">
-              <label for="admin-message-cta">Texte du bouton de fermeture</label>
-              <input type="text" id="admin-message-cta" value="J'ai compris, fermer" />
-            </div>
+
           </div>
 
           <!-- Champs : Annonce de mise à jour -->
@@ -450,15 +462,28 @@
             <div class="field"><label for="admin-ann-notes">Nouveautés (une par ligne)</label><textarea id="admin-ann-notes" rows="4" placeholder="Nouveau calendrier multi-dates&#10;Gestion des concerts et cours"></textarea></div>
           </div>
 
-          <div style="display: grid; gap: 8px;">
+          <details class="admin-design" open><summary>Apparence et personnalisation</summary>
+          <div class="admin-design-fields">
+            <div class="row-2"><div class="field"><label for="admin-popup-theme">Style de couleur</label><select id="admin-popup-theme"><option value="blue">Bleu Cadenza</option><option value="ink">Graphite</option><option value="green">Vert sauge</option><option value="purple">Violet</option><option value="amber">Ambre</option><option value="rose">Rose</option></select></div>
+            <div class="field"><label for="admin-popup-icon">Icône</label><select id="admin-popup-icon"><option value="none">Aucune</option><option value="info">ℹ️ Information</option><option value="sparkles">✨ Nouveauté</option><option value="music">♫ Musique</option><option value="heart">♥ Remerciement</option><option value="bell">🔔 Alerte</option><option value="poll">📊 Sondage</option></select></div></div>
+            <div class="field"><label for="admin-popup-layout">Alignement de l'en-tête</label><select id="admin-popup-layout"><option value="left">À gauche</option><option value="center">Centré</option></select></div>
+            <div class="admin-checks"><label><input type="checkbox" id="admin-popup-show-badge" checked> Afficher le badge</label><label><input type="checkbox" id="admin-popup-show-date" checked> Afficher la date</label></div>
+            <div class="field"><label for="admin-popup-cta">Texte du bouton principal (optionnel)</label><input id="admin-popup-cta" type="text" maxlength="70" placeholder="Utiliser le texte par défaut"></div>
+            <div class="field" id="admin-popup-secondary-field"><label for="admin-popup-secondary">Texte du bouton secondaire (optionnel)</label><input id="admin-popup-secondary" type="text" maxlength="70" placeholder="Utiliser le texte par défaut"></div>
+            <div class="field"><label for="admin-popup-link">Lien complémentaire HTTPS (optionnel)</label><input id="admin-popup-link" type="url" placeholder="https://…"></div>
+            <div class="field"><label for="admin-popup-link-label">Texte du lien</label><input id="admin-popup-link-label" type="text" maxlength="70" placeholder="En savoir plus"></div>
+          </div></details>
+          <div class="admin-form-actions">
             <button type="button" id="btn-admin-preview" class="btn-secondary btn-full">Prévisualiser la pop-up</button>
-            <p id="admin-queue-help" class="admin-queue-help" aria-live="polite"></p><button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour tous les utilisateurs</button>
+            <p id="admin-queue-help" class="admin-queue-help" aria-live="polite"></p><button type="submit" id="btn-admin-publish" class="btn-confirm btn-full">Publier pour les membres</button>
           </div>
         </form>
+        <aside class="admin-preview-column"><div class="admin-form-heading"><h4>Aperçu en direct</h4><p>Les modifications apparaissent ici sans publication.</p></div><div id="admin-live-preview" class="admin-live-preview" inert></div><p class="admin-muted">Utilisez le bouton de prévisualisation pour tester les interactions.</p></aside>
+        </div>
       </div>
 
       <!-- ONGLET 2 : RÉSULTATS DES SONDAGES & RETOURS UTILISATEURS -->
-      <div id="admin-panel-results" class="hidden">
+      <div id="admin-panel-results" role="tabpanel" class="hidden"><div class="admin-section-heading"><div><h4>Résultats &amp; Retours</h4><p>Suivez les consultations, votes et commentaires par campagne.</p></div></div>
         <div id="admin-feedback-rules-warning" class="alert-box hidden">
           <strong>Autorisation Firebase requise pour les retours</strong>
           <span>Ajoutez la règle suivante dans Firebase Realtime Database pour recevoir et lire les votes/retours :</span>
@@ -470,13 +495,13 @@
         </div>
 
         <div id="admin-results-empty" class="empty-state" style="padding: 24px 14px;">
-          <p style="margin-bottom: 6px;">Aucun sondage ni retour utilisateur enregistré pour le moment.</p>
-          <span style="font-size: 12.5px;">Publiez un sondage ou une demande d'avis pour voir les réponses s'afficher ici en direct.</span>
+          <p style="margin-bottom: 6px;">Aucune campagne enregistrée pour le moment.</p>
+          <span style="font-size: 12.5px;">Publiez une pop-up pour suivre ses consultations ici.</span>
         </div>
 
         <div id="admin-results-content" class="hidden">
           <div class="field">
-            <label for="admin-results-campaign-select">Sondage ou campagne de retour</label>
+            <label for="admin-results-campaign-select">Sélectionner une campagne</label>
             <select id="admin-results-campaign-select"></select>
           </div>
 
@@ -490,10 +515,13 @@
               <span class="consensus-badge full" id="res-total-count">0 réponse</span>
             </div>
 
+            <div id="res-campaign-distribution" class="admin-muted"></div>
+            <div class="admin-view-stats"><div class="admin-view-total"><span>Consultations uniques</span><strong id="res-views-total">—</strong></div><div id="res-views-languages" class="admin-view-languages"></div></div>
+            <p id="res-views-note" class="admin-muted"></p>
             <div id="res-poll-bars-container" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--subtle);"></div>
           </div>
 
-          <div class="card" style="padding: 13px 14px;">
+          <div class="card" id="res-comments-card" style="padding: 13px 14px;">
             <div class="card-kicker" style="margin-bottom: 8px;">Commentaires &amp; Retours écrits (<span id="res-comments-count">0</span>)</div>
             <div id="res-comments-list"></div>
           </div>
@@ -503,7 +531,7 @@
       </div>
 
       <!-- ONGLET 3 : STATISTIQUES GLOBALES -->
-      <div id="admin-panel-stats" class="hidden">
+      <div id="admin-panel-stats" role="tabpanel" class="hidden"><div class="admin-section-heading"><div><h4>Statistiques</h4><p>Suivez les inscriptions et retrouvez les ensembles.</p></div></div>
         <div id="admin-stats-rules-warning" class="alert-box hidden">
           <strong>Autorisation Firebase requise pour les statistiques</strong>
           <span>Autorisez la lecture globale du nœud <code>ensembles</code> dans Firebase Realtime Database pour afficher les compteurs et les ensembles récents :</span>
@@ -541,7 +569,7 @@
               <div class="card-kicker" style="margin-bottom: 0;">Derniers ensembles inscrits</div>
               <span class="admin-count-pill" id="stat-recent-count-badge">0</span>
             </div>
-            <div id="stat-recent-ensembles-list"></div>
+            <div class="field admin-search"><label for="admin-ensemble-search">Rechercher un ensemble</label><input type="search" id="admin-ensemble-search" placeholder="Nom, code ou musicien"></div><div id="stat-recent-ensembles-list"></div>
             <button type="button" id="btn-toggle-all-recent-ensembles" class="btn-secondary btn-xs btn-full hidden" style="margin-top: 10px;">Afficher tous les ensembles</button>
           </div>
         </div>
@@ -550,11 +578,13 @@
   </div>
 
   <!-- Modale Universelle Pop-up Utilisateur (Mise à jour, Sondage, Avis, Message libre) -->
-  <div id="modal-whats-new" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div id="modal-whats-new" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="whats-new-title">
     <div class="modal-sheet">
-      <div class="modal-header"><h3 class="modal-title" id="whats-new-title">Nouveautés sur Cadenza</h3><button type="button" class="btn-secondary btn-sm" id="btn-close-whats-new-top">Fermer</button></div>
+      <div class="popup-close-row"><button type="button" class="btn-secondary btn-sm" id="btn-close-whats-new-top">Fermer</button></div>
       <div class="whats-new-hero">
+        <div id="whats-new-icon" class="popup-icon hidden" aria-hidden="true"></div>
         <span class="whats-new-badge" id="whats-new-version-badge">Mise à jour</span>
+        <h3 class="modal-title popup-title" id="whats-new-title">Nouveautés sur Cadenza</h3>
         <div id="whats-new-subtitle" style="font-size: 14.5px; font-weight: 600; color: var(--fg);">Découvrez les dernières améliorations :</div>
         <div id="whats-new-progress" class="popup-progress hidden" aria-live="polite"></div>
         <div id="whats-new-date" style="font-size: 12px; color: var(--muted); margin-top: 3px;"></div>

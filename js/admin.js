@@ -24,7 +24,7 @@ export function openAdminPinPrompt() {
 
 export function switchAdminPortalTab(tab) {
   state.adminActiveTab = tab;
-  document.querySelectorAll("[data-admin-tab]").forEach((b) => b.classList.toggle("active", b.dataset.adminTab === tab));
+  document.querySelectorAll("[data-admin-tab]").forEach((b) => {const active=b.dataset.adminTab===tab;b.classList.toggle("active",active);b.setAttribute("aria-selected",String(active));});
   $("admin-panel-publish").classList.toggle("hidden", tab !== "publish");
   $("admin-panel-results").classList.toggle("hidden", tab !== "results");
   $("admin-panel-stats").classList.toggle("hidden", tab !== "stats");
@@ -34,7 +34,7 @@ export function switchAdminPortalTab(tab) {
 
 export function setAdminPopupType(type) {
   state.adminPopupType = POPUP_TYPE_META[type] ? type : "poll";
-  document.querySelectorAll("[data-popup-type]").forEach((b) => b.classList.toggle("active", b.dataset.popupType === state.adminPopupType));
+  document.querySelectorAll("[data-popup-type]").forEach((b) => {const active=b.dataset.popupType===state.adminPopupType;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));});
   $("admin-fields-poll").classList.toggle("hidden", state.adminPopupType !== "poll");
   $("admin-fields-feedback").classList.toggle("hidden", state.adminPopupType !== "feedback");
   $("admin-fields-message").classList.toggle("hidden", state.adminPopupType !== "message");
@@ -47,6 +47,8 @@ export function setAdminPopupType(type) {
   $("lbl-admin-subtitle").textContent = state.adminPopupType === "poll" ? C18.t("Question du sondage") : state.adminPopupType === "feedback" ? C18.t("Question posée aux utilisateurs") : C18.t("Sous-titre (optionnel)");
   $("admin-ann-subtitle").placeholder = meta.defaultSub;
   if (state.adminPopupType === "poll") renderAdminPollOptionsBuilder();
+  $("admin-popup-secondary-field").classList.toggle("hidden", !["poll","feedback"].includes(state.adminPopupType));
+  renderLivePreview();
 }
 
 export function renderAdminPollOptionsBuilder() {
@@ -58,51 +60,95 @@ export function renderAdminPollOptionsBuilder() {
     </div>`).join("");
 }
 
-// Latest stays a legacy-compatible payload. The preceding active item is stored in queue.
+// New campaigns are deliberately hidden from legacy clients, which cannot enforce targeting.
 const SEEN_QUEUE_KEY = 'cadenza_seen_announcements_v2';
-let adminPublishing=false, popupSubmitting=false, previewQueue=[];
+const MAX_CAMPAIGNS=4, LANGS=['fr','de','en'];
+const LANG_NAMES={fr:'Français',de:'Deutsch',en:'English'};
+let adminPublishing=false, popupSubmitting=false, previewQueue=[], scheduleTimer;
+const viewWrites=new Set();
 function activeAnnouncements(raw=state.latestAnnouncementData) {
-  if(!raw?.active||!raw.id)return [];
-  const previous=Object.values(raw.queue||{}).filter(a=>a?.active&&a.id&&a.id!==raw.id);
-  const items=[...previous,{...raw}].map(({queue,...a})=>a);
-  return [...new Map(items.map(a=>[a.id,a])).values()].slice(-2);
+  if(!raw)return [];
+  const items=raw.campaigns?Object.values(raw.campaigns):raw.active&&raw.id?[...Object.values(raw.queue||{}),raw]:[];
+  return [...new Map(items.filter(a=>a?.active&&a.id).map(({queue,...a})=>[a.id,a])).values()].slice(-MAX_CAMPAIGNS);
+}
+function campaignStatus(a,now=Date.now()){
+  if(a.endsAt&&now>=a.endsAt)return 'expired';
+  if(a.startsAt&&now<a.startsAt)return 'scheduled';
+  return 'live';
+}
+function campaignLanguages(a){return Array.isArray(a.languages)?a.languages:LANGS;}
+function availableAnnouncements(){return activeAnnouncements().filter(a=>campaignStatus(a)!=='expired');}
+function userAnnouncements(){return availableAnnouncements().filter(a=>campaignStatus(a)==='live'&&campaignLanguages(a).includes(language));}
+function statusLabel(a){return C18.t({expired:'Terminée',scheduled:'Programmée',live:'En diffusion'}[campaignStatus(a)]);}
+function formatDate(ts){return ts?new Date(ts).toLocaleString(locale,{dateStyle:'short',timeStyle:'short'}):'';}
+function periodLabel(a){return `${a.startsAt?formatDate(a.startsAt):C18.t('Immédiatement')} → ${a.endsAt?formatDate(a.endsAt):C18.t('Sans fin')}`;}
+function scheduleRefresh(){
+  clearTimeout(scheduleTimer);
+  const now=Date.now(), next=activeAnnouncements().flatMap(a=>[a.startsAt,a.endsAt]).filter(x=>x>now).sort((a,b)=>a-b)[0];
+  if(next)scheduleTimer=setTimeout(()=>{refreshAdminAnnouncementStatusUI();maybeDisplayLatestAnnouncement();scheduleRefresh();},Math.min(60000,Math.max(25,next-now+25)));
+}
+// One record per campaign and browser installation; repeated displays cannot inflate the total.
+function recordView(a){
+  if(!a?.id||!a.trackViews||state.isPreviewingWhatsNew||!eligibleForAnnouncement()||document.visibilityState!=='visible')return;
+  const voter=getVoterDeviceId(), key=`cadenza_view_v1:${a.id}:${voter}`;
+  if(viewWrites.has(key)||localStorage.getItem(key)==='1')return;
+  viewWrites.add(key);
+  const pending=localStorage.getItem(key); let impression;
+  try{impression=JSON.parse(pending||'null');}catch(_){}
+  if(!impression||typeof impression!=='object')impression={language,viewedAt:Date.now()};
+  localStorage.setItem(key,JSON.stringify(impression));
+  update(ref(db,`app_feedback/${a.id}`),{[`views/${voter}`]:impression,meta:a})
+    .then(()=>localStorage.setItem(key,'1')).catch(err=>console.warn('Campaign impression not saved',err)).finally(()=>viewWrites.delete(key));
 }
 function seenAnnouncements(){
   const seen=new Set();try{for(const id of JSON.parse(localStorage.getItem(SEEN_QUEUE_KEY)||'[]'))if(typeof id==='string')seen.add(id);}catch(_){}
   const legacy=localStorage.getItem(KEYS.ann);if(legacy)seen.add(legacy);return seen;
 }
 function markSeen(id){if(!id)return;const seen=seenAnnouncements();seen.add(id);localStorage.setItem(SEEN_QUEUE_KEY,JSON.stringify([...seen]));localStorage.setItem(KEYS.ann,id);}
-function encodeAnnouncements(items){
-  if(!items.length)return {active:false};
-  const last=items[items.length-1];return items.length>1?{...last,queue:items.slice(0,-1)}:{...last};
-}
+function encodeAnnouncements(items){return {active:false,campaigns:items};}
 async function readActiveAnnouncements(){const snap=await get(ref(db,'app_announcements/latest/public'));return activeAnnouncements(snap.exists()?snap.val():null);}
 async function saveAnnouncements(items){await set(ref(db,'app_announcements/latest'),{public:encodeAnnouncements(items),auth:{pin:state.verifiedAdminPin}});}
 export function refreshAdminAnnouncementStatusUI(){
-  const box=$('admin-current-announcement'), retest=$('btn-admin-retest-popup'), clear=$('btn-admin-clear-announcement'),items=activeAnnouncements();
-  box.innerHTML=items.length?items.map((a,i)=>`<div class="admin-queue-item"><span class="admin-queue-number">${i+1}</span><div class="admin-queue-content"><strong>${esc(a.title||'Pop-up')}</strong><small>${esc(POPUP_TYPE_META[a.type]?.label||C18.t('Annonce'))}${a.version?' · '+esc(a.version):''}</small></div><button type="button" class="btn-del-subtle btn-xs" data-admin-deactivate="${esc(a.id)}">${esc(C18.t('Désactiver'))}</button></div>`).join(''):esc(C18.t('Aucune pop-up publiée actuellement.'));
+  const box=$('admin-current-announcement'), retest=$('btn-admin-retest-popup'), clear=$('btn-admin-clear-announcement'),items=availableAnnouncements();
+  box.innerHTML=items.length?items.map((a,i)=>{
+    const views=state.feedbackPermissionDenied||!a.trackViews?'—':Object.keys(state.allFeedbackCampaigns[a.id]?.views||{}).length;
+    return `<div class="admin-queue-item"><span class="admin-queue-number">${i+1}</span><div class="admin-queue-content"><strong>${esc(a.title||'Pop-up')}</strong><div class="admin-campaign-meta"><span class="admin-campaign-status ${campaignStatus(a)}">${esc(statusLabel(a))}</span><span>${esc(campaignLanguages(a).map(l=>LANG_NAMES[l]||l).join(' · '))}</span></div><small>${esc(periodLabel(a))}</small><small>${esc(C18.t('{0} consultations uniques',views))}</small></div><button type="button" class="btn-del-subtle btn-xs" data-admin-deactivate="${esc(a.id)}">${esc(C18.t('Désactiver'))}</button></div>`;
+  }).join(''):esc(C18.t('Aucune pop-up publiée actuellement.'));
   retest.classList.toggle('hidden',!items.length);clear.classList.toggle('hidden',!items.length);
-  $('admin-queue-help').textContent=C18.t(items.length===2?'Deux pop-up sont actives. Désactivez-en une pour en publier une autre.':items.length===1?'La prochaine pop-up sera affichée après la première.':'Publiez une première pop-up, puis éventuellement une seconde.');
-  $('btn-admin-publish').disabled=adminPublishing||items.length>=2;
-  $('btn-admin-publish').textContent=C18.t(items.length===1?'Publier en deuxième position':'Publier pour tous les utilisateurs');
+  $('admin-queue-help').textContent=C18.t(items.length>=MAX_CAMPAIGNS?'Quatre places occupées. Désactivez une campagne ou attendez son expiration.':'Les campagnes sont affichées dans leur ordre de publication, selon la langue et la période.');
+  $('btn-admin-publish').disabled=adminPublishing||items.length>=MAX_CAMPAIGNS;
+  $('admin-active-count').textContent=`${items.length} / ${MAX_CAMPAIGNS}`;
+  $('btn-admin-publish').textContent=C18.t($('admin-start-at').value&&new Date($('admin-start-at').value).getTime()>Date.now()?'Programmer la pop-up':'Publier pour les membres');
 }
 
-export function buildAdminAnnouncementPayload(id) {
+const THEMES=['blue','ink','green','purple','amber','rose'];
+const ICONS={none:'',info:'ℹ️',sparkles:'✨',music:'♫',heart:'♥',bell:'🔔',poll:'📊'};
+function safeLink(value){try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch(_){return '';}}
+function getDesign(){return {theme:$("admin-popup-theme").value,icon:$("admin-popup-icon").value,layout:$("admin-popup-layout").value,showBadge:$("admin-popup-show-badge").checked,showDate:$("admin-popup-show-date").checked,primaryLabel:$("admin-popup-cta").value.trim(),secondaryLabel:$("admin-popup-secondary").value.trim(),link:safeLink($("admin-popup-link").value.trim()),linkLabel:$("admin-popup-link-label").value.trim()};}
+export function buildAdminAnnouncementPayload(id, draft=false) {
   const type = state.adminPopupType;
   const version = $("admin-ann-version").value.trim() || POPUP_TYPE_META[type].defaultBadge;
   const title = $("admin-ann-title").value.trim() || POPUP_TYPE_META[type].defaultTitle;
   const subtitle = $("admin-ann-subtitle").value.trim();
+  const design=getDesign();
+  if(!draft&&$("admin-popup-link").value.trim()&&!design.link){showToast(C18.t("Indiquez un lien HTTPS valide."));return null;}
+  const languages=[...document.querySelectorAll('[data-campaign-language]:checked')].map(el=>el.value);
+  const start=$('admin-start-at').value, end=$('admin-end-at').value;
+  const startsAt=start?new Date(start).getTime():null, endsAt=end?new Date(end).getTime():null;
+  if(!draft&&!languages.length){showToast(C18.t('Sélectionnez au moins une langue.'));return null;}
+  if(!draft&&((start&&!Number.isFinite(startsAt))||(end&&!Number.isFinite(endsAt))||(endsAt!==null&&endsAt<=Math.max(Date.now(),startsAt||0)))){showToast(C18.t('La fin doit être postérieure au début et à maintenant.'));return null;}
+  const common={design, audience:'ensemble-members',languages,trackViews:true,...(Number.isFinite(startsAt)?{startsAt}:{}),...(Number.isFinite(endsAt)?{endsAt}:{})};
 
   if (type === "poll") {
     const cleanOpts = state.adminPollOptions.map((o) => String(o || "").trim()).filter(Boolean);
-    if (cleanOpts.length < 2) {
+    if (!draft && cleanOpts.length < 2) {
       showToast(C18.t("Ajoutez au moins 2 choix de vote."));
       return null;
     }
     return {
-      id, active: true, type: "poll", version, title,
+      ...common, id, active: true, type: "poll", version, title,
       subtitle: subtitle || C18.t("Faites votre choix ci-dessous :"),
-      options: cleanOpts,
+      options: draft&&cleanOpts.length<2?[...cleanOpts,...Array.from({length:2-cleanOpts.length},(_,i)=>C18.t("Option {0}",cleanOpts.length+i+1))]:cleanOpts,
       allowComment: $("admin-poll-allow-comment").checked,
       publishedAt: Date.now()
     };
@@ -110,58 +156,69 @@ export function buildAdminAnnouncementPayload(id) {
 
   if (type === "feedback") {
     const ph = $("admin-feedback-placeholder").value.trim() || C18.t("Écrivez votre retour ou suggestion ici...");
-    if (!subtitle) {
+    if (!draft && !subtitle) {
       showToast(C18.t("Indiquez la question posée aux utilisateurs."));
       return null;
     }
     return {
-      id, active: true, type: "feedback", version, title, subtitle,
+      ...common, id, active: true, type: "feedback", version, title, subtitle,
       placeholder: ph, publishedAt: Date.now()
     };
   }
 
   if (type === "message") {
     const body = $("admin-message-body").value.trim();
-    if (!body) {
+    if (!draft && !body) {
       showToast(C18.t("Écrivez le contenu du message à afficher."));
       return null;
     }
     return {
-      id, active: true, type: "message", version, title, subtitle,
-      body, ctaLabel: $("admin-message-cta").value.trim() || C18.t("J'ai compris, fermer"),
+      ...common, id, active: true, type: "message", version, title, subtitle,
+      body: body || C18.t("Votre message apparaîtra ici."), ctaLabel: design.primaryLabel || C18.t("J'ai compris, fermer"),
       publishedAt: Date.now()
     };
   }
 
   const items = $("admin-ann-notes").value.split("\n").map((l) => l.replace(/^[-•*✓]\s*/, "").trim()).filter(Boolean);
-  if (!items.length) {
+  if (!draft && !items.length) {
     showToast(C18.t("Ajoutez au moins une nouveauté."));
     return null;
   }
   return {
-    id, active: true, type: "update", version, title,
+    ...common, id, active: true, type: "update", version, title,
     subtitle: subtitle || C18.t("Découvrez les dernières améliorations :"),
-    items, publishedAt: Date.now()
+    items: items.length?items:[C18.t("Votre nouveauté apparaîtra ici.")], publishedAt: Date.now()
   };
 }
 
 // Affichage de la pop-up côté utilisateur (Mise à jour, Sondage, Avis ou Message libre)
 export function showWhatsNewModal(ann, isPreview = false) {
-  if (!ann) return;
+  if (!ann || (!isPreview&&!eligibleForAnnouncement())) return;
   state.isPreviewingWhatsNew = isPreview;
   state.currentRenderedPopupData = ann;
   state.displayedAnnouncementId = ann.id || null;
   state.selectedUserPollOptionIndex = null;
 
-  const active=isPreview?previewQueue:activeAnnouncements();
-  const position=active.findIndex(a=>a.id===ann.id), progress=$('whats-new-progress');
+  renderPopupContent(ann, $("modal-whats-new").querySelector('.modal-sheet'), $, isPreview, isPreview?previewQueue:userAnnouncements());
+  $("modal-whats-new").classList.add("open");
+  $("modal-whats-new").querySelector(".modal-sheet").scrollTop=0;
+  if(!isPreview)recordView(ann);
+}
+
+function renderPopupContent(ann,sheet,part,isPreview=false,active=[]){
+  const position=active.findIndex(a=>a.id===ann.id), progress=part('whats-new-progress');
   progress.classList.toggle('hidden',active.length<2||position<0);
   progress.textContent=C18.t('Information {0} sur {1}',position+1,active.length);
+  const design=ann.design||{};
+  const theme=THEMES.includes(design.theme)?design.theme:'blue';
+  sheet.dataset.popupTheme=theme; sheet.dataset.popupLayout=design.layout==='center'?'center':'left';
+  const icon=part('whats-new-icon'); icon.textContent=Object.hasOwn(ICONS,design.icon)?ICONS[design.icon]:''; icon.classList.toggle('hidden',!icon.textContent);
+  part('whats-new-version-badge').classList.toggle('hidden',design.showBadge===false);
   const pType = ann.type || "update";
-  $("whats-new-title").textContent = ann.title || "Cadenza";
-  $("whats-new-version-badge").textContent = ann.version ? (isPreview ? C18.tt`Aperçu • ${ann.version}` : ann.version) : (isPreview ? C18.t("Aperçu") : C18.t("Information"));
+  part("whats-new-title").textContent = ann.title || "Cadenza";
+  part("whats-new-version-badge").textContent = ann.version ? (isPreview ? C18.tt`Aperçu • ${ann.version}` : ann.version) : (isPreview ? C18.t("Aperçu") : C18.t("Information"));
 
-  const subEl = $("whats-new-subtitle");
+  const subEl = part("whats-new-subtitle");
   if (ann.subtitle) {
     subEl.textContent = ann.subtitle;
     subEl.classList.remove("hidden");
@@ -169,14 +226,14 @@ export function showWhatsNewModal(ann, isPreview = false) {
     subEl.classList.add("hidden");
   }
 
-  const dEl = $("whats-new-date");
-  if (ann.publishedAt) {
+  const dEl = part("whats-new-date");
+  if (ann.publishedAt && design.showDate!==false) {
     dEl.textContent = new Date(ann.publishedAt).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
     dEl.classList.remove("hidden");
   } else dEl.classList.add("hidden");
 
-  const bodyEl = $("whats-new-dynamic-body");
-  const footerEl = $("whats-new-footer-actions");
+  const bodyEl = part("whats-new-dynamic-body");
+  const footerEl = part("whats-new-footer-actions");
 
   if (pType === "poll") {
     const opts = Array.isArray(ann.options) ? ann.options : [];
@@ -208,10 +265,28 @@ export function showWhatsNewModal(ann, isPreview = false) {
     footerEl.innerHTML = C18.htmlLiteral("<button type=\"button\" id=\"btn-skip-user-popup\" class=\"btn-primary btn-full\">J'ai compris, fermer</button>");
   }
 
-  $("modal-whats-new").classList.add("open");
-  $("modal-whats-new").querySelector(".modal-sheet").scrollTop=0;
+  const primary=footerEl.querySelector('#btn-submit-user-popup-response')||footerEl.querySelector('#btn-skip-user-popup');
+  if(primary&&design.primaryLabel)primary.textContent=design.primaryLabel;
+  const secondary=footerEl.querySelector('#btn-submit-user-popup-response')&&footerEl.querySelector('#btn-skip-user-popup');
+  if(secondary&&design.secondaryLabel)secondary.textContent=design.secondaryLabel;
+  const href=safeLink(design.link);if(href){const a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.className='popup-extra-link';a.textContent=design.linkLabel||C18.t('En savoir plus');footerEl.append(a);}
 }
-
+function renderLivePreview(){
+  const box=$('admin-live-preview');if(!box)return;
+  const ann=buildAdminAnnouncementPayload('live-preview',true);if(!ann)return;
+  const sheet=$('modal-whats-new').querySelector('.modal-sheet').cloneNode(true);
+  sheet.classList.add('popup-preview-sheet');
+  sheet.querySelectorAll('[id]').forEach(el=>{el.dataset.previewPart=el.id;el.removeAttribute('id');});
+  const part=id=>sheet.querySelector(`[data-preview-part="${id}"]`);
+  renderPopupContent(ann,sheet,part,false,[]);
+  sheet.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+  sheet.querySelectorAll('[for]').forEach(el=>el.removeAttribute('for'));
+  box.replaceChildren(sheet);
+}
+function eligibleForAnnouncement(){
+  const id=state.session.activeEnsembleId,member=state.session.ensembles[id]?.memberId;
+  return Boolean(id&&member&&state.verifiedPopupEnsembleId===id&&state.currentEnsembleData?.members?.[member]&&!$('app-header').classList.contains('hidden')&&$('view-onboarding').classList.contains('hidden')&&$('view-install-tuto').classList.contains('hidden'));
+}
 export function dismissWhatsNewModal() {
   if(popupSubmitting)return;
   haptic();
@@ -225,8 +300,19 @@ export function dismissWhatsNewModal() {
   closeModal('modal-whats-new');maybeDisplayLatestAnnouncement();
 }
 export function maybeDisplayLatestAnnouncement() {
-  if(adminPublishing||popupSubmitting||$('modal-whats-new').classList.contains('open')||!$('view-install-tuto').classList.contains('hidden'))return;
-  const seen=seenAnnouncements(), next=activeAnnouncements().find(a=>!seen.has(a.id));
+  if(!eligibleForAnnouncement()){
+    if($('modal-whats-new').classList.contains('open')&&!state.isPreviewingWhatsNew){
+      closeModal('modal-whats-new');state.displayedAnnouncementId=null;state.currentRenderedPopupData=null;
+    }return;
+  }
+  if(document.visibilityState!=='visible')return;
+  if($('modal-whats-new').classList.contains('open')&&!state.isPreviewingWhatsNew){
+    if(popupSubmitting)return;
+    if(userAnnouncements().some(a=>a.id===state.displayedAnnouncementId)){recordView(state.currentRenderedPopupData);return;}
+    closeModal('modal-whats-new');state.displayedAnnouncementId=null;state.currentRenderedPopupData=null;
+  }
+  if(adminPublishing||popupSubmitting||document.querySelector('.modal-backdrop.open'))return;
+  const seen=seenAnnouncements(), next=userAnnouncements().find(a=>!seen.has(a.id));
   if(next)showWhatsNewModal(next,false);
 }
 
@@ -246,7 +332,7 @@ export function renderAdminResultsPanel() {
   const campaignsMap = { ...state.allFeedbackCampaigns };
   const latest = state.latestAnnouncementData;
   const active=activeAnnouncements();
-  for(const a of active)if((a.type==='poll'||a.type==='feedback')&&!campaignsMap[a.id])campaignsMap[a.id]={meta:a,responses:{}};
+  for(const a of active)campaignsMap[a.id]={...(campaignsMap[a.id]||{}),meta:a};
 
   const campaigns = Object.values(campaignsMap)
     .filter((c) => c?.meta)
@@ -267,10 +353,10 @@ export function renderAdminResultsPanel() {
   }
 
   select.innerHTML = campaigns.map((c) => {
-    const count = Object.keys(c.responses || {}).length;
+    const count = Object.keys(c.views || {}).length;
     const tLabel = POPUP_TYPE_META[c.meta.type]?.label || C18.t("Campagne");
-    const isCurrent = active.some(a=>a.id===c.meta.id);
-    return C18.h`<option value="${esc(c.meta.id)}" ${c.meta.id === state.selectedResultsCampaignId ? "selected" : ""}>[${tLabel}] ${esc(c.meta.title || C18.t("Sans titre"))} (${count} rép.)${isCurrent ? C18.t(" — Actif") : ""}</option>`;
+    const isCurrent = active.some(a=>a.id===c.meta.id&&campaignStatus(a)!=='expired');
+    return `<option value="${esc(c.meta.id)}" ${c.meta.id === state.selectedResultsCampaignId ? "selected" : ""}>[${esc(tLabel)}] ${esc(c.meta.title || C18.t("Sans titre"))} · ${esc(C18.t("{0} consultations uniques",c.meta.trackViews?count:"—"))}${isCurrent ? " · "+esc(statusLabel(c.meta)) : ""}</option>`;
   }).join("");
 
   const activeCamp = campaignsMap[state.selectedResultsCampaignId] || campaigns[0];
@@ -281,6 +367,12 @@ export function renderAdminResultsPanel() {
   $("res-campaign-title").textContent = meta.title || C18.t("Sondage");
   $("res-campaign-subtitle").textContent = meta.subtitle || "";
   $("res-total-count").textContent = C18.t(responses.length === 1 ? "{0} réponse" : "{0} réponses", responses.length);
+  const views=Object.values(activeCamp.views||{}), tracked=Boolean(meta.trackViews||views.length), readable=!state.feedbackPermissionDenied;
+  $('res-views-total').textContent=tracked&&readable?views.length:'—';
+  $('res-views-languages').innerHTML=LANGS.map(l=>`<div><span>${LANG_NAMES[l]}</span><strong>${tracked&&readable?views.filter(v=>v?.language===l).length:'—'}</strong></div>`).join('');
+  $('res-views-note').textContent=C18.t(!tracked?'Historique : les consultations n’étaient pas encore mesurées.':'Une consultation par appareil ou navigateur, sans compter les aperçus admin.');
+  $('res-campaign-distribution').textContent=`${campaignLanguages(meta).map(l=>LANG_NAMES[l]||l).join(' · ')} | ${periodLabel(meta)}`;
+  $('res-comments-card').classList.toggle('hidden',!['poll','feedback'].includes(meta.type));
 
   const barsBox = $("res-poll-bars-container");
   if (meta.type === "poll" && Array.isArray(meta.options) && meta.options.length) {
@@ -441,7 +533,8 @@ export function renderAdminStatsPanel() {
   $("stat-total-musicians").textContent = String(totalMusicians);
   $("stat-total-musicians-sub").textContent = C18.tt`moy. ${avgMusicians} / ensemble`;
 
-  const sourceList = activeEnsembles.length > 0 ? activeEnsembles : allEnsembles;
+  const search=$('admin-ensemble-search').value.trim().toLocaleLowerCase(locale);
+  const sourceList = search?allEnsembles.filter(e=>[e.name,e.id,e.formation,...e.members.map(m=>`${m.name} ${m.instrument||''}`)].some(v=>String(v||'').toLocaleLowerCase(locale).includes(search))):(activeEnsembles.length > 0 ? activeEnsembles : allEnsembles);
   const limit = 10;
   const visibleList = state.showAllRecentEnsembles ? sourceList : sourceList.slice(0, limit);
 
@@ -469,7 +562,7 @@ export function renderAdminStatsPanel() {
         </div>
         ${membersPreview ? `<div class="admin-stat-ens-members">${esc(membersPreview)}</div>` : ""}
       </div>`;
-  }).join("");
+  }).join("") || `<p class="admin-muted">${esc(C18.t("Aucun résultat."))}</p>`;
 
   const toggleBtn = $("btn-toggle-all-recent-ensembles");
   if (sourceList.length > limit) {
@@ -483,6 +576,15 @@ export function renderAdminStatsPanel() {
 }
 
 export function initAdminListeners() {
+  $('form-admin-announcement').addEventListener('input',()=>queueMicrotask(renderLivePreview));
+  $('form-admin-announcement').addEventListener('change',()=>{queueMicrotask(renderLivePreview);refreshAdminAnnouncementStatusUI();});
+  $('admin-select-languages').addEventListener('click',()=>{document.querySelectorAll('[data-campaign-language]').forEach(el=>el.checked=true);});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){refreshAdminAnnouncementStatusUI();scheduleRefresh();maybeDisplayLatestAnnouncement();}});
+  window.addEventListener('online',maybeDisplayLatestAnnouncement);
+  $('admin-ensemble-search').addEventListener('input',()=>{state.showAllRecentEnsembles=false;renderAdminStatsPanel();});
+  // Defer announcements until another modal is closed, without interrupting a task.
+  const observer=new MutationObserver(()=>maybeDisplayLatestAnnouncement());
+  document.querySelectorAll('.modal-backdrop').forEach(el=>observer.observe(el,{attributes:true,attributeFilter:['class']}));
   document.querySelectorAll("[data-admin-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
       haptic();
@@ -511,13 +613,13 @@ export function initAdminListeners() {
     if (!del || state.adminPollOptions.length <= 2) return;
     haptic();
     state.adminPollOptions.splice(Number(del.dataset.delOpt), 1);
-    renderAdminPollOptionsBuilder();
+    renderAdminPollOptionsBuilder();renderLivePreview();
   });
 
   $("btn-admin-add-option").addEventListener("click", () => {
     haptic();
     state.adminPollOptions.push("");
-    renderAdminPollOptionsBuilder();
+    renderAdminPollOptionsBuilder();renderLivePreview();
     const inputs = $("admin-poll-options-list").querySelectorAll(".admin-poll-opt-input");
     inputs[inputs.length - 1]?.focus();
   });
@@ -558,21 +660,14 @@ export function initAdminListeners() {
       return dismissWhatsNewModal();
     }
 
+    if(!eligibleForAnnouncement())return maybeDisplayLatestAnnouncement();
     submitBtn.disabled = true; popupSubmitting=true;
     const voterId = getVoterDeviceId();
     const optionLabel = pType === "poll" ? (ann.options?.[state.selectedUserPollOptionIndex] || "") : "";
 
     try {
       await update(ref(db, `app_feedback/${ann.id}`), {
-        meta: {
-          id: ann.id,
-          type: pType,
-          version: ann.version || "",
-          title: ann.title || "",
-          subtitle: ann.subtitle || "",
-          options: ann.options || null,
-          publishedAt: ann.publishedAt || Date.now()
-        },
+        meta: ann,
         [`responses/${voterId}`]: {
           voterId,
           respondent: getCurrentRespondentLabel(),
@@ -595,6 +690,7 @@ export function initAdminListeners() {
   // Écoute Firebase des annonces & retours
   onValue(ref(db, "app_announcements/latest/public"), (snap) => {
     state.latestAnnouncementData = snap.exists() ? snap.val() : null;
+    scheduleRefresh();
     refreshAdminAnnouncementStatusUI();
     if(state.adminActiveTab==="results"&&$("modal-admin-portal").classList.contains("open"))renderAdminResultsPanel();
     maybeDisplayLatestAnnouncement();
@@ -604,12 +700,14 @@ export function initAdminListeners() {
     state.feedbackPermissionDenied = false;
     state.allFeedbackCampaigns = snap.exists() ? (snap.val() || {}) : {};
     updateAdminResultsBadge();
+    refreshAdminAnnouncementStatusUI();
     if (state.adminActiveTab === "results" && $("modal-admin-portal").classList.contains("open")) {
       renderAdminResultsPanel();
     }
   }, (err) => {
     if (String(err?.message || "").toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED") {
       state.feedbackPermissionDenied = true;
+      refreshAdminAnnouncementStatusUI();
       if (state.adminActiveTab === "results" && $("modal-admin-portal").classList.contains("open")) {
         renderAdminResultsPanel();
       }
@@ -641,11 +739,12 @@ export function initAdminListeners() {
 
   $("btn-admin-delete-campaign-results").addEventListener("click", () => {
     if (!state.selectedResultsCampaignId || !state.verifiedAdminPin) return;
+    if(availableAnnouncements().some(a=>a.id===state.selectedResultsCampaignId))return showToast(C18.t("Désactivez la campagne avant de supprimer ses résultats."));
     const campId = state.selectedResultsCampaignId;
     openConfirmationModal({
       title: C18.t("Supprimer ces résultats ?"),
       context: $("res-campaign-title").textContent,
-      message: C18.t("Tous les votes et commentaires associés à cette campagne seront définitivement effacés."),
+      message: C18.t("Les consultations, votes et commentaires de cette campagne seront définitivement effacés."),
       confirmLabel: C18.t("Supprimer les résultats"),
       onConfirm: async () => {
         try {
@@ -697,29 +796,28 @@ export function initAdminListeners() {
     const newId=genId('ann'),payload=buildAdminAnnouncementPayload(newId);if(!payload)return;
     adminPublishing=true;refreshAdminAnnouncementStatusUI();
     try{
-      const items=await readActiveAnnouncements();
-      if(items.length>=2){showToast(C18.t('Deux pop-up sont actives. Désactivez-en une pour en publier une autre.'));return;}
+      const items=(await readActiveAnnouncements()).filter(a=>campaignStatus(a)!=='expired');
+      if(items.length>=MAX_CAMPAIGNS){showToast(C18.t('Quatre places occupées. Désactivez une campagne ou attendez son expiration.'));return;}
       await saveAnnouncements([...items,payload]);
       // Publisher has already read the new message; preview is available in the portal.
       markSeen(newId);
-      if(payload.type==='poll'||payload.type==='feedback'){
-        set(ref(db,`app_feedback/${newId}/meta`),payload).catch(()=>{});state.selectedResultsCampaignId=newId;
-      }
-      closeModal('modal-admin-portal');showToast(C18.t('Pop-up publiée pour tous les utilisateurs !'));
+      state.selectedResultsCampaignId=newId;
+      try{await set(ref(db,`app_feedback/${newId}/meta`),payload);showToast(C18.t(campaignStatus(payload)==='scheduled'?'Pop-up programmée !':'Pop-up publiée pour les membres !'));}
+      catch(err){showToast(C18.t('Pop-up enregistrée, mais statistiques non accessibles. Vérifiez Firebase.'));}
     }catch(_){$('admin-firebase-warning').classList.remove('hidden');showToast(C18.t('Accès refusé par Firebase.'));}
-    finally{adminPublishing=false;refreshAdminAnnouncementStatusUI();}
+    finally{adminPublishing=false;refreshAdminAnnouncementStatusUI();maybeDisplayLatestAnnouncement();}
   });
   $('btn-admin-retest-popup').addEventListener('click',()=>{
-    previewQueue=activeAnnouncements();if(!previewQueue.length)return;
-    closeModal('modal-admin-portal');showWhatsNewModal(previewQueue[0],true);
+    previewQueue=availableAnnouncements();if(!previewQueue.length)return;
+    showWhatsNewModal(previewQueue[0],true);
   });
   const deactivate=async id=>{
     if(adminPublishing)return;haptic();
     if(!state.verifiedAdminPin){closeModal('modal-admin-portal');return openAdminPinPrompt();}
     adminPublishing=true;refreshAdminAnnouncementStatusUI();
-    try{const items=await readActiveAnnouncements();await saveAnnouncements(id?items.filter(a=>a.id!==id):[]);showToast(C18.t(id?'La pop-up a été désactivée.':'Les pop-up ont été désactivées.'));}
+    try{const items=(await readActiveAnnouncements()).filter(a=>campaignStatus(a)!=='expired');await saveAnnouncements(id?items.filter(a=>a.id!==id):[]);showToast(C18.t(id?'La pop-up a été désactivée.':'Les pop-up ont été désactivées.'));}
     catch(_){$('admin-firebase-warning').classList.remove('hidden');showToast(C18.t('Accès refusé par Firebase.'));}
-    finally{adminPublishing=false;refreshAdminAnnouncementStatusUI();}
+    finally{adminPublishing=false;refreshAdminAnnouncementStatusUI();maybeDisplayLatestAnnouncement();}
   };
   $('admin-current-announcement').addEventListener('click',e=>{const b=e.target.closest('[data-admin-deactivate]');if(b)deactivate(b.dataset.adminDeactivate);});
   $('btn-admin-clear-announcement').addEventListener('click',()=>deactivate(null));
