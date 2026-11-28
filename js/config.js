@@ -5,10 +5,10 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase
 import { getDatabase, ref, set, update, remove, onValue, get, runTransaction } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
 import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-messaging.js";
 
-export const APP_VERSION = "v22.1.4";
+export const APP_VERSION = "v23.0.0-rc1";
 export const FIREBASE_VAPID_KEY = "BKIqxDVW3gHqeRavAYDAd3E7W-3r6117dL6wKeCL_9FnxqFUHSG6Dsask_aTKQOvOAYR-GfAqUBfudVE8MKThPQ";
-export const CALENDAR_SERVICE_URL = "https://cal.cadenzaapp.ch";
-export const PUSH_WORKER_URL = "https://cadenza-notifications.colinsoldati.workers.dev/";
+export const CALENDAR_SERVICE_URL = window.CADENZA_DEV ? null : "https://cal.cadenzaapp.ch";
+export const PUSH_WORKER_URL = window.CADENZA_DEV ? null : "https://cadenza-notifications.colinsoldati.workers.dev/";
 
 export const KEYS = {
   session: "cadenza_session_v1",
@@ -26,7 +26,8 @@ export const EVENT_TYPES = {
 };
 export const getEventMeta = (t) => EVENT_TYPES[t] || EVENT_TYPES.rehearsal;
 
-const app = initializeApp({
+import { DEV_FIREBASE_CONFIG } from "./firebase-environment.js";
+const productionConfig = {
   apiKey: "AIzaSyCFt-CleI7BurUN70TbjA8R97NFBRyXM1A",
   authDomain: "cadenza-dad79.firebaseapp.com",
   databaseURL: "https://cadenza-dad79-default-rtdb.firebaseio.com",
@@ -35,15 +36,22 @@ const app = initializeApp({
   messagingSenderId: "298490556921",
   appId: "1:298490556921:web:0f83dc2d107ee4eae8cd28",
   measurementId: "G-PT9W1RCJJR"
-});
+};
+if(window.CADENZA_DEV && !DEV_FIREBASE_CONFIG){
+  const screen=document.getElementById("view-auth");screen.classList.remove("hidden");document.getElementById("auth-form").classList.add("hidden");document.getElementById("auth-status").textContent="DEV : configurez js/firebase-environment.js avec un projet Firebase de test (voir MIGRATION.md). Aucun accès à la production.";
+  throw new Error("Separate development Firebase configuration required");
+}
+const app=initializeApp(window.CADENZA_DEV ? DEV_FIREBASE_CONFIG : productionConfig);
 try { getAnalytics(app); } catch (_) {}
 
+import { getAuth } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+export const auth = getAuth(app);
 export const db = getDatabase(app);
 export { ref, set, update, remove, onValue, get, runTransaction, getMessaging, getToken, onMessage, isSupported };
 
 // État partagé de l'application
 export const state = {
-  session: JSON.parse(localStorage.getItem(KEYS.session) || "null") || { activeEnsembleId: null, ensembles: {} },
+  session: { activeEnsembleId: null, ensembles: {} },
   currentEnsembleData: null,
   verifiedPopupEnsembleId: null,
   unsubscribeEnsemble: null,
@@ -90,12 +98,13 @@ export const state = {
 
 // Utilitaires DOM & Système
 export const $ = (id) => document.getElementById(id);
-export const saveSession = () => localStorage.setItem(KEYS.session, JSON.stringify(state.session));
+export const saveSession = () => { if(auth.currentUser) localStorage.setItem(`cadenza_active_${auth.currentUser.uid}`, JSON.stringify(state.session.activeEnsembleId)); };
 export const haptic = () => navigator.vibrate && navigator.vibrate(10);
-export const genId = (p) => `${p}-${Array.from({ length: 6 }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join("")}`;
+export const genId = (p) => `${p}-${Array.from(crypto.getRandomValues(new Uint8Array(p === "ens" ? 16 : 12)), n => n.toString(16).padStart(2,"0")).join("")}`;
 export const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
 
 export function getVoterDeviceId() {
+  if(auth.currentUser) return auth.currentUser.uid;
   let id = localStorage.getItem(KEYS.voter);
   if (!id) { id = genId("usr"); localStorage.setItem(KEYS.voter, id); }
   return id;
@@ -120,7 +129,7 @@ export function handleFirebaseError(err) {
   console.error("Firebase error:", err);
   const msg = String(err?.message || err || "");
   $("firebase-error-text").textContent = (msg.toLowerCase().includes("permission") || err?.code === "PERMISSION_DENIED")
-    ? C18.t("Accès refusé par Firebase : autorisez .read et .write sur \"ensembles\".")
+    ? C18.t("Accès refusé par Firebase. Vérifiez votre compte et vos droits.")
     : C18.tt`Erreur de synchronisation Firebase : ${msg}`;
   $("firebase-error-banner").classList.remove("hidden");
   showToast(C18.t("Erreur de connexion à la base de données."));

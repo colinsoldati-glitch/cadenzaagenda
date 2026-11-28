@@ -1,0 +1,138 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "accounts": {
+      "$uid": {
+        ".read": "auth != null && auth.token.email_verified == true && auth.uid == $uid",
+        "revision": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.uid == $uid && newData.isNumber() && ((!data.exists() && newData.val() == 1) || (data.isNumber() && newData.val() == data.val() + 1))"
+        },
+        "memberships": {
+          "$ens": {
+            ".write": "auth != null && auth.token.email_verified == true && auth.uid == $uid && (newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').isNumber() && ((!root.child('accounts').child(auth.uid).child('revision').exists() && newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == 1) || (root.child('accounts').child(auth.uid).child('revision').isNumber() && newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == root.child('accounts').child(auth.uid).child('revision').val() + 1))) && (!newData.exists() || (newData.isString() && (!data.exists() || data.val() == newData.val() || !root.child('ensembles').child($ens).child('members').child(data.val()).exists()) && newData.parent().parent().parent().parent().child('profileOwners').child($ens).child(newData.val()).val() == auth.uid && newData.parent().parent().parent().parent().child('ensembles').child($ens).child('members').child(newData.val()).exists()))"
+          }
+        },
+        "absences": {
+          "$id": {
+            ".write": "auth != null && auth.token.email_verified == true && auth.uid == $uid && (newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').isNumber() && ((!root.child('accounts').child(auth.uid).child('revision').exists() && newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == 1) || (root.child('accounts').child(auth.uid).child('revision').isNumber() && newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == root.child('accounts').child(auth.uid).child('revision').val() + 1)))",
+            ".validate": "newData.hasChildren(['id','startDate','endDate']) && newData.child('id').val() == $id && newData.child('startDate').isString() && newData.child('endDate').isString() && newData.child('startDate').val().matches(/^\\d{4}-\\d{2}-\\d{2}$/) && newData.child('endDate').val().matches(/^\\d{4}-\\d{2}-\\d{2}$/) && newData.child('startDate').val() <= newData.child('endDate').val()"
+          }
+        }
+      }
+    },
+    "profileOwners": {
+      "$ens": {
+        ".read": "auth != null && auth.token.email_verified == true",
+        "$mid": {
+          ".write": "auth != null && auth.token.email_verified == true && newData.val() == auth.uid && (!data.exists() || data.val() == auth.uid) && (newData.parent().parent().parent().child('accounts').child(auth.uid).child('revision').isNumber() && ((!root.child('accounts').child(auth.uid).child('revision').exists() && newData.parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == 1) || (root.child('accounts').child(auth.uid).child('revision').isNumber() && newData.parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == root.child('accounts').child(auth.uid).child('revision').val() + 1))) && newData.parent().parent().parent().child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid && newData.parent().parent().parent().child('ensembles').child($ens).child('members').child($mid).exists()"
+        }
+      }
+    },
+    "ensembles": {
+      ".read": "(auth != null && auth.token.email_verified == true && root.child('admin_users').child(auth.uid).val() == true)",
+      "$ens": {
+        ".read": "auth != null && auth.token.email_verified == true",
+        ".write": "auth != null && auth.token.email_verified == true && !data.exists() && newData.exists() && (newData.parent().parent().child('accounts').child(auth.uid).child('revision').isNumber() && ((!root.child('accounts').child(auth.uid).child('revision').exists() && newData.parent().parent().child('accounts').child(auth.uid).child('revision').val() == 1) || (root.child('accounts').child(auth.uid).child('revision').isNumber() && newData.parent().parent().child('accounts').child(auth.uid).child('revision').val() == root.child('accounts').child(auth.uid).child('revision').val() + 1))) && newData.parent().parent().child('accounts').child(auth.uid).child('memberships').child($ens).isString() && newData.child('members').child(newData.parent().parent().child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists() && newData.parent().parent().child('profileOwners').child($ens).child(newData.parent().parent().child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid",
+        ".validate": "newData.hasChildren(['id','name']) && newData.child('id').val() == $ens",
+        "name": {
+          ".write": "(auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists())",
+          ".validate": "newData.isString()"
+        },
+        "formation": {
+          ".write": "(auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists())"
+        },
+        "autoRemindEve": {
+          ".write": "(auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists())"
+        },
+        "lastEvent": {
+          ".write": "(auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists())"
+        },
+        "memberManagerId": {
+          ".write": "((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && (!root.child('ensembles').child($ens).child('memberManagerId').exists() || root.child('ensembles').child($ens).child('memberManagerId').val() == root.child('accounts').child(auth.uid).child('memberships').child($ens).val()))",
+          ".validate": "newData.isString() && newData.parent().child('members').child(newData.val()).exists()"
+        },
+        "members": {
+          "$mid": {
+            ".write": "(!data.exists() && newData.exists() && (auth != null && auth.token.email_verified == true && newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid && newData.parent().parent().parent().parent().child('profileOwners').child($ens).child($mid).val() == auth.uid) && (newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').isNumber() && ((!root.child('accounts').child(auth.uid).child('revision').exists() && newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == 1) || (root.child('accounts').child(auth.uid).child('revision').isNumber() && newData.parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == root.child('accounts').child(auth.uid).child('revision').val() + 1)))) || (data.exists() && !newData.exists() && (((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid) || ((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && (!root.child('ensembles').child($ens).child('memberManagerId').exists() || root.child('ensembles').child($ens).child('memberManagerId').val() == root.child('accounts').child(auth.uid).child('memberships').child($ens).val()))) && (root.child('ensembles').child($ens).child('memberManagerId').val() != $mid || !newData.parent().parent().child('memberManagerId').exists()))",
+            ".validate": "newData.hasChildren(['id','name','instrument']) && newData.child('id').val() == $mid",
+            "name": {
+              ".write": "(((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid) || ((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && (!root.child('ensembles').child($ens).child('memberManagerId').exists() || root.child('ensembles').child($ens).child('memberManagerId').val() == root.child('accounts').child(auth.uid).child('memberships').child($ens).val())))",
+              ".validate": "newData.isString()"
+            },
+            "instrument": {
+              ".write": "(((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid) || ((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && (!root.child('ensembles').child($ens).child('memberManagerId').exists() || root.child('ensembles').child($ens).child('memberManagerId').val() == root.child('accounts').child(auth.uid).child('memberships').child($ens).val())))",
+              ".validate": "newData.isString()"
+            },
+            "pushEnabled": {
+              ".write": "((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid)",
+              ".validate": "newData.isBoolean()"
+            },
+            "fcmToken": {
+              ".write": "((auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists()) && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid)",
+              ".validate": "newData.isString()"
+            },
+            "unavailabilities": {
+              ".write": "(auth != null && auth.token.email_verified == true && newData.parent().parent().parent().parent().parent().child('accounts').child(auth.uid).child('memberships').child($ens).val() == $mid && newData.parent().parent().parent().parent().parent().child('profileOwners').child($ens).child($mid).val() == auth.uid) && (newData.parent().parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').isNumber() && ((!root.child('accounts').child(auth.uid).child('revision').exists() && newData.parent().parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == 1) || (root.child('accounts').child(auth.uid).child('revision').isNumber() && newData.parent().parent().parent().parent().parent().child('accounts').child(auth.uid).child('revision').val() == root.child('accounts').child(auth.uid).child('revision').val() + 1))) && newData.parent().exists()",
+              "$id": {
+                ".validate": "newData.hasChildren(['id','startDate','endDate']) && newData.child('id').val() == $id"
+              }
+            }
+          }
+        },
+        "polls": {
+          ".write": "(auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists())"
+        },
+        "archivedPolls": {
+          ".write": "(auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists())"
+        },
+        "rehearsals": {
+          ".write": "(auth != null && auth.token.email_verified == true && root.child('accounts').child(auth.uid).child('memberships').child($ens).val() != null && root.child('profileOwners').child($ens).child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).val() == auth.uid && root.child('ensembles').child($ens).child('members').child(root.child('accounts').child(auth.uid).child('memberships').child($ens).val()).exists())"
+        }
+      }
+    },
+    "admin_config": {
+      ".read": false,
+      ".write": false
+    },
+    "admin_users": {
+      "$uid": {
+        ".read": "auth != null && auth.token.email_verified == true && auth.uid == $uid",
+        ".write": false
+      }
+    },
+    "admin_sessions": {
+      "last_check": {
+        ".write": "(auth != null && auth.token.email_verified == true && root.child('admin_users').child(auth.uid).val() == true) && newData.child('pin').isString() && newData.child('pin').val() == root.child('admin_config/secret_pin').val()"
+      }
+    },
+    "app_announcements": {
+      "latest": {
+        ".write": "(auth != null && auth.token.email_verified == true && root.child('admin_users').child(auth.uid).val() == true) && newData.child('auth/pin').isString() && newData.child('auth/pin').val() == root.child('admin_config/secret_pin').val()",
+        "public": {
+          ".read": "auth != null && auth.token.email_verified == true"
+        },
+        "auth": {
+          ".read": false
+        }
+      }
+    },
+    "app_feedback": {
+      ".read": "(auth != null && auth.token.email_verified == true && root.child('admin_users').child(auth.uid).val() == true)",
+      "$campaign": {
+        ".write": "(auth != null && auth.token.email_verified == true && root.child('admin_users').child(auth.uid).val() == true)",
+        "responses": {
+          "$uid": {
+            ".write": "auth != null && auth.token.email_verified == true && auth.uid == $uid && newData.exists()",
+            ".validate": "newData.child('voterId').val() == $uid"
+          }
+        },
+        "views": {
+          "$uid": {
+            ".write": "auth != null && auth.token.email_verified == true && auth.uid == $uid && newData.exists()"
+          }
+        }
+      }
+    }
+  }
+}

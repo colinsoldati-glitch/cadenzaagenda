@@ -1,4 +1,4 @@
-const CACHE_NAME = "cadenza-cache-v22.1.4";
+const CACHE_NAME = "cadenza-cache-v23.0.0-rc1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -31,6 +31,9 @@ const APP_SHELL = [
   "./js/polls.js",
   "./js/agenda.js",
   "./js/ensemble.js",
+  "./js/firebase-environment.js",
+  "./js/accounts.js",
+  "./js/account-model.js",
   "./js/app.js"
 ];
 

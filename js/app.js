@@ -1,3 +1,4 @@
+import { requireAccount, initAccountUI, registerAccountHooks, showAccountOverview } from "./accounts.js";
 import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
 import * as C18 from "./i18n.js";
 import { APP_VERSION, KEYS, $ } from "./config.js";
@@ -16,7 +17,7 @@ import {
 } from "./agenda.js";
 import {
   registerEnsembleHooks, initServiceWorkerAndPush, showInstallTutorial,
-  proceedAfterTutorial, publishEnsembleNotification, switchTab, initEnsembleListeners
+  proceedAfterTutorial, publishEnsembleNotification, switchTab, initEnsembleListeners, enterEnsemble, showOnboarding
 } from "./ensemble.js";
 
 C18.initLanguage();
@@ -52,7 +53,7 @@ registerEnsembleHooks({
 initFormSelectors();
 initCalendarControls();
 initModalGlobalListeners();
-initAdminListeners();
+
 initPollsListeners();
 initAgendaListeners();
 initEnsembleListeners();
@@ -66,12 +67,17 @@ initEnsembleListeners();
       memberId: p.get("member") || null
     }));
   }
+  await requireAccount();
+  initAdminListeners();
+  registerAccountHooks({enter:enterEnsemble,onboarding:showOnboarding,tab:switchTab});
+  initAccountUI();
   await initServiceWorkerAndPush();
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   if (isStandalone) localStorage.setItem(KEYS.tuto, "1");
   if (!localStorage.getItem(KEYS.tuto) && !isStandalone) showInstallTutorial();
   else {
-    await proceedAfterTutorial();
+    if (!localStorage.getItem(KEYS.invite)) showAccountOverview();
+    else await proceedAfterTutorial();
     maybeDisplayLatestAnnouncement();
   }
 })();

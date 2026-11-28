@@ -110,7 +110,7 @@ function recordView(a){
   try{impression=JSON.parse(pending||'null');}catch(_){}
   if(!impression||typeof impression!=='object')impression={language,viewedAt:Date.now()};
   localStorage.setItem(key,JSON.stringify(impression));
-  update(ref(db,`app_feedback/${a.id}`),{[`views/${voter}`]:impression,meta:canonicalCampaign(a)})
+  update(ref(db,`app_feedback/${a.id}`),{[`views/${voter}`]:impression})
     .then(()=>localStorage.setItem(key,'1')).catch(err=>console.warn('Campaign impression not saved',err)).finally(()=>viewWrites.delete(key));
 }
 function seenAnnouncements(){
@@ -694,7 +694,6 @@ export function initAdminListeners() {
 
     try {
       await update(ref(db, `app_feedback/${ann.id}`), {
-        meta: canonicalCampaign(ann),
         [`responses/${voterId}`]: {
           voterId,
           language,

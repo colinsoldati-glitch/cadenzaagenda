@@ -94,6 +94,7 @@ function updateCalendarModal(message = '') {
   $('calendar-sync-status').textContent = message ? C18.t(message) : '';
 }
 function openCalendarSubscription() {
+  if (!CALENDAR_SERVICE_URL) return showToast("DEV : abonnement calendrier externe désactivé.");
   if (calendarBusy) return;
   const ensembleId = state.session.activeEnsembleId, memberId = state.session.ensembles[ensembleId]?.memberId;
   if (!ensembleId || !memberId || !state.currentEnsembleData?.members?.[memberId]) return showToast(C18.t('Profil de membre introuvable.'));

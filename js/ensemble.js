@@ -1,3 +1,4 @@
+import { claimProfile, currentUid, updateGlobalAbsences, unlinkEnsemble, showAccountOverview, hideAccountOverview } from "./accounts.js";
 import { locale, language, localizeFormation, localizePeriod } from "./i18n.js";
 import * as C18 from "./i18n.js";
 import {
@@ -100,7 +101,7 @@ function initAbsenceCalendar() {
     const reason=$('unavail-reason').value.trim(),createdAt=Date.now(),writes={};
     for(const period of periods){const id=genId('una');writes[id]={id,...period,reason,createdAt};}
     saving=true;sync();haptic();
-    try{await update(ref(db,`ensembles/${ens}/members/${myId}/unavailabilities`),writes);selected.clear();$('form-unavailability').reset();closeModal('modal-unavailability');showToast(C18.t('Indisponibilité enregistrée.'));}
+    try{await updateGlobalAbsences(writes);selected.clear();$('form-unavailability').reset();closeModal('modal-unavailability');showToast(C18.t('Indisponibilité enregistrée.'));}
     catch(err){handleFirebaseError(err);}finally{saving=false;sync();}
   });
 }
@@ -114,7 +115,7 @@ export async function initServiceWorkerAndPush() {
   if (!("serviceWorker" in navigator)) return;
   try {
     state.swRegistration = await navigator.serviceWorker.register(new URL("../sw.js", import.meta.url), { scope: new URL("../", import.meta.url).href });
-    if (await isSupported().catch(() => false)) {
+    if (!window.CADENZA_DEV && await isSupported().catch(() => false)) {
       state.messagingInstance = getMessaging();
       onMessage(state.messagingInstance, (p) => {
         if (isEnsemblePushActive()) { const msg = C18.notificationFor(p); triggerLocalSystemNotification(msg.title, msg.body); }
@@ -144,6 +145,7 @@ export async function fetchFcmTokenSafe() {
 }
 
 export async function togglePushForEnsemble() {
+  if(window.CADENZA_DEV)return showToast("DEV : notifications désactivées.");
   haptic();
   const ensId = state.session.activeEnsembleId, mbrId = state.session.ensembles[ensId]?.memberId;
   const ensName = state.currentEnsembleData?.name || C18.t("cet ensemble");
@@ -209,6 +211,7 @@ export function switchTab(tab) {
 
 // Tutoriel & Onboarding
 export function showInstallTutorial() {
+  hideAccountOverview();
   state.verifiedPopupEnsembleId=null; hooks.maybeDisplayLatestAnnouncement();
   ["app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble", "view-onboarding", "install-banner"].forEach((id) => $(id).classList.add("hidden"));
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -217,9 +220,11 @@ export function showInstallTutorial() {
   $("view-install-tuto").classList.remove("hidden");
 }
 
-export function renderClaimableMembers(ensId, data) {
+export async function renderClaimableMembers(ensId, data) {
   const box = $("join-existing-members-box"), list = $("join-existing-members-list"), kicker = $("join-new-member-kicker");
-  const members = data?.members ? Object.values(data.members) : [];
+  let members = data?.members ? Object.values(data.members) : [];
+  if(ensId&&members.length){try{const owners=(await get(ref(db,`profileOwners/${ensId}`))).val()||{};members=members.filter(m=>!owners[m.id]||owners[m.id]===currentUid());}catch(err){members=[];console.warn(err);}}
+  if(ensId && extractEnsembleCode($("join-code").value)!==ensId)return;
   if (!data || !members.length) { box.classList.add("hidden"); list.innerHTML = ""; kicker.classList.add("hidden"); return; }
   kicker.classList.remove("hidden"); box.classList.remove("hidden");
   list.innerHTML = members.map((m) => C18.h`<button type="button" class="btn-secondary btn-sm btn-full" style="justify-content:space-between" data-claim="${esc(m.id)}"><span><strong>${esc(m.name)}</strong> • ${esc(m.instrument)}</span><span style="font-size:12px;color:var(--muted)">Reprendre →</span></button>`).join("");
@@ -229,14 +234,13 @@ export function renderClaimableMembers(ensId, data) {
     haptic();
     const m = data.members[b.dataset.claim];
     if (!m) return;
-    state.session.ensembles[ensId] = { memberId: m.id, name: m.name, instrument: m.instrument, ensembleName: data.name };
-    state.session.activeEnsembleId = ensId; saveSession();
-    if (m.pushEnabled && Notification.permission === "granted") {
-      const tok = await fetchFcmTokenSafe();
-      if (tok) update(ref(db, `ensembles/${ensId}/members/${m.id}`), { fcmToken: tok }).catch(() => {});
-    }
-    window.history.replaceState({}, "", window.location.pathname);
-    showToast(C18.tt`Profil de ${m.name} restauré.`); enterEnsemble(ensId);
+    if(!confirm(C18.tt`Rattacher le profil de ${m.name} à votre compte ?`))return;
+    b.disabled=true;
+    try {
+      await claimProfile(ensId,m.id);
+      window.history.replaceState({}, "", window.location.pathname);
+      showToast(C18.tt`Profil de ${m.name} restauré.`); enterEnsemble(ensId);
+    } catch(err){showToast(err.message);}finally{b.disabled=false;}
   };
 }
 
@@ -247,19 +251,21 @@ export async function proceedAfterTutorial() {
   const ensId = params.get("ensemble") || pending?.ensembleId || null;
   const mbrId = params.get("member") || pending?.memberId || null;
 
-  if (ensId) {
+  if (ensId && /^[a-zA-Z0-9_-]{6,150}$/.test(ensId)) {
     localStorage.removeItem(KEYS.invite);
-    if (mbrId) {
+    if (mbrId && /^[a-zA-Z0-9_-]{1,150}$/.test(mbrId)) {
       try {
         const snap = await get(ref(db, `ensembles/${ensId}`));
         const d = snap.exists() ? snap.val() : null;
         const target = d?.members?.[mbrId];
         if (target) {
-          state.session.ensembles[ensId] = { memberId: target.id, name: target.name, instrument: target.instrument, ensembleName: d.name };
-          state.session.activeEnsembleId = ensId; saveSession();
-          window.history.replaceState({}, "", window.location.pathname);
-          showToast(C18.tt`Profil de ${target.name} restauré.`);
-          return enterEnsemble(ensId);
+          // A legacy transfer URL is a recovery hint, not a login credential.
+          if(confirm(C18.tt`Rattacher le profil de ${target.name} à votre compte ?`)){
+            await claimProfile(ensId,target.id);
+            window.history.replaceState({}, "", window.location.pathname);
+            showToast(C18.tt`Profil de ${target.name} restauré.`);
+            return enterEnsemble(ensId);
+          }
         }
       } catch (err) { handleFirebaseError(err); }
     }
@@ -281,10 +287,11 @@ export async function proceedAfterTutorial() {
     } catch (err) { handleFirebaseError(err); }
     return showOnboarding();
   }
-  state.session.activeEnsembleId && state.session.ensembles[state.session.activeEnsembleId] ? enterEnsemble(state.session.activeEnsembleId) : showOnboarding();
+  showAccountOverview();
 }
 
 export function showOnboarding() {
+  hideAccountOverview();
   state.verifiedPopupEnsembleId=null; state.currentEnsembleData=null;
   state.unsubscribeEnsemble?.(); state.unsubscribeEnsemble=null; hooks.maybeDisplayLatestAnnouncement();
   ["view-install-tuto", "app-header", "app-nav", "view-agenda", "view-avail", "view-ensemble"].forEach((id) => $(id).classList.add("hidden"));
@@ -292,6 +299,8 @@ export function showOnboarding() {
 }
 
 export function enterEnsemble(ensembleId) {
+  hideAccountOverview();
+  if(!state.session.ensembles[ensembleId])return showAccountOverview();
   state.verifiedPopupEnsembleId=null; state.currentEnsembleData=null; hooks.maybeDisplayLatestAnnouncement();
   ["view-install-tuto", "view-onboarding"].forEach((id) => $(id).classList.add("hidden"));
   ["app-header", "app-nav"].forEach((id) => $(id).classList.remove("hidden"));
@@ -421,7 +430,7 @@ export function renderEnsembleInfo() {
   $('saved-ensembles-count').textContent = Object.keys(state.session.ensembles).length;
   $('toggle-auto-remind-eve').checked = data.autoRemindEve !== false;
 
-  $('ensemble-manager-panel').innerHTML = `<div><strong>${esc(C18.t(manager?'Responsable de l’ensemble':'Gestion partagée'))}</strong><small>${esc(manager?membersObj[manager].name:C18.t('Tous les membres peuvent gérer les profils.'))}</small></div>${canAssign(data,myId)?`<button type="button" class="btn-secondary" data-manager-settings>${esc(C18.t(manager?'Modifier':'Nommer'))}</button>`:''}<p>${esc(C18.t('Restriction dans l’application uniquement. Les profils ne sont pas authentifiés.'))}</p>`;
+  $('ensemble-manager-panel').innerHTML = `<div><strong>${esc(C18.t(manager?'Responsable de l’ensemble':'Gestion partagée'))}</strong><small>${esc(manager?membersObj[manager].name:C18.t('Tous les membres peuvent gérer les profils.'))}</small></div>${canAssign(data,myId)?`<button type="button" class="btn-secondary" data-manager-settings>${esc(C18.t(manager?'Modifier':'Nommer'))}</button>`:''}<p>${esc(C18.t('Les droits de gestion sont contrôlés dans Firebase.'))}</p>`;
   $('members-list').innerHTML = members.map(m => {
     const isMe = m.id === myId, abs = Object.values(m.unavailabilities || {}).filter(u => u.endDate >= today).length;
     const role = manager === m.id ? `<span class="manager-label">${esc(C18.t('Responsable'))}</span>` : '';
@@ -491,10 +500,11 @@ export function initEnsembleListeners() {
   $("join-code").addEventListener("input", () => {
     clearTimeout(codeLookupTimer);
     const code = extractEnsembleCode($("join-code").value);
-    if (code.length < 6) return renderClaimableMembers(null, null);
+    if (!/^[a-zA-Z0-9_-]{6,150}$/.test(code)) return renderClaimableMembers(null, null);
     codeLookupTimer = setTimeout(async () => {
       try {
         const snap = await get(ref(db, `ensembles/${code}`));
+        if(code!==extractEnsembleCode($("join-code").value))return;
         if (snap.exists()) {
           const d = snap.val();
           $("join-kicker").textContent = C18.tt`Ensemble trouvé — ${localizeFormation(d.formation || "Ensemble")}`;
@@ -515,7 +525,7 @@ export function initEnsembleListeners() {
       const pushEnabled = "Notification" in window && Notification.permission === "granted";
       const fcmToken = pushEnabled ? await fetchFcmTokenSafe() : null;
 
-      await set(ref(db, `ensembles/${ensembleId}`), {
+      await claimProfile(ensembleId,memberId,null,{
         id: ensembleId, name: ensembleName, formation, autoRemindEve: true, createdAt: Date.now(),
         ...($("create-manager").checked?{memberManagerId:memberId}:{}),
         members: { [memberId]: { id: memberId, name: memberName, instrument, pushEnabled, ...(fcmToken ? { fcmToken } : {}), joinedAt: Date.now() } }
@@ -533,6 +543,7 @@ export function initEnsembleListeners() {
     const btn = $("btn-submit-join"); btn.disabled = true;
     try {
       const code = extractEnsembleCode($("join-code").value), name = $("join-name").value.trim(), instrument = $("join-instrument").value.trim();
+      if(!/^[a-zA-Z0-9_-]{6,150}$/.test(code))return showToast(C18.t("Ensemble introuvable."));
       const snap = await get(ref(db, `ensembles/${code}`));
       $("firebase-error-banner").classList.add("hidden");
       if (!snap.exists()) { showToast(C18.t("Ensemble introuvable.")); return; }
@@ -540,32 +551,23 @@ export function initEnsembleListeners() {
       const d = snap.val();
       const dup = Object.values(d.members || {}).find((m) => m.name?.trim().toLowerCase() === name.toLowerCase());
       const finalizeJoin = async (memberId, finalName, isRestore) => {
-        const pushEnabled = isRestore ? Boolean(dup.pushEnabled) : ("Notification" in window && Notification.permission === "granted");
-        const fcmToken = (pushEnabled && Notification.permission === "granted") ? await fetchFcmTokenSafe() : null;
-        if (isRestore) {
-          await update(ref(db, `ensembles/${code}/members/${memberId}`), { instrument, ...(fcmToken ? { fcmToken } : {}) });
-        } else {
-          await set(ref(db, `ensembles/${code}/members/${memberId}`), { id: memberId, name: finalName, instrument, pushEnabled, ...(fcmToken ? { fcmToken } : {}), joinedAt: Date.now() });
-        }
-        state.session.ensembles[code] = { memberId, name: finalName, instrument, ensembleName: d.name };
-        state.session.activeEnsembleId = code; saveSession();
-        window.history.replaceState({}, "", window.location.pathname);
-        showToast(isRestore ? C18.tt`Profil de ${finalName} restauré.` : C18.tt`Bienvenue dans ${d.name}.`);
-        enterEnsemble(code);
+        try{
+          const pushEnabled = "Notification" in window && Notification.permission === "granted";
+          const fcmToken = pushEnabled ? await fetchFcmTokenSafe() : null;
+          await claimProfile(code,memberId,isRestore?null:{id:memberId,name:finalName,instrument,pushEnabled,...(fcmToken?{fcmToken}:{}),joinedAt:Date.now()});
+          window.history.replaceState({}, "", window.location.pathname);
+          showToast(isRestore ? C18.tt`Profil de ${finalName} restauré.` : C18.tt`Bienvenue dans ${d.name}.`);
+          enterEnsemble(code);
+        }catch(err){showToast(err.message);}
       };
-
       if (dup) {
-        openConfirmationModal({
-          title: C18.t("Profil existant détecté"),
-          context: `${dup.name} • ${dup.instrument}`,
-          message: C18.tt`Un membre nommé « ${dup.name} » existe déjà. Voulez-vous restaurer ce profil et ses votes plutôt que d'en créer un nouveau ?`,
-          confirmLabel: C18.t("Restaurer ce profil"),
-          danger: false,
-          onConfirm: () => finalizeJoin(dup.id, dup.name, true)
-        });
-      } else {
-        await finalizeJoin(genId("mbr"), name, false);
-      }
+        const owner=(await get(ref(db,`profileOwners/${code}/${dup.id}`))).val();
+        if(owner&&owner!==currentUid()){
+          if(confirm(C18.t("Un autre compte utilise déjà ce nom. Créer un nouveau profil distinct ?")))await finalizeJoin(genId("mbr"),name,false);
+          return;
+        }
+        openConfirmationModal({title:C18.t("Profil existant détecté"),context:`${dup.name} • ${dup.instrument}`,message:C18.tt`Un membre nommé « ${dup.name} » existe déjà. Voulez-vous restaurer ce profil et ses votes plutôt que d'en créer un nouveau ?`,confirmLabel:C18.t("Restaurer ce profil"),danger:false,onConfirm:()=>finalizeJoin(dup.id,dup.name,true)});
+      } else await finalizeJoin(genId("mbr"),name,false);
     } catch (err) { handleFirebaseError(err); }
     finally { btn.disabled = false; }
   });
@@ -601,16 +603,14 @@ export function initEnsembleListeners() {
           try {
             if(ensId!==state.session.activeEnsembleId)return;
             if(isMe)leavingEnsemble=ensId;
-            const result=await runTransaction(ref(db,`ensembles/${ensId}`),data=>{
-              if(!canManage(data,myId,tid))return;
-              if(managerId(data)===tid&&Object.keys(data.members).length>1)return;
-              delete data.members[tid];
-              if(data.memberManagerId===tid)delete data.memberManagerId;
-              for(const poll of Object.values(data.polls||{})){if(poll.votes)delete poll.votes[tid];if(poll.voteNotes)delete poll.voteNotes[tid];}
-              return data;
-            },{applyLocally:false});
-            if(!result.committed)return showToast(C18.t('Action refusée : vérifiez les droits de gestion.'));
+            const latest=(await get(ref(db,`ensembles/${ensId}`))).val();
+            if(!canManage(latest,myId,tid)||(managerId(latest)===tid&&Object.keys(latest.members).length>1))return showToast(C18.t('Action refusée : vérifiez les droits de gestion.'));
+            const writes={[`members/${tid}`]:null};
+            if(latest.memberManagerId===tid)writes.memberManagerId=null;
+            for(const [id,poll] of Object.entries(latest.polls||{})){if(poll.votes?.[tid])writes[`polls/${id}/votes/${tid}`]=null;if(poll.voteNotes?.[tid])writes[`polls/${id}/voteNotes/${tid}`]=null;}
+            await update(ref(db,`ensembles/${ensId}`),writes);
             if (isMe) {
+              await unlinkEnsemble(ensId);
               delete state.session.ensembles[ensId];
               state.session.activeEnsembleId = Object.keys(state.session.ensembles)[0] || null;
               saveSession(); showToast(C18.t("Vous avez quitté l'ensemble."));
@@ -625,9 +625,9 @@ export function initEnsembleListeners() {
       const rTxt = u.startDate === u.endDate ? C18.tt`Le ${formatShortDateFr(u.startDate)}` : C18.tt`Du ${formatShortDateFr(u.startDate)} au ${formatShortDateFr(u.endDate)}`;
       return openConfirmationModal({
         title: C18.t("Supprimer cette absence ?"), context: `${rTxt}${u.reason ? ` — ${u.reason}` : ""}`,
-        message: C18.t("Cette période ne sera plus signalée."), confirmLabel: C18.t("Supprimer"),
+        message: C18.t("Cette période sera supprimée de tous vos ensembles."), confirmLabel: C18.t("Supprimer"),
         onConfirm: async () => {
-          try { await remove(ref(db, `ensembles/${state.session.activeEnsembleId}/members/${myId}/unavailabilities/${u.id}`)); showToast(C18.t("Absence supprimée.")); }
+          try { await updateGlobalAbsences({[u.id]:null}); showToast(C18.t("Absence supprimée.")); }
           catch (err) { handleFirebaseError(err); }
         }
       });
@@ -662,15 +662,14 @@ export function initEnsembleListeners() {
     e.preventDefault();const ctx=managerContext, target=$('manager-select').value,btn=e.target.querySelector('button[type="submit"]');
     if(!ctx||ctx.ens!==state.session.activeEnsembleId||btn.disabled)return;
     btn.disabled=true;
-    try{const result=await runTransaction(ref(db,`ensembles/${ctx.ens}`),data=>{if(!canAssign(data,ctx.actor)||(target&&!data.members?.[target]))return;if(target)data.memberManagerId=target;else delete data.memberManagerId;return data;},{applyLocally:false});if(!result.committed)return showToast(C18.t('Action refusée : vérifiez les droits de gestion.'));closeModal('modal-ensemble-manager');showToast(C18.t('Gestion des membres mise à jour.'));}catch(err){handleFirebaseError(err);}finally{btn.disabled=false;}
+    try{await update(ref(db,`ensembles/${ctx.ens}`),{memberManagerId:target||null});closeModal('modal-ensemble-manager');showToast(C18.t('Gestion des membres mise à jour.'));}catch(err){handleFirebaseError(err);}finally{btn.disabled=false;}
   });
   $("form-edit-member").addEventListener("submit", async (e) => {
     e.preventDefault(); haptic();
     const id = $("edit-member-id").value, name = $("edit-member-name").value.trim(), instrument = $("edit-member-instrument").value.trim();
     if (!id || !name || !instrument || !state.session.activeEnsembleId || editMemberContext?.ens!==state.session.activeEnsembleId) return;
     try {
-      const result=await runTransaction(ref(db,`ensembles/${editMemberContext.ens}`),data=>{if(!canManage(data,editMemberContext.actor,id))return;Object.assign(data.members[id],{name,instrument});return data;},{applyLocally:false});
-      if(!result.committed)return showToast(C18.t('Action refusée : vérifiez les droits de gestion.'));
+      await update(ref(db,`ensembles/${editMemberContext.ens}/members/${id}`),{name,instrument});
       const mySes = state.session.ensembles[state.session.activeEnsembleId];
       if (mySes?.memberId === id) { mySes.name = name; mySes.instrument = instrument; saveSession(); }
       closeModal("modal-edit-member"); showToast(C18.t("Profil mis à jour."));
@@ -678,7 +677,7 @@ export function initEnsembleListeners() {
   });
 
   $("btn-open-edit-ensemble").addEventListener("click", () => openModal("modal-edit-ensemble"));
-  $("btn-open-transfer").addEventListener("click", () => openModal("modal-transfer-device"));
+  $("btn-open-transfer").addEventListener("click", showAccountOverview);
   $("btn-invite-top").addEventListener("click", () => openModal("modal-invite"));
   $("btn-notif-top").addEventListener("click", togglePushForEnsemble);
   $("btn-toggle-push").addEventListener("click", togglePushForEnsemble);
@@ -694,5 +693,5 @@ export function initEnsembleListeners() {
   $("btn-native-share").addEventListener("click", () => shareOrCopy(getInviteUrl(state.session.activeEnsembleId), `Cadenza — ${state.currentEnsembleData.name}`, C18.tt`Rejoignez notre ensemble ${state.currentEnsembleData.name} sur Cadenza :`, C18.t("Lien d'invitation copié.")));
   $("btn-copy-transfer").addEventListener("click", async () => { haptic(); showToast((await copyTextReliable($("transfer-link-display").textContent)) ? C18.t("Lien personnel copié.") : C18.t("Copiez le lien affiché.")); });
   $("btn-share-transfer").addEventListener("click", () => shareOrCopy($("transfer-link-display").textContent, C18.tt`Cadenza — Profil de ${state.session.ensembles[state.session.activeEnsembleId]?.name || C18.t("Musicien")}`, C18.t("Ouvrez ce lien sur votre appareil pour retrouver votre profil Cadenza :"), C18.t("Lien personnel copié.")));
-  $("btn-switch-onboarding").addEventListener("click", () => { haptic(); state.unsubscribeEnsemble?.(); showOnboarding(); });
+  $("btn-switch-onboarding").addEventListener("click", () => { haptic(); $("account-join").click(); });
 }

@@ -1,0 +1,11 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const {mergeLegacyAbsences,absenceWrites}=await import('data:text/javascript;base64,'+Buffer.from(readFileSync(new URL('../js/account-model.js',import.meta.url),'utf8')).toString('base64'));
+const a={id:'una-a',startDate:'2027-01-01',endDate:'2027-01-03',reason:'Vacances',createdAt:1};
+const b={id:'una-b',startDate:'2027-02-01',endDate:'2027-02-02',reason:'Examen',createdAt:2};
+test('keeps the original absence id on first import and does not mutate source',()=>{const old={'una-a':a};assert.deepEqual(mergeLegacyAbsences({},old,'ens-a','mbr-a'),old);assert.equal(old['una-a'].createdAt,1);});
+test('unites absences from separate groups and preserves past dates and reasons',()=>{assert.deepEqual(mergeLegacyAbsences({'una-a':a},{'una-b':b},'ens-b','mbr-b'),{'una-a':a,'una-b':b});});
+test('deduplicates exactly identical ranges and reasons and is idempotent',()=>{const canon={'una-a':a};const legacy={'una-other':{...a,id:'una-other'}};assert.deepEqual(mergeLegacyAbsences(canon,legacy,'ens-b','mbr-b'),canon);});
+test('preserves distinct data on ID collision',()=>{const legacy={'una-a':{...b,id:'una-a'}};const canon=mergeLegacyAbsences({'una-a':a},legacy,'ens-b','mbr-b');assert.equal(Object.keys(canon).length,2);assert.deepEqual(canon['una-a'],a);assert.equal(canon.legacy_ens_b_mbr_b_una_a,undefined);assert.equal(canon['legacy_ens-b_mbr-b_una-a'].reason,'Examen');assert.deepEqual(mergeLegacyAbsences(canon,legacy,'ens-b','mbr-b'),canon);});
+test('global create and deletion target the canonical account and every linked group only',()=>{const links={'ens-a':'mbr-a','ens-b':'mbr-b'};const w=absenceWrites('user',links,{'una-a':a,'una-b':null});assert.equal(Object.keys(w).length,6);assert.deepEqual(w['accounts/user/absences/una-a'],a);assert.equal(w['ensembles/ens-b/members/mbr-b/unavailabilities/una-b'],null);assert.ok(Object.keys(w).every(k=>!k.includes('polls')&&!k.includes('rehearsals')));});
